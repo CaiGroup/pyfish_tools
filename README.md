@@ -1,2 +1,2 @@
 # seqFISH DASH
-Scripts and jupyter notebooks used for the analysis of seqFISH DASH. SeqFISH DASH is a seqFISH-based rolling circle amplification method where genes are encoded across channels and utilizes fluorophore switchable readouts to enable dual encoding of a single barcode site.
+Scripts and jupyter notebooks used for the analysis of seqFISH DASH. SeqFISH DASH is a seqFISH-based rolling circle amplification method where genes are encoded across channels and utilizes fluorophore switchable readouts to enable dual encoding of a single barcode site. This method allows the profiling of large tissue sections with significantly improved speed and enhances the overall throughput of seqFISH. 
