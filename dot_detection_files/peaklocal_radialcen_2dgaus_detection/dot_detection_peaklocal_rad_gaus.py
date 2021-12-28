@@ -986,7 +986,7 @@ def dot_detection_parallel(img_src, box_size = 5, exclude_border=3, HybCycle=0, 
                     img_parent_cycle = Path(img).parent.name
                     HybCycle_mod = int(img_parent_cycle.split("_")[1])
                     #dot detect
-                    fut = exe.submit(dot_detection, img, box_size, exclude_border, HybCycle, size_cutoff,
+                    fut = exe.submit(dot_detection, img, box_size, exclude_border, HybCycle_mod, size_cutoff,
                                      opt_thresh,channel,pos,choose_thresh_set,hyb_number,region_size,
                                      check_initial, gaussian, radial_center, optimize, output)
                     futures[fut] = img
@@ -1002,6 +1002,6 @@ def dot_detection_parallel(img_src, box_size = 5, exclude_border=3, HybCycle=0, 
                 img_parent_cycle = Path(img).parent.name
                 HybCycle_mod = int(img_parent_cycle.split("_")[1])
                 #dot detect
-                dot_detection(img, box_size, exclude_border, HybCycle, size_cutoff,
+                dot_detection(img, box_size, exclude_border, HybCycle_mod, size_cutoff,
                               opt_thresh,channel,pos,choose_thresh_set,hyb_number,region_size,
                               check_initial, gaussian, radial_center, optimize, output)
