@@ -605,10 +605,10 @@ def bkgrd_corr_one(image_path, correction_type = None, stack_bkgrd=None, swapaxe
     if lowpass == True:
         print('low pass gaussian and writing image...')
         lpgb = low_pass_gaussian(corr_img, kern = 3)
-        tf.imwrite(str(output_path).replace("ome.tif","tif"), lpgb)
+        tf.imwrite(str(output_path), lpgb)
     else:
         print('writing image')
-        tf.imwrite(str(output_path).replace("ome.tif","tif"), corr_img)
+        tf.imwrite(str(output_path), corr_img)
 
 def correct_many(images, correction_type = None, stack_bkgrd=None, swapaxes=False,
                  z=2, size=2048, gamma = 1.4, sigma=40, rb_radius=5, rollingball=False, lowpass = True):
