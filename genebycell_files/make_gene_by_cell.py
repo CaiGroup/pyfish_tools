@@ -1,3 +1,9 @@
+"""
+author: Katsuya Lex Colon
+group: Cai Lab
+updated: 01/07/22
+"""
+
 import pandas as pd
 import numpy as np
 from pathlib import Path
