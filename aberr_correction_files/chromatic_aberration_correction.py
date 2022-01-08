@@ -478,7 +478,7 @@ def apply_chromatic_corr(tiff_srcs, tform_list, cores = 24, include_dapi=False, 
     
     #check if it is only 1 image
     if type(tiff_srcs) != list:
-        apply_tform(tiff_srcs, tform_list, include_dapi=nclude_dapi, swapaxes=swapaxes, write = write)
+        apply_tform(tiff_srcs, tform_list, include_dapi=include_dapi, swapaxes=swapaxes, write = write)
         print(f'Path {tiff_srcs} completed after {(time.time() - start)/60} minutes')
     else:
         with ProcessPoolExecutor(max_workers=cores) as exe:

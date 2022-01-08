@@ -9,16 +9,16 @@ JOB_ID = os.getenv('SLURM_ARRAY_TASK_ID', 0)
 print(f'This is task {JOB_ID}')
 
 #fill parameters
-locations_path = glob.glob(f"/groups/CaiLab/personal/Lex/raw/Linus_10k_cleared_080918_NIH3T3/notebook_pyfiles/dots_comb/adcg/dots_comb/Pos_0/*")
-codebook_path = "/groups/CaiLab/personal/Lex/raw/Linus_10k_cleared_080918_NIH3T3/barcode_key/codebook_string.csv"
+locations_path = glob.glob(f"/groups/CaiLab/personal/Lex/raw/112221_20kdash_3t3/notebook_pyfiles/dots_comb/final/channels_combined_daostar/MMStack_Pos{JOB_ID}/*")
+codebook_path = "/groups/CaiLab/personal/Lex/raw/112221_20kdash_3t3/barcode_key/corrected_codebook_4channel_12hybs.csv"
 n_neighbors = 4
 num_barcodes = 4
 #multiply radius by 100 to get search in nm
-radius=0.50
-diff=1
-min_seed=3
-hybs = 80
-output_dir = f"/groups/CaiLab/personal/Lex/raw/Linus_10k_cleared_080918_NIH3T3/notebook_pyfiles/decoded/adcg/"
+radius=2
+diff=0
+min_seed=4
+hybs = 12
+output_dir = f"/groups/CaiLab/personal/Lex/raw/112221_20kdash_3t3/notebook_pyfiles/decoded/final/daostar/MMStack_Pos{JOB_ID}"
 ignore_errors = False
 
 if len(locations_path) > 1:

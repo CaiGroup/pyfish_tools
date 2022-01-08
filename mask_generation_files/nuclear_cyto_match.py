@@ -5,7 +5,7 @@ group: Cai Lab
 """
 
 import numpy as np
-import tqdm
+from tqdm import tqdm
 
 def nuclear_cyto_matching(cyto, nuc, threshold=0.20):
     """Match cyto masks and nuclear masks. Keep cyto masks that have nucleus

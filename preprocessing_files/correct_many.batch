@@ -2,9 +2,9 @@
 
 #SBATCH --ntasks=1
 #SBATCH --mem=50G
-#SBATCH --cpus-per-task=18
-#SBATCH --time=01:00:00
-#SBATCH --array=0-96
+#SBATCH --cpus-per-task=12
+#SBATCH --time=02:00:00
+#SBATCH --array=0-107
 
 pwd; hostname; date
 echo This is task $SLURM_ARRAY_TASK_ID

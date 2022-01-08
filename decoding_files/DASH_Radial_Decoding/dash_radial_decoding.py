@@ -206,7 +206,7 @@ def radial_decoding(locations, codebook, n_neighbors=4,
     
     This function will decode dots utilizing kNN algorithm from sklearn with a euclidean distance 
     metric. Essentially, a defined search radius will be used to identify nearby dots. Dot sequence will be
-    determined using a score based metric incorporatin distance, intensity, and size. Dot sequences that appear n
+    determined using a score based metric incorporating distance, intensity, and size. Dot sequences that appear n
     number of time defined by min seed will be kept. A table will be generated for each unnamed
     gene, at which a codebook will act as a hash table for identification. This decoder should operate
     similarly to MATLAB decoding. However, this decoder can be used for seqFISH DASH datasets, and will try to
@@ -465,7 +465,7 @@ def radial_decoding_parallel(location_path, codebook_path, n_neighbors=4,
         info = dot_info[i][["x","y","z","intensity","size"]].mean().values
         info_list.append(info)
         for j in range(len(code)):
-            code_table[i][code[j][0]] = int(code[j][1])
+            code_table[i][int(code[j][0])] = int(code[j][1])
     
     if diff == 0:
         #convert codebook to hash table

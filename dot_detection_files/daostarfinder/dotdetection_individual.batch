@@ -1,0 +1,18 @@
+#!/bin/bash
+
+#SBATCH --ntasks=1
+#SBATCH --mem=50G
+#SBATCH --cpus-per-task=20
+#SBATCH --time=01:00:00
+#SBATCH --array=0-107
+
+pwd; hostname; date
+echo This is task $SLURM_ARRAY_TASK_ID
+
+source ~/miniconda3/bin/activate
+
+conda activate python3.7
+
+python batch_dotdetection_individual.py
+
+date
