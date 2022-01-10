@@ -13,6 +13,7 @@ from skimage.exposure import adjust_gamma
 from sklearn import linear_model
 from skimage import restoration
 from skimage.feature import peak_local_max
+from skimage.exposure import match_histograms
 #general analysis packages
 import numpy as np
 #directory management
@@ -31,28 +32,27 @@ import warnings
 from concurrent.futures import ProcessPoolExecutor, as_completed
 warnings.filterwarnings("ignore")
 
-def background_correct_image(stack, correction_algo, stack_bkgrd=None, z=2, size=2048, gamma = 1.4, sigma=40):
+def background_correct_image(stack, correction_algo, stack_bkgrd=None, z=2, size=2048, 
+                             gamma = 1.4, sigma=40, match_hist =True, subtract=True, divide=False):
     '''
-    INPUT:  - stack: a TIF stack numpy array in the format (Z-axis position, Channel, Y-axis position, X-axis position),
-                     with elements as 16-bit unsigned numpy integers
-                     
-                     Note: The last channel is assumed to be the nuclear stain. Only dimming correction via LS regression
-                     is applied to that channel.
-                     
-            - stack_bkgrd: aligned initial background image
-            
-            - correction_algo: the name of one of the image 
-                               processing algorithms below (SigmaClipping_and_Gamma_C,
-                               Gaussian_and_Gamma_Correction,LSR_Backgound_Corrrection)
-            - z: number of z's
-            
-            -gamma: int
-            -sigma:int
-            
-    OUTPUT: - a TIF stack numpy array in the format (Z-axis position, Channel, Y-axis position, X-axis position),
-              with elements as 16-bit unsigned numpy integers 
+   This function will background correct raw images. There are several correction algorithms that can be used (SigmaClipping_and_Gamma_C,Gaussian_and_Gamma_Correction, and LSR_Backgound_Correction).
+   Additionally, one can choose to use final or initial background image for subtraction if stack_bkgrd (background image array) is provided. 
+   Parameters
+   ----------
+   stack = raw image
+   correction_algo = SigmaClipping_and_Gamma_C,Gaussian_and_Gamma_Correction, and LSR_Backgound_Correction
+   stack_bkgrd = initial or final background image array
+   z = number of z slices
+   size = image size
+   gamma = gamma enhancment values
+   sigma = sigma value for gaussian blurring
+   match_hist = bool to match histograms of blurred image
+   subtract = bool to subtract blurred image from raw
+   divide = bool to divide blurred image from raw
+   
     
     '''
+    #check z's
     if len(stack.shape) == 3:
         channels = stack.shape[0]
         stack = stack.reshape(z,channels,size,size)
@@ -82,7 +82,8 @@ def background_correct_image(stack, correction_algo, stack_bkgrd=None, z=2, size
                     corrected_channel = correction_algo(channel)
                 else:
                     if correction_algo == Gaussian_and_Gamma_Correction:
-                        corrected_channel = correction_algo(channel, gamma, sigma)
+                        corrected_channel = correction_algo(channel, gamma, sigma, 
+                                                            match_hist, subtract, divide)
                     else:
                         corrected_channel = correction_algo(channel, gamma)
                 corrected_channel = np.asarray([np.uint16(i) for i in corrected_channel.flatten()]).reshape(corrected_channel.shape)
@@ -94,15 +95,15 @@ def background_correct_image(stack, correction_algo, stack_bkgrd=None, z=2, size
         corrected_stack.append(corrected_z_slice)
     return np.array(corrected_stack)
 
-def tophat_background(image, kern=3):
-    """tophat raw then initial background subtraction"""
-    # Getting the kernel to be used in Top-Hat
-    filterSize =(kern, kern)
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, filterSize)
-    # Applying the Top-Hat operation
-    tophat_img = cv2.morphologyEx(image,cv2.MORPH_TOPHAT, kernel)
-    
-    return tophat_img
+#def tophat_background(image, kern=3):
+#    """tophat raw then initial background subtraction"""
+#    Getting the kernel to be used in Top-Hat
+#    filterSize =(kern, kern)
+#    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, filterSize)
+#    Applying the Top-Hat operation
+#    tophat_img = cv2.morphologyEx(image,cv2.MORPH_TOPHAT, kernel)
+#    
+#    return tophat_img
 
 def SigmaClipping_and_Gamma_C(image, gamma):
     """Background Correction via Background Elimination 
@@ -117,10 +118,18 @@ def SigmaClipping_and_Gamma_C(image, gamma):
     
     return sigma_clipped_contrast_ench_Gamma_c
 
-def Gaussian_and_Gamma_Correction(image, gamma, sigma):
+def Gaussian_and_Gamma_Correction(image, gamma, sigma, match_hist =True, subtract=True, divide=False):
     """ Background Correction via Background Elimination (estimated by Gaussian), followed by Gamma Correction"""
     image_blur = ndimage.gaussian_filter(image, sigma)
-    image_background_eliminated= image/((image_blur)/np.mean(image_blur))
+    if divide == False:
+        if (match_hist == True) and (subtract == True):
+            image_background_eliminated= image - match_histograms(image_blur, image)
+            image_background_eliminated[image_background_eliminated<0] = 0 
+        elif (match_hist == False) and (subtract == True):
+            image_background_eliminated= image - image_blur
+            image_background_eliminated[image_background_eliminated<0] = 0 
+    else:
+        image_background_eliminated= image/((image_blur)/np.mean(image_blur))
     contrast_ench_Gamma_c = adjust_gamma(image_background_eliminated, gamma)
     contrast_ench_Gamma_c = (contrast_ench_Gamma_c/np.mean(contrast_ench_Gamma_c))*np.mean(image)
     return contrast_ench_Gamma_c
@@ -230,47 +239,6 @@ def remove_fiducials(image_ref, tiff, size=9,min_distance=10,threshold_abs=1000,
     #return mask
     return new_image
     
-def high_pass_gaussian(img, kern=9, sigma=1):
-    """A high pass gaussian filter
-    Parameters
-    ----------
-    img = z,c,x,y
-    kern = int
-    """
-    if len(img.shape) == 3:
-        #generate kernel
-        kernel = np.ones((kern,kern),np.float32)/kern**2
-        #blur the image and subtract
-        c_slice = []
-        for c in range(img.shape[0]):
-            #gaussian filter
-            blur = cv2.GaussianBlur(img[c],(kern,kern),sigma)
-            #subtract
-            filtered = util.img_as_int(img[c])-util.img_as_int(blur)
-            #set negative values to zero
-            filtered[filtered<0]=0
-            c_slice.append(filtered)
-        return np.array(c_slice) 
-    else:
-        #generate kernel
-        kernel = np.ones((kern,kern),np.float32)/kern**2
-        #blur the image and subtract
-        z_slice = []
-        for z in range(img.shape[0]):
-            channel_slice = []
-            for c in range(img.shape[1]):
-                #gaussian filter
-                blur = cv2.GaussianBlur(img[z][c],(kern,kern),sigma)
-                #subtract
-                filtered = util.img_as_int(img[z][c])-util.img_as_int(blur)
-                #set negative values to zero
-                filtered[filtered<0]=0
-                channel_slice.append(filtered)
-            z_slice.append(channel_slice)
-        return np.array(z_slice)
-
-
-
 def gen_psf(model="gaussian", sigma=2, radius=6, size=7):
     
     """
@@ -293,7 +261,7 @@ def gen_psf(model="gaussian", sigma=2, radius=6, size=7):
     
 def RL_deconvolution(image, kern_rl=7, sigma=(1.8,1.6,1.5,1.3), 
                    radius=(4,4,4,4), model="gaussian", microscope = "boc"):
-    """Assuming a gaussian psf, images are deconvoluted using the richardson-lucy algorithm
+    """Assuming a gaussian or airy disc psf, images are deconvoluted using the richardson-lucy algorithm
     Parameters
     ----------
     image = multi or single array of images (z,c,x,y)
@@ -382,19 +350,19 @@ def low_pass_gaussian(image, kern=3):
             z_slice.append(channel_slice)
         return np.array(z_slice)
 
-def deconvolute_one(image_path, image_ref, kern_hpgb = 9, sigma_hpgb = 1, kern_rl = 5, 
+def deconvolute_one(image_path, image_ref, sigma_hpgb = 1, kern_rl = 5, 
                     kern_lpgb = 3, sigma=(1.8,1.6,1.5,1.3), radius=(4,4,4,4),
                     model="gaussian", microscope="boc",
                     size=9,min_distance=10,threshold_abs=1000,
                     num_peaks=1000, edge='raise', swapaxes=True,
-                    noise= True, bkgrd_corr = True, bkgrd_sub=True, remove_fiducial=False):
+                    noise= True, bkgrd_sub=True, remove_fiducial=False, 
+                    match_hist=True, subtract=True, divide=False):
     
     """deconvolute one image only
     Parameters
     ----------
     image_path = path to single image
     image_ref = path to reference image for removing fiducials
-    kern_hpgb = kernel size for high-pass gaussian blur
     sigma_hpgb = sigma for high-pass gaussian blur
     kern_rl = kernel size for Richardson-Lucy deconvolution
     kern_lpgb = kernel size for low-pass gaussian blur
@@ -407,11 +375,13 @@ def deconvolute_one(image_path, image_ref, kern_hpgb = 9, sigma_hpgb = 1, kern_r
     threshold_abs = absolute threshold used in remove fiducial function
     num_peaks = number of total dots for remove fiducials
     edge = argument for bounding box in remove fiducials
-    swapaxes = bool to swap axes when readin in an image
+    swapaxes = bool to swap axes when reading in an image
     noise = re-convolve image at the end
-    bkgrd_corr = use background correction algo before deconvolution
     bkgrd_sub = bool to perform background subtraction
     remove_fiducial = bool to keep or remove fiducials
+    match_hist = bool to match histograms of blurred image
+    subtract = bool to subtract blurred image from raw
+    divide = bool to divide blurred image from raw
     """
     
     #make output directory
@@ -424,7 +394,7 @@ def deconvolute_one(image_path, image_ref, kern_hpgb = 9, sigma_hpgb = 1, kern_r
     if swapaxes == True:
         image = tf.imread(image_path)
         image = np.swapaxes(image,0,1)
-        if (bkgrd_corr == True) and (bkgrd_sub==True):
+        if bkgrd_sub == True:
             bkgrd_tiff_src =  Path(image_path).parent.parent / "final_background"
             pos = Path(image_path).name
             stack_bkgrd_path = bkgrd_tiff_src / pos
@@ -434,7 +404,7 @@ def deconvolute_one(image_path, image_ref, kern_hpgb = 9, sigma_hpgb = 1, kern_r
             stack_bkgrd=None
     else:
         image = tf.imread(image_path)
-        if (bkgrd_corr == True) and (bkgrd_sub==True):
+        if bkgrd_sub == True:
             bkgrd_tiff_src =  Path(image_path).parent.parent / "final_background"
             pos = Path(image_path).name
             stack_bkgrd_path = bkgrd_tiff_src / pos
@@ -450,21 +420,20 @@ def deconvolute_one(image_path, image_ref, kern_hpgb = 9, sigma_hpgb = 1, kern_r
         image = fid_rem_image.copy()
         
     #perform background correction    
-    if bkgrd_corr == True:
-        if len(image.shape) ==4:
-            z=image.shape[0]
-            size = image.shape[2]
-            print('background correction...')
-            hpgb_image = background_correct_image(image,Gaussian_and_Gamma_Correction, stack_bkgrd, z, size) 
-        else:
-            z=1
-            size = image.shape[2]
-            print('background correction...')
-            hpgb_image = background_correct_image(image,Gaussian_and_Gamma_Correction, stack_bkgrd, z, size) 
+    if len(image.shape) ==4:
+        z=image.shape[0]
+        size = image.shape[2]
+        print('background correction...')
+        hpgb_image = background_correct_image(image,Gaussian_and_Gamma_Correction, 
+                                                  stack_bkgrd, z, size,gamma, sigma,
+                                                  match_hist, subtract, divide) 
     else:
-        print('high pass gaussian...')
-        hpgb_image = high_pass_gaussian(image, kern=kern_hpgb, sigma = sigma_hpgb)
-        
+        z=1
+        size = image.shape[2]
+        print('background correction...')
+        hpgb_image = background_correct_image(image,Gaussian_and_Gamma_Correction, 
+                                                  stack_bkgrd, z, size,gamma, sigma,
+                                                  match_hist, subtract, divide) 
     #perform deconvolution
     print('deconvolution...')
     if len(image.shape) ==3:
@@ -484,19 +453,19 @@ def deconvolute_one(image_path, image_ref, kern_hpgb = 9, sigma_hpgb = 1, kern_r
         print('writing image')
         tf.imwrite(output_path, rl_img_hpgb)
             
-def deconvolute_many(images, image_ref, kern_hpgb = 9, sigma_hpgb = 1, kern_rl = 5, 
+def deconvolute_many(images, image_ref, sigma_hpgb = 1, kern_rl = 5, 
                     kern_lpgb = 3, sigma=(1.8,1.6,1.5,1.3), radius=(4,4,4,4),
                     model="gaussian", microscope="boc",
                     size=9,min_distance=10,threshold_abs=1000,
                     num_peaks=1000, edge='raise', swapaxes=True,
-                    noise= True, bkgrd_corr = True, bkgrd_sub=True, remove_fiducial=False):
+                    noise= True, bkgrd_sub=True, remove_fiducial=False, 
+                    match_hist=True, subtract=True, divide=False):
     
     """function to deconvolute all images
      Parameters
     ----------
     images = list of image paths
     image_ref = path to reference image for removing fiducials
-    kern_hpgb = kernel size for high-pass gaussian blur
     sigma_hpgb = sigma for high-pass gaussian blur
     kern_rl = kernel size for Richardson-Lucy deconvolution
     kern_lpgb = kernel size for low-pass gaussian blur
@@ -511,30 +480,34 @@ def deconvolute_many(images, image_ref, kern_hpgb = 9, sigma_hpgb = 1, kern_rl =
     edge = argument for bounding box in remove fiducials
     swapaxes = bool to swap axes when readin in an image
     noise = re-convolve image at the end
-    bkgrd_corr = use background correction algo before deconvolution
+    bkgrd_sub = bool to perform background subtraction
     remove_fiducial = bool to keep or remove fiducials
+    match_hist = bool to match histograms of blurred image
+    subtract = bool to subtract blurred image from raw
+    divide = bool to divide blurred image from raw
     """
     
     import time
     start = time.time()
     
     if type(images) != list:
-        deconvolute_one(images, image_ref, kern_hpgb=kern_hpgb, 
+        deconvolute_one(images, image_ref, 
                        sigma_hpgb=sigma_hpgb, kern_rl=kern_rl, 
                        kern_lpgb=kern_lpgb, sigma=sigma, radius=radius,model=model, microscope=microscope,
                        size=size,min_distance=min_distance,threshold_abs=threshold_abs,
                        num_peaks=num_peaks, edge=edge, swapaxes=swapaxes,
-                       noise=noise, bkgrd_corr=bkgrd_corr, bkgrd_sub=bkgrd_sub, remove_fiducial=remove_fiducial)
+                       noise=noise, bkgrd_sub=bkgrd_sub, remove_fiducial=remove_fiducial, 
+                       match_hist=match_hist, subtract=subtract, divide=divide)
     else:
         with ProcessPoolExecutor(max_workers=12) as exe:
             futures = {}
             for path in images:
-                fut = exe.submit(deconvolute_one, path, image_ref, kern_hpgb=kern_hpgb, 
-                       sigma_hpgb=sigma_hpgb, kern_rl=kern_rl, 
+                fut = exe.submit(deconvolute_one, path, image_ref, sigma_hpgb=sigma_hpgb, kern_rl=kern_rl, 
                        kern_lpgb=kern_lpgb, sigma=sigma, radius=radius,model=model, microscope=microscope,
                        size=size,min_distance=min_distance,threshold_abs=threshold_abs,
                        num_peaks=num_peaks, edge=edge, swapaxes=swapaxes,
-                       noise=noise, bkgrd_corr=bkgrd_corr, bkgrd_sub=bkgrd_sub, remove_fiducial=remove_fiducial)
+                       noise=noise, bkgrd_sub=bkgrd_sub, remove_fiducial=remove_fiducial, 
+                       match_hist=match_hist, subtract=subtract, divide=divide)
                 futures[fut] = path
 
             for fut in as_completed(futures):
@@ -542,7 +515,8 @@ def deconvolute_many(images, image_ref, kern_hpgb = 9, sigma_hpgb = 1, kern_rl =
                 print(f'Path {path} completed after {time.time() - start} seconds')
                 
 def bkgrd_corr_one(image_path, correction_type = None, stack_bkgrd=None, swapaxes=False, 
-                   z=2, size=2048, gamma = 1.4, sigma = 40, rb_radius=5, rollingball = False, lowpass=True):
+                   z=2, size=2048, gamma = 1.4, sigma = 40, rb_radius=5, 
+                   rollingball = False, lowpass=True, match_hist=True, subtract=True, divide=False):
     """
     background correct one image only
     
@@ -558,6 +532,10 @@ def bkgrd_corr_one(image_path, correction_type = None, stack_bkgrd=None, swapaxe
     simga = int
     lowpass = do a low pass gaussian filter
     rollingball = do a rolling ball subtraction
+    lowpass = bool to blur image with gaussian
+    match_hist = bool to match histograms of blurred image
+    subtract = bool to subtract blurred image from raw
+    divide = bool to divide blurred image from raw
     """
     
     orig_image_dir = Path(image_path).parent.parent
@@ -584,9 +562,11 @@ def bkgrd_corr_one(image_path, correction_type = None, stack_bkgrd=None, swapaxe
     
     #background correct
     if type(stack_bkgrd) != type(None):
-        corr_img = background_correct_image(image, correction_type, bkgrd, z, size, gamma, sigma)
+        corr_img = background_correct_image(image, correction_type, bkgrd, 
+                                            z, size, gamma, sigma, match_hist, subtract, divide)
     else:
-        corr_img = background_correct_image(image, correction_type, stack_bkgrd, z, size, gamma, sigma)
+        corr_img = background_correct_image(image, correction_type, stack_bkgrd,
+                                            z, size, gamma, sigma, match_hist, subtract, divide)
     
     #do rolling ball subtraction
     if rollingball == True:
@@ -611,7 +591,8 @@ def bkgrd_corr_one(image_path, correction_type = None, stack_bkgrd=None, swapaxe
         tf.imwrite(str(output_path), corr_img)
 
 def correct_many(images, correction_type = None, stack_bkgrd=None, swapaxes=False,
-                 z=2, size=2048, gamma = 1.4, sigma=40, rb_radius=5, rollingball=False, lowpass = True):
+                 z=2, size=2048, gamma = 1.4, sigma=40, rb_radius=5, 
+                 rollingball=False, lowpass = True, match_hist=True, subtract=True, divide=False):
     """
     function to correct all image
     
@@ -627,20 +608,23 @@ def correct_many(images, correction_type = None, stack_bkgrd=None, swapaxes=Fals
     sigma = int
     rollingball = do a rolling ball subtraction
     lowpass = do a low pass gaussian filter 
+    match_hist = bool to match histograms of blurred image
+    subtract = bool to subtract blurred image from raw
+    divide = bool to divide blurred image from raw
     """
     import time
     start = time.time()
     
     if type(images) != list:
         bkgrd_corr_one(images, correction_type,stack_bkgrd, swapaxes, z, size,  
-                       gamma, sigma, rb_radius, rollingball, lowpass)
+                       gamma, sigma, rb_radius, rollingball, lowpass,  match_hist, subtract, divide)
     else:
         with ProcessPoolExecutor(max_workers=12) as exe:
             futures = {}
             for path in images:
                 fut = exe.submit(bkgrd_corr_one, path, correction_type, stack_bkgrd,
                                  swapaxes, z, size,  gamma, sigma,rb_radius,
-                                 rollingball, lowpass)
+                                 rollingball, lowpass,  match_hist, subtract, divide)
                 futures[fut] = path
 
             for fut in as_completed(futures):
