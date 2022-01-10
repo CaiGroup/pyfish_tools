@@ -536,8 +536,8 @@ def dot_detection(img_src, fwhm = 4.0, HybCycle=0, size_cutoff=3,
                 else:
                     blob = get_region_around(img[z][c-1], center=[y,x], size=5, normalize=True, edge='raise')
             except IndexError:
+                area_list.append(0)
                 continue
-                
             #estimate area of dot by local thresholding and summing binary mask
             try:
                 local_thresh = threshold_local(blob, block_size=7)
@@ -663,8 +663,8 @@ def dot_detection(img_src, fwhm = 4.0, HybCycle=0, size_cutoff=3,
                 else:
                     blob = get_region_around(img[z][c-1], center=[y,x], size=5, normalize=True, edge='raise')
             except IndexError:
+                area_list.append(0)
                 continue
-                
             #estimate area of dot by local thresholding and summing binary mask
             try:
                 local_thresh = threshold_local(blob, block_size=7)
