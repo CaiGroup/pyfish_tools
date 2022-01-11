@@ -18,29 +18,31 @@ files = [str(f) for f in files]
 
 images = files
 image_ref = None
-kern_hpgb = None
-kern_rl = 5
-kern_lpgb = None
+sigma_hpgb = 20
+kern_rl = 7
+kern_lpgb = 3
 sigma = (1.8,1.6,1.5,1.3)
 radius = (3,3,3,3)
 model = "gaussian"
 microscope = "lb"
-sigma_hpgb = None
 size = None
 threshold_abs = None
+gamma=1
 min_distance = None
 num_peaks = None
 edge = None
 swapaxes = False
-noise = False
-bkgrd_corr = True
+noise = True
 bkgrd_sub = False
 remove_fiducial = False
+match_hist=True
+subtract=True
+divide=False
 
-deconvolute_many(images=images, image_ref=image_ref, kern_hpgb=kern_hpgb, 
-                       sigma_hpgb=sigma_hpgb, kern_rl=kern_rl, 
-                       kern_lpgb = kern_lpgb, sigma=sigma, radius=radius, model=model, microscope=microscope,
-                       size=size,min_distance=min_distance,threshold_abs=threshold_abs,
-                       num_peaks=num_peaks, edge=edge, swapaxes=swapaxes,
-                       noise= noise, bkgrd_corr = bkgrd_corr, bkgrd_sub=bkgrd_sub, remove_fiducial=remove_fiducial)
-
+deconvolute_many(images=images, image_ref=image_ref, 
+                 sigma_hpgb=sigma_hpgb, kern_rl=kern_rl, 
+                 kern_lpgb = kern_lpgb, sigma=sigma, radius=radius, model=model, microscope=microscope,
+                 size=size,min_distance=min_distance,threshold_abs=threshold_abs,
+                 num_peaks=num_peaks, edge=edge, swapaxes=swapaxes,
+                 noise= noise, bkgrd_sub=bkgrd_sub, remove_fiducial=remove_fiducial,
+                 match_hist=match_hist, subtract=subtract, divide=divide)

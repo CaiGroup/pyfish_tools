@@ -49,7 +49,6 @@ def background_correct_image(stack, correction_algo, stack_bkgrd=None, z=2, size
    match_hist = bool to match histograms of blurred image
    subtract = bool to subtract blurred image from raw
    divide = bool to divide blurred image from raw
-   
     
     '''
     #check z's
@@ -74,8 +73,10 @@ def background_correct_image(stack, correction_algo, stack_bkgrd=None, z=2, size
     for z_slice in stack:
         corrected_z_slice = []
         for i in range(z_slice.shape[0]):
+            #get specific channel from a z slice
             channel = z_slice[i]
             channel = np.asarray([float(i) for i in channel.flatten()]).reshape(channel.shape)
+            #apply correction
             if correction_algo != LSR_Backgound_Correction:
                 if i == (z_slice.shape[0]-1):
                     correction_algo = LSR_Backgound_Correction
@@ -120,8 +121,10 @@ def SigmaClipping_and_Gamma_C(image, gamma):
 
 def Gaussian_and_Gamma_Correction(image, gamma, sigma, match_hist =True, subtract=True, divide=False):
     """ Background Correction via Background Elimination (estimated by Gaussian), followed by Gamma Correction"""
+    #gaussian blur image
     image_blur = ndimage.gaussian_filter(image, sigma)
     if divide == False:
+        #subtract gaussian blurred background
         if (match_hist == True) and (subtract == True):
             image_background_eliminated= image - match_histograms(image_blur, image)
             image_background_eliminated[image_background_eliminated<0] = 0 
@@ -129,9 +132,13 @@ def Gaussian_and_Gamma_Correction(image, gamma, sigma, match_hist =True, subtrac
             image_background_eliminated= image - image_blur
             image_background_eliminated[image_background_eliminated<0] = 0 
     else:
+        #divide gaussian blurred background to even out illumination
         image_background_eliminated= image/((image_blur)/np.mean(image_blur))
+    #adjust contrast by gamma enhancement
     contrast_ench_Gamma_c = adjust_gamma(image_background_eliminated, gamma)
-    contrast_ench_Gamma_c = (contrast_ench_Gamma_c/np.mean(contrast_ench_Gamma_c))*np.mean(image)
+    #rescale image by constant factor
+    contrast_ench_Gamma_c = (contrast_ench_Gamma_c/np.mean(contrast_ench_Gamma_c))*100
+    
     return contrast_ench_Gamma_c
 
 def LSR_Backgound_Correction(image):
@@ -354,7 +361,7 @@ def deconvolute_one(image_path, image_ref, sigma_hpgb = 1, kern_rl = 5,
                     kern_lpgb = 3, sigma=(1.8,1.6,1.5,1.3), radius=(4,4,4,4),
                     model="gaussian", microscope="boc",
                     size=9,min_distance=10,threshold_abs=1000,
-                    num_peaks=1000, edge='raise', swapaxes=True,
+                    num_peaks=1000, gamma=1, edge='raise', swapaxes=True,
                     noise= True, bkgrd_sub=True, remove_fiducial=False, 
                     match_hist=True, subtract=True, divide=False):
     
@@ -374,6 +381,7 @@ def deconvolute_one(image_path, image_ref, sigma_hpgb = 1, kern_rl = 5,
     min_distance = number of pixels to peaks need to be away for remove fiducial function
     threshold_abs = absolute threshold used in remove fiducial function
     num_peaks = number of total dots for remove fiducials
+    gamma = interger for gamma enhancement
     edge = argument for bounding box in remove fiducials
     swapaxes = bool to swap axes when reading in an image
     noise = re-convolve image at the end
@@ -425,15 +433,15 @@ def deconvolute_one(image_path, image_ref, sigma_hpgb = 1, kern_rl = 5,
         size = image.shape[2]
         print('background correction...')
         hpgb_image = background_correct_image(image,Gaussian_and_Gamma_Correction, 
-                                                  stack_bkgrd, z, size,gamma, sigma,
-                                                  match_hist, subtract, divide) 
+                                              stack_bkgrd, z, size, gamma, sigma_hpgb,
+                                              match_hist, subtract, divide) 
     else:
         z=1
         size = image.shape[2]
         print('background correction...')
         hpgb_image = background_correct_image(image,Gaussian_and_Gamma_Correction, 
-                                                  stack_bkgrd, z, size,gamma, sigma,
-                                                  match_hist, subtract, divide) 
+                                              stack_bkgrd, z, size,gamma, sigma_hpgb,
+                                              match_hist, subtract, divide) 
     #perform deconvolution
     print('deconvolution...')
     if len(image.shape) ==3:
@@ -457,7 +465,7 @@ def deconvolute_many(images, image_ref, sigma_hpgb = 1, kern_rl = 5,
                     kern_lpgb = 3, sigma=(1.8,1.6,1.5,1.3), radius=(4,4,4,4),
                     model="gaussian", microscope="boc",
                     size=9,min_distance=10,threshold_abs=1000,
-                    num_peaks=1000, edge='raise', swapaxes=True,
+                    num_peaks=1000, gamma = 1, edge='raise', swapaxes=True,
                     noise= True, bkgrd_sub=True, remove_fiducial=False, 
                     match_hist=True, subtract=True, divide=False):
     
@@ -477,6 +485,7 @@ def deconvolute_many(images, image_ref, sigma_hpgb = 1, kern_rl = 5,
     min_distance = number of pixels to peaks need to be away for remove fiducial function
     threshold_abs = absolute threshold used in remove fiducial function
     num_peaks = number of total dots for remove fiducials
+    gamma = interger for gamma enhancement
     edge = argument for bounding box in remove fiducials
     swapaxes = bool to swap axes when readin in an image
     noise = re-convolve image at the end
@@ -494,7 +503,7 @@ def deconvolute_many(images, image_ref, sigma_hpgb = 1, kern_rl = 5,
         deconvolute_one(images, image_ref, 
                        sigma_hpgb=sigma_hpgb, kern_rl=kern_rl, 
                        kern_lpgb=kern_lpgb, sigma=sigma, radius=radius,model=model, microscope=microscope,
-                       size=size,min_distance=min_distance,threshold_abs=threshold_abs,
+                       size=size,min_distance=min_distance,threshold_abs=threshold_abs,gamma=gamma,
                        num_peaks=num_peaks, edge=edge, swapaxes=swapaxes,
                        noise=noise, bkgrd_sub=bkgrd_sub, remove_fiducial=remove_fiducial, 
                        match_hist=match_hist, subtract=subtract, divide=divide)
@@ -504,7 +513,7 @@ def deconvolute_many(images, image_ref, sigma_hpgb = 1, kern_rl = 5,
             for path in images:
                 fut = exe.submit(deconvolute_one, path, image_ref, sigma_hpgb=sigma_hpgb, kern_rl=kern_rl, 
                        kern_lpgb=kern_lpgb, sigma=sigma, radius=radius,model=model, microscope=microscope,
-                       size=size,min_distance=min_distance,threshold_abs=threshold_abs,
+                       size=size,min_distance=min_distance,threshold_abs=threshold_abs,gamma=gamma,
                        num_peaks=num_peaks, edge=edge, swapaxes=swapaxes,
                        noise=noise, bkgrd_sub=bkgrd_sub, remove_fiducial=remove_fiducial, 
                        match_hist=match_hist, subtract=subtract, divide=divide)

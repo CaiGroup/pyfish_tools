@@ -33,5 +33,9 @@ sigma=20
 rb_radius=5
 rollingball=True
 lowpass = True
+match_hist=True
+subtract=True
+divide=False
 
-correct_many(files, correction_type, stack_bkgrd, swapaxes, z, size, gamma, sigma, rb_radius, rollingball, lowpass)
+correct_many(files, correction_type, stack_bkgrd, swapaxes, z, size, gamma, 
+             sigma, rb_radius, rollingball, lowpass, match_hist, subtract, divide)
