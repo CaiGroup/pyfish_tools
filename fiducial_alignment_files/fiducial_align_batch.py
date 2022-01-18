@@ -1,7 +1,7 @@
 #custom function
 from fiducial_alignment_affine import fiducial_align_parallel
-#matlab engine for radial centering
-import matlab.engine
+# #matlab engine for radial centering
+# import matlab.engine
 #file organization packages
 from pathlib import Path
 import os
@@ -30,7 +30,7 @@ files = [str(f) for f in files]
 
 # ##use this for normal alignment
 # #ref, _, _ = find_matching_files(directory, 'HybCycle_0' + f'/{position_name}') 
-ref = f"/groups/CaiLab/personal/Lex/raw/Linus_10k_cleared_080918_NIH3T3/beads/{position_name}"
+ref = f"/groups/CaiLab/personal/Lex/raw/Linus_10k_cleared_080918_NIH3T3/notebook_pyfiles/max_projected/beads/{position_name}"
 
 tiff_list = files
 ref_src = ref
@@ -39,8 +39,8 @@ min_distance=10
 threshold_abs=500
 num_peaks=500
 max_dist=2
-eng = matlab.engine.start_matlab()
-radial_center=True
+eng = None
+radial_center=False
 include_dapi=True
 swapaxes=True
 cores = 12
