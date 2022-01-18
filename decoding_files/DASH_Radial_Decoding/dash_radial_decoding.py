@@ -1,7 +1,7 @@
 """
 author: Katsuya Lex Colon
 group: Cai Lab
-updated: 12/06/21
+updated: 01/17/22
 """
 
 #general analysis packages
@@ -199,7 +199,7 @@ def pick_best_codeword(filtered_set, codeword_scores,total_distances):
     
     return complete_set
     
-def radial_decoding(locations, codebook, n_neighbors=4,
+def radial_decoding(locations, n_neighbors=4,
                     num_barcodes = 4, radius=np.sqrt(2),diff=0,
                     seed=0, hybs = 12):
     """
@@ -215,7 +215,6 @@ def radial_decoding(locations, codebook, n_neighbors=4,
     Parameters
     ----------
     locations = locations.csv file
-    codebook = codebook showing at which channel and hyb a dot should appear
     n_neighbors = number of nearest neighbor counting self expected
     num_barcodes = number of total barcodes
     radius = search radius using euclidean metric
@@ -313,7 +312,7 @@ def radial_decoding(locations, codebook, n_neighbors=4,
     del distance_list
     
     #Get best dot sequence based on dot traits
-    #weighted scores will be calculated based on distance, intensity, and size
+    #weighted scores will be calculated based on distance, flux, and size
     dot_idx = []
     ambiguity_scores = []
     codeword_score_list = []
@@ -343,7 +342,7 @@ def radial_decoding(locations, codebook, n_neighbors=4,
                 #generate score table
                 trait_score = np.zeros(len(dot_traits))
                 #rank dots
-                int_score = np.argsort(dot_traits["intensity"]).values[::-1]
+                int_score = np.argsort(dot_traits["flux"]).values[::-1]
                 size_score = np.argsort(dot_traits["size"]).values[::-1]
                 #calculate best score
                 #note that distance is already sorted
@@ -374,25 +373,21 @@ def radial_decoding(locations, codebook, n_neighbors=4,
     #return indicies of nearby dots from seed, ambiguity scores, codeword scores and total distance per codeword
     return dot_idx,ambiguity_scores,codeword_score_list,total_distance_list
 
-def radial_decoding_parallel(location_path, codebook_path, n_neighbors=4,
-                    num_barcodes = 4, radius=1,diff=0,
-                    min_seed=4, hybs = 12, output_dir = "", 
-                    ignore_errors = False, include_undecoded = False):
+def radial_decoding_parallel(locations,codebook, n_neighbors=4,
+                             num_barcodes = 4, radius=1,diff=0,
+                             min_seed=4, hybs = 12, include_undecoded = False):
     """This function will perform radial decoding on all barcodes as reference. Dot sequences
     that appear n number of times defined by min seed will be kept.
     Parameters 
     ----------
-    location_path = path to location.csv
-    codebook_path = path to codebook showing at which channel and hyb a dot should appear
+    locations = location.csv file
+    codebook = codebook.csv
     n_neighbors = number of nearest neighbor counting self expected
     num_barcodes = number of total barcodes
     radius = search radius using euclidean metric
     diff = allowed barcode drops
     min_seed = number of barcode seeds
-    cores = number of cores should match number of barcodes
     hybs = total number of hybs
-    output_dir = directory to where you want the file outputted
-    ignore_errors = ignore codebook error (codebook is incomplete)
     include_undecoded = bool to output the undecoded dots
     
     Returns
@@ -400,23 +395,12 @@ def radial_decoding_parallel(location_path, codebook_path, n_neighbors=4,
     gene_locations.csv
     """
     
-    #read in files and collect z info
-    locations = pd.read_csv(location_path)
-    codebook = pd.read_csv(codebook_path)
-    codebook = codebook.set_index(codebook.columns[0])
-    location_path_name = Path(location_path).name
-    z_info = location_path_name.split("_")[2].replace(".csv","")
-
-    #make directories
-    Path(output_dir).mkdir(parents=True, exist_ok = True)
-    output_path = Path(output_dir) / f"diff_{diff}_minseed_{min_seed}_z_{z_info}_finalgenes.csv"
-    
     #parallel processing for nearest neighbor computation for each barcode
     with ProcessPoolExecutor(max_workers=num_barcodes) as exe:
         futures = []
         for i in range(num_barcodes):
             seed = i
-            fut = exe.submit(radial_decoding, locations, codebook, n_neighbors,
+            fut = exe.submit(radial_decoding, locations, n_neighbors,
                              num_barcodes, radius,diff,
                              seed, hybs)
             futures.append(fut)
@@ -433,7 +417,6 @@ def radial_decoding_parallel(location_path, codebook_path, n_neighbors=4,
     dot_idx_min = filter_dots_fast(dot_index_list, min_seed=min_seed)
         
     #pick best codewords where there could be multiple options
-    #this function will eliminate the need for above code
     dot_idx_filtered =  pick_best_codeword(dot_idx_min, codeword_score_list, total_distance_list)
     
     #generate hash table for amiguity score assignment
@@ -462,7 +445,17 @@ def radial_decoding_parallel(location_path, codebook_path, n_neighbors=4,
     code_table = np.zeros(shape=(len(dot_info), hybs)).astype(int)
     for i in range(len(dot_info)):
         code = dot_info[i][["hyb","ch"]].values
-        info = dot_info[i][["x","y","z","intensity","size"]].mean().values
+        info = dot_info[i][["x","y","z","flux","max intensity","size"]].mean().values
+        info_list.append(info)
+        for j in range(len(code)):
+            code_table[i][int(code[j][0])] = int(code[j][1])
+    
+    #generate code table for decoding and store info about dots
+    info_list = []
+    code_table = np.zeros(shape=(len(dot_info), hybs)).astype(int)
+    for i in range(len(dot_info)):
+        code = dot_info[i][["hyb","ch"]].values
+        info = dot_info[i][["x","y","z","flux","max intensity","size"]].mean().values
         info_list.append(info)
         for j in range(len(code)):
             code_table[i][int(code[j][0])] = int(code[j][1])
@@ -481,18 +474,15 @@ def radial_decoding_parallel(location_path, codebook_path, n_neighbors=4,
                 gene_name = hash_table[tuple(code_table[i])]
                 decoded_genes.append(gene_name)
             except KeyError:
-                if ignore_errors == True:
-                    decoded_genes.append("Undefined")
-                else:
-                    sys.exit("Check codebook for completeness")
+                sys.exit("Check codebook for completeness")
 
         #add gene names
         genes_locations = pd.DataFrame(info_list)
-        genes_locations.columns = ["x","y","z","intensity","size"]
+        genes_locations.columns = ["x","y","z","flux","max intensity","size"]
         genes_locations["genes"] = decoded_genes
         #add ambiguity score
         genes_locations["ambiguity score"] = ambiguity_scores_final
-        genes_locations = genes_locations[["genes", "x", "y","z","intensity", "size", "ambiguity score"]]  
+        genes_locations = genes_locations[["genes", "x", "y","z","flux","max intensity", "size", "ambiguity score"]]  
 
     elif diff == 1:
         #make other possible codebooks
@@ -527,19 +517,106 @@ def radial_decoding_parallel(location_path, codebook_path, n_neighbors=4,
                 
         #make final df
         genes_locations = pd.DataFrame(info_list)
-        genes_locations.columns = ["x","y","z","intensity","size"]
+        genes_locations.columns = ["x","y","z","flux","max intensity","size"]
         genes_locations["genes"] = decoded_genes
         genes_locations["ambiguity score"] = ambiguity_scores_final
         if include_undecoded ==  False:
             genes_locations = genes_locations[genes_locations["genes"] != "Undefined"]
-        genes_locations = genes_locations[["genes", "x", "y", "z", "intensity", "size", "ambiguity score"]]  
-
+        genes_locations = genes_locations[["genes", "x", "y","z","flux","max intensity", "size", "ambiguity score"]]  
     else:
         print("Sorry, no diff > 1 :(")
         sys.exit()
         
     #final gene locations file
     genes_locations = genes_locations.sort_values("genes").reset_index(drop=True)
-    genes_locations.to_csv(output_path)
     
+    #return first set of decoded dots and their corresponding indicies
+    return genes_locations, dot_idx_filtered
     
+def dash_radial_decoding(location_path, codebook_path, n_neighbors=4,
+                         num_barcodes = 4, radius=1,diff=0,
+                         min_seed=4, hybs = 12, output_dir = "", 
+                         include_undecoded = False, triple_decode=True):
+    """
+    This function will perform radial decoding on all barcodes as reference. Dot sequences
+    that appear n number of times defined by min seed will be kept. Additionally, this function will run
+    radial_decoding parallel three times. The first pass is to decode most of the crowded dots, the second pass
+    will be with those dots removed, and the third will be with the dots removed from second round. Each round will recover 
+    significantly less than the previous round. Three rounds should maximize recovery. 
+    
+    Parameters 
+    ----------
+    location_path = path to location.csv
+    codebook_path = path to codebook showing at which channel and hyb a dot should appear
+    n_neighbors = number of nearest neighbor counting self expected
+    num_barcodes = number of total barcodes
+    radius = search radius using euclidean metric
+    diff = allowed barcode drops
+    min_seed = number of barcode seeds
+    cores = number of cores should match number of barcodes
+    hybs = total number of hybs
+    output_dir = directory to where you want the file outputted
+    include_undecoded = bool to output the undecoded dots
+    triple_decode=bool to perform another around of decoding
+    
+    Returns
+    --------
+    gene_locations.csv
+    """
+    #read in files and collect z info
+    locations = pd.read_csv(location_path)
+    codebook = pd.read_csv(codebook_path)
+    codebook = codebook.set_index(codebook.columns[0])
+    location_path_name = Path(location_path).name
+    z_info = location_path_name.split("_")[2].replace(".csv","")
+
+    #make directories
+    Path(output_dir).mkdir(parents=True, exist_ok = True)
+    output_path = Path(output_dir) / f"diff_{diff}_minseed_{min_seed}_z_{z_info}_finalgenes.csv"
+    
+    #run decoding first pass
+    decoded_1, indicies_used_1 = radial_decoding_parallel(locations, codebook, n_neighbors=n_neighbors,
+                    num_barcodes=num_barcodes, radius=radius,diff=diff,
+                    min_seed=min_seed, hybs = hybs, include_undecoded = False)
+    
+    #flatten 1st set of indicies used list
+    flattened_indicies_used = [element for sublist in indicies_used_1 for element in sublist]
+    
+    #remove already decoded dots
+    new_locations = locations.drop(flattened_indicies_used).reset_index(drop=True)
+    
+    #run decoding second pass with a search radius of 2 pixels
+    decoded_2, indicies_used_2 = radial_decoding_parallel(new_locations, codebook, n_neighbors=n_neighbors,
+                    num_barcodes=num_barcodes, radius=2,diff=diff,
+                    min_seed=min_seed, hybs = hybs, include_undecoded = include_undecoded)
+    if triple_decode == True:
+        #flatten 2nd set of indicies used list
+        flattened_indicies_used_2 = [element for sublist in indicies_used_2 for element in sublist]
+
+        #remove already decoded dots
+        new_locations_2 = new_locations.drop(flattened_indicies_used_2).reset_index(drop=True)
+
+        #run decoding third pass with a search radius of 2 pixels
+        decoded_3, indicies_used_3 = radial_decoding_parallel(new_locations_2, codebook, n_neighbors=n_neighbors,
+                        num_barcodes=num_barcodes, radius=2,diff=diff,
+                        min_seed=min_seed, hybs = hybs, include_undecoded = include_undecoded)
+        #in case include_indecoded is set to true
+        if include_undecoded == True:
+            decoded_2 = decoded_2[decoded_2["genes"] != "Undefined"]
+        #combine decoded dfs
+        decoded_combined = pd.concat([decoded_1, decoded_2, decoded_3])
+    else:
+        #combine decoded dfs
+        decoded_combined = pd.concat([decoded_1, decoded_2])
+    
+    #sort and reset index
+    final_decoded = decoded_combined.sort_values("genes").reset_index(drop=True)
+    
+#     #make df of dots used (use for later for incorporating labels)
+#     flattened_indicies_used_2 = [element for sublist in indicies_used_2 for element in sublist]
+#     final_set = flattened_indicies_used + flattened_indicies_used_2
+#     final_set = pd.DataFrame(final_set)
+    
+    #write files
+    final_decoded.to_csv(str(output_path))
+                         
