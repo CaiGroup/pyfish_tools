@@ -361,7 +361,7 @@ def deconvolute_one(image_path, image_ref, sigma_hpgb = 1, kern_rl = 5,
                     kern_lpgb = 3, sigma=(1.8,1.6,1.5,1.3), radius=(4,4,4,4),
                     model="gaussian", microscope="boc",
                     size=9,min_distance=10,threshold_abs=1000,
-                    num_peaks=1000, gamma=1, edge='raise', swapaxes=True,
+                    num_peaks=1000, gamma=1, hyb_offset=0, edge='raise', swapaxes=True,
                     noise= True, bkgrd_sub=True, remove_fiducial=False, 
                     match_hist=True, subtract=True, divide=False):
     
@@ -381,7 +381,8 @@ def deconvolute_one(image_path, image_ref, sigma_hpgb = 1, kern_rl = 5,
     min_distance = number of pixels to peaks need to be away for remove fiducial function
     threshold_abs = absolute threshold used in remove fiducial function
     num_peaks = number of total dots for remove fiducials
-    gamma = interger for gamma enhancement
+    gamma = interge for gamma enhancement
+    hyb_offset = number of hybcycles to subtract for file name adjustment
     edge = argument for bounding box in remove fiducials
     swapaxes = bool to swap axes when reading in an image
     noise = re-convolve image at the end
@@ -396,7 +397,14 @@ def deconvolute_one(image_path, image_ref, sigma_hpgb = 1, kern_rl = 5,
     orig_image_dir = Path(image_path).parent.parent
     output_folder = Path(orig_image_dir).with_name('deconvoluted_images')
     output_path = output_folder / Path(image_path).relative_to(orig_image_dir)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
+    if hyb_offset != 0:
+        hyb_number = int(output_path.parent.name.split("_")[1])
+        new_number = "HybCycle_" + str(hyb_number-offset)
+        pos_name = Path(image_path).name
+        output_path = output_path.parent.parent / new_number /pos_name
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+    else:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
     
     #read in image
     if swapaxes == True:
@@ -465,7 +473,7 @@ def deconvolute_many(images, image_ref, sigma_hpgb = 1, kern_rl = 5,
                     kern_lpgb = 3, sigma=(1.8,1.6,1.5,1.3), radius=(4,4,4,4),
                     model="gaussian", microscope="boc",
                     size=9,min_distance=10,threshold_abs=1000,
-                    num_peaks=1000, gamma = 1, edge='raise', swapaxes=True,
+                    num_peaks=1000, gamma = 1, hyb_offset=0, edge='raise', swapaxes=True,
                     noise= True, bkgrd_sub=True, remove_fiducial=False, 
                     match_hist=True, subtract=True, divide=False):
     
@@ -503,7 +511,7 @@ def deconvolute_many(images, image_ref, sigma_hpgb = 1, kern_rl = 5,
         deconvolute_one(images, image_ref, 
                        sigma_hpgb=sigma_hpgb, kern_rl=kern_rl, 
                        kern_lpgb=kern_lpgb, sigma=sigma, radius=radius,model=model, microscope=microscope,
-                       size=size,min_distance=min_distance,threshold_abs=threshold_abs,gamma=gamma,
+                       size=size,min_distance=min_distance,threshold_abs=threshold_abs,gamma=gamma,hyb_offset=hyb_offset,
                        num_peaks=num_peaks, edge=edge, swapaxes=swapaxes,
                        noise=noise, bkgrd_sub=bkgrd_sub, remove_fiducial=remove_fiducial, 
                        match_hist=match_hist, subtract=subtract, divide=divide)
@@ -513,7 +521,7 @@ def deconvolute_many(images, image_ref, sigma_hpgb = 1, kern_rl = 5,
             for path in images:
                 fut = exe.submit(deconvolute_one, path, image_ref, sigma_hpgb=sigma_hpgb, kern_rl=kern_rl, 
                        kern_lpgb=kern_lpgb, sigma=sigma, radius=radius,model=model, microscope=microscope,
-                       size=size,min_distance=min_distance,threshold_abs=threshold_abs,gamma=gamma,
+                       size=size,min_distance=min_distance,threshold_abs=threshold_abs,gamma=gamma,hyb_offset=hyb_offset,
                        num_peaks=num_peaks, edge=edge, swapaxes=swapaxes,
                        noise=noise, bkgrd_sub=bkgrd_sub, remove_fiducial=remove_fiducial, 
                        match_hist=match_hist, subtract=subtract, divide=divide)
@@ -524,7 +532,7 @@ def deconvolute_many(images, image_ref, sigma_hpgb = 1, kern_rl = 5,
                 print(f'Path {path} completed after {time.time() - start} seconds')
                 
 def bkgrd_corr_one(image_path, correction_type = None, stack_bkgrd=None, swapaxes=False, 
-                   z=2, size=2048, gamma = 1.4, sigma = 40, rb_radius=5, 
+                   z=2, size=2048, gamma = 1.4, sigma = 40, rb_radius=5, hyb_offset=0,
                    rollingball = False, lowpass=True, match_hist=True, subtract=True, divide=False):
     """
     background correct one image only
@@ -538,7 +546,9 @@ def bkgrd_corr_one(image_path, correction_type = None, stack_bkgrd=None, swapaxe
     z=number of z
     size=x and y shape
     gamma = int
-    simga = int
+    sigma = int
+    rb_radius = rolling ball size
+    hyb_offset = number of hybcycles to subtract for file name adjustment
     lowpass = do a low pass gaussian filter
     rollingball = do a rolling ball subtraction
     lowpass = bool to blur image with gaussian
@@ -546,12 +556,18 @@ def bkgrd_corr_one(image_path, correction_type = None, stack_bkgrd=None, swapaxe
     subtract = bool to subtract blurred image from raw
     divide = bool to divide blurred image from raw
     """
-    
+   
     orig_image_dir = Path(image_path).parent.parent
     output_folder = Path(orig_image_dir).with_name('pre_processed_images')
     output_path = output_folder / Path(image_path).relative_to(orig_image_dir)
-    
-    output_path.parent.mkdir(parents=True, exist_ok=True)
+    if hyb_offset != 0:
+        hyb_number = int(output_path.parent.name.split("_")[1])
+        new_number = "HybCycle_" + str(hyb_number-offset)
+        pos_name = Path(image_path).name
+        output_path = output_path.parent.parent / new_number /pos_name
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+    else:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
     
     if swapaxes == True:
         image = tf.imread(image_path)
@@ -600,7 +616,7 @@ def bkgrd_corr_one(image_path, correction_type = None, stack_bkgrd=None, swapaxe
         tf.imwrite(str(output_path), corr_img)
 
 def correct_many(images, correction_type = None, stack_bkgrd=None, swapaxes=False,
-                 z=2, size=2048, gamma = 1.4, sigma=40, rb_radius=5, 
+                 z=2, size=2048, gamma = 1.4, sigma=40, rb_radius=5, hyb_offset=0,
                  rollingball=False, lowpass = True, match_hist=True, subtract=True, divide=False):
     """
     function to correct all image
@@ -626,13 +642,13 @@ def correct_many(images, correction_type = None, stack_bkgrd=None, swapaxes=Fals
     
     if type(images) != list:
         bkgrd_corr_one(images, correction_type,stack_bkgrd, swapaxes, z, size,  
-                       gamma, sigma, rb_radius, rollingball, lowpass,  match_hist, subtract, divide)
+                       gamma, sigma, rb_radius, hyb_offset, rollingball, lowpass,  match_hist, subtract, divide)
     else:
         with ProcessPoolExecutor(max_workers=12) as exe:
             futures = {}
             for path in images:
                 fut = exe.submit(bkgrd_corr_one, path, correction_type, stack_bkgrd,
-                                 swapaxes, z, size,  gamma, sigma,rb_radius,
+                                 swapaxes, z, size,  gamma, sigma,rb_radius,hyb_offset,
                                  rollingball, lowpass,  match_hist, subtract, divide)
                 futures[fut] = path
 
