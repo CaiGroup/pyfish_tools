@@ -99,7 +99,7 @@ def combine_dot_files(path_dots, hyb_start=0,hyb_end=63,num_HybCycle=32, pos= 0,
             comb_ch = comb[comb["ch"]==channel]
             for z in range(num_z):
                 comb_z = comb_ch[comb_ch["z"]==z]
-                output_folder = dot_path_list[0][0].parent.parent.parent.parent.parent / "dots_comb"
+                output_folder = dot_path_list[0][0].parent.parent.parent.parent/ "dots_comb"
                 output_path = output_folder  /f"Channel_{channel}"/f"MMStack_Pos{pos}"/f"Threshold_{i}"/"Dot_Locations"
                 output_path.mkdir(parents=True, exist_ok=True)
                 comb_z.to_csv(str(output_path) + f"/locations_z_{z}.csv", index=False)
@@ -495,7 +495,7 @@ def dot_detection(img_src, fwhm = 4.0, HybCycle=0, size_cutoff=3,
             z=0
             peaks = daofinder(img[channel-1], threshold=opt_thresh,fwhm=fwhm)
             peaks = peaks.to_pandas()
-            peaks = peaks[["xcentroid" ,"ycentroid", "flux"]].values
+            peaks = peaks[["xcentroid" ,"ycentroid", "flux", "peak"]].values
             ch = np.zeros(len(peaks))+channel
             z_slice = np.zeros(len(peaks))+z
             peaks = np.append(peaks, ch.reshape(len(ch),1), axis=1)
@@ -506,7 +506,7 @@ def dot_detection(img_src, fwhm = 4.0, HybCycle=0, size_cutoff=3,
             for z in range(img.shape[0]):
                 peaks = daofinder(img[z][channel-1], threshold=opt_thresh, fwhm=fwhm)
                 peaks = peaks.to_pandas()
-                peaks = peaks[["xcentroid" ,"ycentroid", "flux"]].values
+                peaks = peaks[["xcentroid" ,"ycentroid", "flux", "peak"]].values
                 ch = np.zeros(len(peaks))+channel
                 z_slice = np.zeros(len(peaks))+z
                 peaks = np.append(peaks, ch.reshape(len(ch),1), axis=1)
@@ -516,9 +516,9 @@ def dot_detection(img_src, fwhm = 4.0, HybCycle=0, size_cutoff=3,
             
         #make df and reorganize        
         dots = pd.DataFrame(dots)
-        dots.columns = ["x", "y", "intensity","ch", "z"]
+        dots.columns = ["x", "y", "flux","max intensity","ch", "z"]
         dots["hyb"] = HybCycle
-        dots = dots[["hyb","ch","x","y","z", "intensity"]]
+        dots = dots[["hyb","ch","x","y","z", "flux","max intensity"]]
 
         #get area
         #subtract 1 from channels to get right slice
@@ -551,7 +551,7 @@ def dot_detection(img_src, fwhm = 4.0, HybCycle=0, size_cutoff=3,
         
         #construct final df
         dots["size"] = area_list
-        dots = dots[["hyb","ch","x","y","z","intensity", "size"]]
+        dots = dots[["hyb","ch","x","y","z", "flux","max intensity", "size"]]
         #write out plot
         output_path_adj = output_path.replace(".csv", f"_{opt_thresh}.csv")
         #filter by size
@@ -622,7 +622,7 @@ def dot_detection(img_src, fwhm = 4.0, HybCycle=0, size_cutoff=3,
             z=0
             peaks = daofinder(img[channel-1], threshold=opt_thresh,fwhm=fwhm)
             peaks = peaks.to_pandas()
-            peaks = peaks[["xcentroid" ,"ycentroid", "flux"]].values
+            peaks = peaks[["xcentroid" ,"ycentroid", "flux", "peak"]].values
             ch = np.zeros(len(peaks))+channel
             z_slice = np.zeros(len(peaks))+z
             peaks = np.append(peaks, ch.reshape(len(ch),1), axis=1)
@@ -633,7 +633,7 @@ def dot_detection(img_src, fwhm = 4.0, HybCycle=0, size_cutoff=3,
             for z in range(img.shape[0]):
                 peaks = daofinder(img[z][channel-1], threshold=opt_thresh, fwhm=fwhm)
                 peaks = peaks.to_pandas()
-                peaks = peaks[["xcentroid" ,"ycentroid", "flux"]].values
+                peaks = peaks[["xcentroid" ,"ycentroid", "flux", "peak"]].values
                 ch = np.zeros(len(peaks))+channel
                 z_slice = np.zeros(len(peaks))+z
                 peaks = np.append(peaks, ch.reshape(len(ch),1), axis=1)
@@ -643,9 +643,9 @@ def dot_detection(img_src, fwhm = 4.0, HybCycle=0, size_cutoff=3,
             
         #make df and reorganize        
         dots = pd.DataFrame(dots)
-        dots.columns = ["x", "y", "intensity","ch", "z"]
+        dots.columns = ["x", "y", "flux","max intensity","ch", "z"]
         dots["hyb"] = HybCycle
-        dots = dots[["hyb","ch","x","y","z", "intensity"]]
+        dots = dots[["hyb","ch","x","y","z", "flux","max intensity"]]
 
         #get area
         #subtract 1 from channels to get right slice
@@ -678,7 +678,7 @@ def dot_detection(img_src, fwhm = 4.0, HybCycle=0, size_cutoff=3,
         
         #construct final df
         dots["size"] = area_list
-        dots = dots[["hyb","ch","x","y","z","intensity", "size"]]
+        dots = dots[["hyb","ch","x","y","z", "flux","max intensity", "size"]]
         #write out plot
         output_path_adj = output_path.replace(".csv", f"_{opt_thresh}.csv")
         #filter by size
