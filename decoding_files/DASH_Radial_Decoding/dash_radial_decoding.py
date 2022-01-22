@@ -534,7 +534,7 @@ def radial_decoding_parallel(locations,codebook, n_neighbors=4,
     return genes_locations, dot_idx_filtered
     
 def dash_radial_decoding(location_path, codebook_path, n_neighbors=4,
-                         num_barcodes = 4, first_radius=1, second_radius=1,third_radius=2,diff=0,
+                         num_barcodes = 4, first_radius=1, second_radius=1,diff=0,
                          min_seed=4, hybs = 12, output_dir = "", 
                          include_undecoded = False, triple_decode=True):
     """
@@ -596,9 +596,9 @@ def dash_radial_decoding(location_path, codebook_path, n_neighbors=4,
         #remove already decoded dots
         new_locations_2 = new_locations.drop(flattened_indicies_used_2).reset_index(drop=True)
 
-        #run decoding third pass with same or different search radius
+        #run decoding third pass with 2 pixel search
         decoded_3, indicies_used_3 = radial_decoding_parallel(new_locations_2, codebook, n_neighbors=n_neighbors,
-                        num_barcodes=num_barcodes, radius=third_radius,diff=diff,
+                        num_barcodes=num_barcodes, radius=2,diff=diff,
                         min_seed=min_seed, hybs = hybs, include_undecoded = include_undecoded)
         #in case include_indecoded is set to true
         if include_undecoded == True:
