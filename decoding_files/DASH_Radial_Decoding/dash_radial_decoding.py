@@ -300,9 +300,9 @@ def radial_decoding(locations,num_barcodes = 4,
         total_distance = [sublist for sublist in temp_dist if sublist != []]
         #remove arrays less than allowed diff
         #there will be a -1 for distance array because we wouldn't have distance value for self
-        if len(orig_idx) >= (n_neighbors-diff):
+        if len(orig_idx) >= (num_barcodes-diff):
             neighbor_list2.append(orig_idx)
-        if len(total_distance) >= (n_neighbors-diff-1):
+        if len(total_distance) >= (num_barcodes-diff-1):
             distance_list2.append(total_distance)
         else:
             continue  
