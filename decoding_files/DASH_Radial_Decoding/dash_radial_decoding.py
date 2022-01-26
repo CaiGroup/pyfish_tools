@@ -199,8 +199,8 @@ def pick_best_codeword(filtered_set, codeword_scores,total_distances):
     
     return complete_set
     
-def radial_decoding(locations, n_neighbors=4,
-                    num_barcodes = 4, radius=np.sqrt(2),diff=0,
+def radial_decoding(locations,num_barcodes = 4, 
+                    radius=np.sqrt(2),diff=0,
                     seed=0, hybs = 12):
     """
     
@@ -215,7 +215,6 @@ def radial_decoding(locations, n_neighbors=4,
     Parameters
     ----------
     locations = locations.csv file
-    n_neighbors = number of nearest neighbor counting self expected
     num_barcodes = number of total barcodes
     radius = search radius using euclidean metric
     diff = allowed barcode drops
@@ -229,7 +228,7 @@ def radial_decoding(locations, n_neighbors=4,
     """
     #using sklearn nearest neighbor algorithm to find nearest dots
     #initialize algorithm
-    neigh = NearestNeighbors(n_neighbors=n_neighbors, radius=radius, metric="euclidean", n_jobs=1)
+    neigh = NearestNeighbors(n_neighbors=num_barcodes, radius=radius, metric="euclidean", n_jobs=1)
     
     barcoding_round = []
     #separate locations by barcoding round
@@ -373,8 +372,7 @@ def radial_decoding(locations, n_neighbors=4,
     #return indicies of nearby dots from seed, ambiguity scores, codeword scores and total distance per codeword
     return dot_idx,ambiguity_scores,codeword_score_list,total_distance_list
 
-def radial_decoding_parallel(locations,codebook, n_neighbors=4,
-                             num_barcodes = 4, radius=1,diff=0,
+def radial_decoding_parallel(locations,codebook,num_barcodes = 4, radius=1,diff=0,
                              min_seed=4, hybs = 12, include_undecoded = False):
     """This function will perform radial decoding on all barcodes as reference. Dot sequences
     that appear n number of times defined by min seed will be kept.
@@ -382,7 +380,6 @@ def radial_decoding_parallel(locations,codebook, n_neighbors=4,
     ----------
     locations = location.csv file
     codebook = codebook.csv
-    n_neighbors = number of nearest neighbor counting self expected
     num_barcodes = number of total barcodes
     radius = search radius using euclidean metric
     diff = allowed barcode drops
@@ -400,7 +397,7 @@ def radial_decoding_parallel(locations,codebook, n_neighbors=4,
         futures = []
         for i in range(num_barcodes):
             seed = i
-            fut = exe.submit(radial_decoding, locations, n_neighbors,
+            fut = exe.submit(radial_decoding, locations,
                              num_barcodes, radius,diff,
                              seed, hybs)
             futures.append(fut)
@@ -533,7 +530,7 @@ def radial_decoding_parallel(locations,codebook, n_neighbors=4,
     #return first set of decoded dots and their corresponding indicies
     return genes_locations, dot_idx_filtered
     
-def dash_radial_decoding(location_path, codebook_path, n_neighbors=4,
+def dash_radial_decoding(location_path, codebook_path,
                          num_barcodes = 4, first_radius=1, second_radius=1,diff=0,
                          min_seed=4, hybs = 12, output_dir = "", 
                          include_undecoded = False, triple_decode=True):
@@ -548,7 +545,6 @@ def dash_radial_decoding(location_path, codebook_path, n_neighbors=4,
     ----------
     location_path = path to location.csv
     codebook_path = path to codebook showing at which channel and hyb a dot should appear
-    n_neighbors = number of nearest neighbor counting self expected
     num_barcodes = number of total barcodes
     radius = search radius using euclidean metric
     diff = allowed barcode drops
@@ -575,7 +571,7 @@ def dash_radial_decoding(location_path, codebook_path, n_neighbors=4,
     output_path = Path(output_dir) / f"diff_{diff}_minseed_{min_seed}_z_{z_info}_finalgenes.csv"
     
     #run decoding first pass
-    decoded_1, indicies_used_1 = radial_decoding_parallel(locations, codebook, n_neighbors=n_neighbors,
+    decoded_1, indicies_used_1 = radial_decoding_parallel(locations, codebook,
                     num_barcodes=num_barcodes, radius=first_radius,diff=diff,
                     min_seed=min_seed, hybs = hybs, include_undecoded = False)
     
@@ -586,7 +582,7 @@ def dash_radial_decoding(location_path, codebook_path, n_neighbors=4,
     new_locations = locations.drop(flattened_indicies_used).reset_index(drop=True)
     
     #run decoding second pass with same or different search radius
-    decoded_2, indicies_used_2 = radial_decoding_parallel(new_locations, codebook, n_neighbors=n_neighbors,
+    decoded_2, indicies_used_2 = radial_decoding_parallel(new_locations, codebook,
                     num_barcodes=num_barcodes, radius=second_radius,diff=diff,
                     min_seed=min_seed, hybs = hybs, include_undecoded = include_undecoded)
     if triple_decode == True:
@@ -597,7 +593,7 @@ def dash_radial_decoding(location_path, codebook_path, n_neighbors=4,
         new_locations_2 = new_locations.drop(flattened_indicies_used_2).reset_index(drop=True)
 
         #run decoding third pass with 2 pixel search
-        decoded_3, indicies_used_3 = radial_decoding_parallel(new_locations_2, codebook, n_neighbors=n_neighbors,
+        decoded_3, indicies_used_3 = radial_decoding_parallel(new_locations_2, codebook,
                         num_barcodes=num_barcodes, radius=2,diff=diff,
                         min_seed=min_seed, hybs = hybs, include_undecoded = include_undecoded)
         #in case include_indecoded is set to true

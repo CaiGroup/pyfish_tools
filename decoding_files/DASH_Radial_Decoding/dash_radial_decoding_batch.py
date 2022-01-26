@@ -11,7 +11,6 @@ print(f'This is task {JOB_ID}')
 #fill parameters
 locations_path = glob.glob(f"/groups/CaiLab/personal/Lex/raw/Linus_10k_cleared_080918_NIH3T3/notebook_pyfiles/dots_comb/Channel_1/MMStack_Pos0/Threshold_{JOB_ID}/Dot_Locations/*")
 codebook_path = "/groups/CaiLab/personal/Lex/raw/Linus_10k_cleared_080918_NIH3T3/barcode_key/codebook_string.csv"
-n_neighbors = 4
 num_barcodes = 4
 #multiply radius by 100 to get search in nm
 first_radius=1
@@ -25,12 +24,12 @@ output_dir = f"/groups/CaiLab/personal/Lex/raw/Linus_10k_cleared_080918_NIH3T3/n
 
 if len(locations_path) > 1:
     for locations in locations_path:
-        dash_radial_decoding(locations, codebook_path, n_neighbors,
+        dash_radial_decoding(locations, codebook_path,
                              num_barcodes, first_radius, second_radius,
                              diff, min_seed, hybs, 
                              output_dir, include_undecoded, triple_decode)
 else:
-    dash_radial_decoding(locations_path[0], codebook_path, n_neighbors,
+    dash_radial_decoding(locations_path[0], codebook_path,
                          num_barcodes, first_radius, second_radius,
                          diff, min_seed, hybs, 
                          output_dir, include_undecoded, triple_decode)
