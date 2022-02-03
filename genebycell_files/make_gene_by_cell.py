@@ -7,6 +7,7 @@ updated: 01/07/22
 import pandas as pd
 import numpy as np
 from pathlib import Path
+import os
 
 def make_genebycell(gene_loc_dir, output_dir = None, check_thresholds=True, channel = "all"):
     """
@@ -56,8 +57,23 @@ def make_genebycell(gene_loc_dir, output_dir = None, check_thresholds=True, chan
         #all positions
         genebycell_list = []
         for i in range(len(gene_loc_dir)):
-            #read in df
-            pos = pd.read_csv(gene_loc_dir[i], index_col=0)
+            try:
+                #read in df
+                pos = pd.read_csv(gene_loc_dir[i], index_col=0)
+            except FileNotFoundError:
+                #output readme file if file not found
+                path = final_output.parent / "missing_files.txt"
+                #check if text file exists
+                if os.path.isfile(str(path)):
+                    with open(str(path),"a") as f:
+                        f.write(f"{str(Path(gene_loc_dir[i]).parent.name)} gene locations missing. Could be that either no genes were decoded in this position or no cells are present (check image or masks)." + "\n")
+                        f.close()
+                    continue
+                else:
+                    with open(str(path),"w+") as f:
+                        f.write(f"{str(Path(gene_loc_dir[i]).parent.name)} gene locations missing. Could be that either no genes were decoded in this position or no cells are present (check image or masks)." + "\n")
+                        f.close()
+                    continue
             #get counts of each gene per cell
             cell_counts = []
             for j in np.unique(pos["cell number"].values):
