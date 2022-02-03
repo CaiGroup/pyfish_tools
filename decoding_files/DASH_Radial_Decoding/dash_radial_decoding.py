@@ -201,7 +201,7 @@ def pick_best_codeword(filtered_set, codeword_scores,total_distances):
     
 def radial_decoding(locations,num_barcodes = 4, 
                     radius=np.sqrt(2),diff=0,
-                    seed=0, hybs = 12):
+                    seed=0, hybs = 12, decode_across = False):
     """
     
     This function will decode dots utilizing kNN algorithm from sklearn with a euclidean distance 
@@ -220,6 +220,7 @@ def radial_decoding(locations,num_barcodes = 4,
     diff = allowed barcode drops
     seed = which barcode set to use as reference
     hybs = total number of hybs
+    decode_across = bool for decoding across
     
     Returns
     --------
@@ -331,30 +332,49 @@ def radial_decoding(locations,num_barcodes = 4,
                 else:
                     total_distance_values += distance_list2[i][j-1][0]
             else:
-                #generate scoring system
-                dist_values = (np.linspace(0,2,len(neighbor_list2[i][j])+1)/2)[::-1]
-                int_values = (np.linspace(0,1,len(neighbor_list2[i][j])+1)/2)[::-1]
-                size_values = (np.linspace(0,0.5,len(neighbor_list2[i][j])+1)/2)[::-1]
-                #get dot traits
-                #note that pandas iloc preserve order matching slice order
-                dot_traits = locations.iloc[neighbor_list2[i][j]]
-                #generate score table
-                trait_score = np.zeros(len(dot_traits))
-                #rank dots
-                int_score = np.argsort(dot_traits["flux"]).values[::-1]
-                size_score = np.argsort(dot_traits["size"]).values[::-1]
-                #calculate best score
-                #note that distance is already sorted
-                for _ in range(len(trait_score)):
-                    trait_score[int_score[_]] += int_values[_]
-                    trait_score[_] += dist_values[_]
-                    trait_score[size_score[_]] += size_values[_]
-                #get highest scoring index, then get all scores
-                best_dot_idx = np.argmax(trait_score)
-                temp.append(neighbor_list2[i][j][best_dot_idx])
-                ambiguity += len(neighbor_list2[i][j])
-                codeword_score += trait_score[best_dot_idx]
-                total_distance_values += distance_list2[i][j-1][best_dot_idx]
+                if decode_across == False:
+                    #generate scoring system
+                    dist_values = (np.linspace(0,2,len(neighbor_list2[i][j])+1)/2)[::-1]
+                    int_values = (np.linspace(0,1,len(neighbor_list2[i][j])+1)/2)[::-1]
+                    size_values = (np.linspace(0,0.5,len(neighbor_list2[i][j])+1)/2)[::-1]
+                    #get dot traits
+                    #note that pandas iloc preserve order matching slice order
+                    dot_traits = locations.iloc[neighbor_list2[i][j]]
+                    #generate score table
+                    trait_score = np.zeros(len(dot_traits))
+                    #rank dots
+                    int_score = np.argsort(dot_traits["flux"]).values[::-1]
+                    size_score = np.argsort(dot_traits["size"]).values[::-1]
+                    #calculate best score
+                    #note that distance is already sorted
+                    for _ in range(len(trait_score)):
+                        trait_score[int_score[_]] += int_values[_]
+                        trait_score[_] += dist_values[_]
+                        trait_score[size_score[_]] += size_values[_]
+                    #get highest scoring index, then get all scores
+                    best_dot_idx = np.argmax(trait_score)
+                    temp.append(neighbor_list2[i][j][best_dot_idx])
+                    ambiguity += len(neighbor_list2[i][j])
+                    codeword_score += trait_score[best_dot_idx]
+                    total_distance_values += distance_list2[i][j-1][best_dot_idx]
+                else:
+                    #int and size will have no contribution to choice only distance
+                    dist_values = (np.linspace(0,2,len(neighbor_list2[i][j])+1)/2)[::-1]
+                    #get dot traits
+                    #note that pandas iloc preserve order matching slice order
+                    dot_traits = locations.iloc[neighbor_list2[i][j]]
+                    #generate score table
+                    trait_score = np.zeros(len(dot_traits))
+                    #calculate best score
+                    #note that distance is already sorted
+                    for _ in range(len(trait_score)):
+                        trait_score[_] += dist_values[_]
+                    #get highest scoring index, then get all scores
+                    best_dot_idx = np.argmax(trait_score)
+                    temp.append(neighbor_list2[i][j][best_dot_idx])
+                    ambiguity += len(neighbor_list2[i][j])
+                    codeword_score += trait_score[best_dot_idx]
+                    total_distance_values += distance_list2[i][j-1][best_dot_idx]
         #calculate final scores
         ambiguity_score_final = ambiguity-len(neighbor_list2[i])
         codeword_score -= ambiguity_score_final 
@@ -373,7 +393,7 @@ def radial_decoding(locations,num_barcodes = 4,
     return dot_idx,ambiguity_scores,codeword_score_list,total_distance_list
 
 def radial_decoding_parallel(locations,codebook,num_barcodes = 4, radius=1,diff=0,
-                             min_seed=4, hybs = 12, include_undecoded = False):
+                             min_seed=4, hybs = 12, include_undecoded = False, decode_across = False):
     """This function will perform radial decoding on all barcodes as reference. Dot sequences
     that appear n number of times defined by min seed will be kept.
     Parameters 
@@ -386,6 +406,7 @@ def radial_decoding_parallel(locations,codebook,num_barcodes = 4, radius=1,diff=
     min_seed = number of barcode seeds
     hybs = total number of hybs
     include_undecoded = bool to output the undecoded dots
+    decode_across = bool for decoding across
     
     Returns
     --------
@@ -399,7 +420,7 @@ def radial_decoding_parallel(locations,codebook,num_barcodes = 4, radius=1,diff=
             seed = i
             fut = exe.submit(radial_decoding, locations,
                              num_barcodes, radius,diff,
-                             seed, hybs)
+                             seed, hybs, decode_across)
             futures.append(fut)
             
     #collect result from futures objects
@@ -533,7 +554,8 @@ def radial_decoding_parallel(locations,codebook,num_barcodes = 4, radius=1,diff=
 def dash_radial_decoding(location_path, codebook_path,
                          num_barcodes = 4, first_radius=1, second_radius=1,diff=0,
                          min_seed=4, hybs = 12, output_dir = "", 
-                         include_undecoded = False, triple_decode=True):
+                         include_undecoded = False, 
+                         triple_decode=True, decode_across = False):
     """
     This function will perform radial decoding on all barcodes as reference. Dot sequences
     that appear n number of times defined by min seed will be kept. Additionally, this function will run
@@ -554,6 +576,7 @@ def dash_radial_decoding(location_path, codebook_path,
     output_dir = directory to where you want the file outputted
     include_undecoded = bool to output the undecoded dots
     triple_decode=bool to perform another around of decoding
+    decode_across = bool for decoding across
     
     Returns
     --------
@@ -573,7 +596,7 @@ def dash_radial_decoding(location_path, codebook_path,
     #run decoding first pass
     decoded_1, indicies_used_1 = radial_decoding_parallel(locations, codebook,
                     num_barcodes=num_barcodes, radius=first_radius,diff=diff,
-                    min_seed=min_seed, hybs = hybs, include_undecoded = False)
+                    min_seed=min_seed, hybs = hybs, include_undecoded = False, decode_across=decode_across)
     
     #flatten 1st set of indicies used list
     flattened_indicies_used = [element for sublist in indicies_used_1 for element in sublist]
@@ -583,8 +606,9 @@ def dash_radial_decoding(location_path, codebook_path,
     
     #run decoding second pass with same or different search radius
     decoded_2, indicies_used_2 = radial_decoding_parallel(new_locations, codebook,
-                    num_barcodes=num_barcodes, radius=second_radius,diff=diff,
-                    min_seed=min_seed, hybs = hybs, include_undecoded = include_undecoded)
+                                                          num_barcodes=num_barcodes, radius=second_radius,diff=diff,
+                                                          min_seed=min_seed, hybs = hybs, include_undecoded = include_undecoded, 
+                                                          decode_across=decode_across)
     if triple_decode == True:
         #flatten 2nd set of indicies used list
         flattened_indicies_used_2 = [element for sublist in indicies_used_2 for element in sublist]
@@ -593,14 +617,17 @@ def dash_radial_decoding(location_path, codebook_path,
         new_locations_2 = new_locations.drop(flattened_indicies_used_2).reset_index(drop=True)
 
         #run decoding third pass with 2 pixel search
-        decoded_3, indicies_used_3 = radial_decoding_parallel(new_locations_2, codebook,
+        try:
+            decoded_3, indicies_used_3 = radial_decoding_parallel(new_locations_2, codebook,
                         num_barcodes=num_barcodes, radius=2,diff=diff,
-                        min_seed=min_seed, hybs = hybs, include_undecoded = include_undecoded)
-        #in case include_indecoded is set to true
-        if include_undecoded == True:
-            decoded_2 = decoded_2[decoded_2["genes"] != "Undefined"]
-        #combine decoded dfs
-        decoded_combined = pd.concat([decoded_1, decoded_2, decoded_3])
+                        min_seed=min_seed, hybs = hybs, include_undecoded = include_undecoded, decode_across=decode_across)
+            #in case include_undecoded is set to true
+            if include_undecoded == True:
+                decoded_2 = decoded_2[decoded_2["genes"] != "Undefined"]
+            #combine decoded dfs
+            decoded_combined = pd.concat([decoded_1, decoded_2, decoded_3])
+        except:
+            decoded_combined = pd.concat([decoded_1, decoded_2])   
     else:
         #combine decoded dfs
         decoded_combined = pd.concat([decoded_1, decoded_2])
