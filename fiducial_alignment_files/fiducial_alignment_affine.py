@@ -20,9 +20,6 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 #organization packages
 from pathlib import Path
 import glob
-# #import matlab packages
-# import matlab.engine
-# import matlab
 #ignore warnings
 import warnings
 warnings.filterwarnings("ignore")
@@ -70,7 +67,7 @@ def get_region_around(im, center, size, normalize=True, edge='raise'):
         return region
     
 def get_alignment_dots(image, region_size=7, min_distance=10, 
-                       threshold_abs=500, num_peaks=1000, eng = None, radial_center = False):
+                       threshold_abs=500, num_peaks=1000):
     """
     This funtion will pick dots using skimage.feature.peak_local_max then generate a bounding box
     for that dot. The isolated dot will then be fitted with a 2d gaussian  or radial centered to get subpixel centers.
@@ -82,8 +79,6 @@ def get_alignment_dots(image, region_size=7, min_distance=10,
     min_distance = minimum number of pixels separating peaks (arg for peal_local_max)
     threshold_abs = minimum absolute pixel intensity
     num_peaks = number of desired dots
-    eng = none or matlab.engine.start_matlab() for radial centering
-    radial_center = bool for radial centering (if false it will try to gaussian fit)
     
     Returns
     -------
@@ -102,47 +97,25 @@ def get_alignment_dots(image, region_size=7, min_distance=10,
     #cand should by y,x coord
     centroids = []
     for cand in dot_cands:
-        if radial_center ==  False:
-            try:
-                im_data = get_region_around(image, cand, region_size)
-                x_g, y_g = centroid_2dg(im_data)
-                y_offset = np.abs(y_g-(region_size // 2))
-                x_offset = np.abs(x_g-(region_size // 2))
-                #apply offset to dots
-                if y_g > (region_size // 2):
-                    y = cand[0]+y_offset
-                else:
-                    y = cand[0]-y_offset
-                if x_g > (region_size // 2):
-                    x = cand[1]+x_offset
-                else:
-                    x = cand[1]-x_offset
-                centroids.append([x, y])
-            except ValueError:
-                continue
-            except IndexError:
-                continue
-        else:  
-            #get bounds
+        try:
             im_data = get_region_around(image, cand, region_size)
-            #converts python 2d array to matlab 2d array
-            mat_blob = matlab.double(im_data.tolist())
-            #return subpixel center and adjust for python indexing
-            x_rad,y_rad,sigma = eng.radialcenter(mat_blob, nargout=3)
-            x_rad = x_rad-1
-            y_rad = y_rad-1
-            y_offset = np.abs(y_rad-(region_size // 2))
-            x_offset = np.abs(x_rad-(region_size // 2))
+            x_g, y_g = centroid_2dg(im_data)
+            y_offset = np.abs(y_g-(region_size // 2))
+            x_offset = np.abs(x_g-(region_size // 2))
             #apply offset to dots
-            if y_rad > (region_size // 2):
+            if y_g > (region_size // 2):
                 y = cand[0]+y_offset
             else:
                 y = cand[0]-y_offset
-            if x_rad > (region_size // 2):
+            if x_g > (region_size // 2):
                 x = cand[1]+x_offset
             else:
                 x = cand[1]-x_offset
             centroids.append([x, y])
+        except ValueError:
+            continue
+        except IndexError:
+            continue
             
     return centroids
 
@@ -162,6 +135,7 @@ def nearest_neighbors(ref_points, fit_points, max_dist=None):
     -------
     dists and a list of indices of fit_points which correspond.
     """
+    
     #initiate neighbors
     ref_neighbors = nbrs.NearestNeighbors(n_neighbors=1).fit(ref_points)
     #perform search
@@ -203,13 +177,14 @@ def nearest_neighbors_transform(ref_points, fit_points, max_dist=None):
     -------
     transform object, distances
     """
-    
-    #check to see if they are the same length
-    assert len(ref_points) == len(fit_points), 'reference and fit points must be same length'
-    
+
     #convert lists to arrays
     ref_points = np.array(ref_points)
     fit_points = np.array(fit_points)
+    
+    #check if dots have nan, if so remove
+    ref_points = ref_points[~np.isnan(ref_points).any(axis=1)]
+    fit_points = fit_points[~np.isnan(fit_points).any(axis=1)]
     
     #find nearest neighbors
     dists, ref_inds, fit_inds = nearest_neighbors(ref_points, fit_points, max_dist=max_dist)
@@ -224,7 +199,7 @@ def nearest_neighbors_transform(ref_points, fit_points, max_dist=None):
     return tform, dists
 
 def alignment_error(corrected_image, original_ref, dist_ori, region_size=7, min_distance=10, 
-                       threshold_abs=500, num_peaks=1000, max_dist=2, eng=None,radial_center = False):
+                       threshold_abs=500, num_peaks=1000, max_dist=2):
     
     """
    This function will calculate the average error in distance from reference of the tranformed image.
@@ -239,8 +214,6 @@ def alignment_error(corrected_image, original_ref, dist_ori, region_size=7, min_
    threshold_abs = the absolute intenstiy threshold
    num_peaks = number of dots detected
    max_dist = number of pixels for search radius to find matching dots
-   eng = none or matlab.engine.start_matlab() for radial centering
-   radial_center = bool to perform radial center instead of gaussian
    
    Returns
    -------
@@ -254,7 +227,7 @@ def alignment_error(corrected_image, original_ref, dist_ori, region_size=7, min_
         for c in range(corrected_image.shape[0]):
             #get alignment dots
             exp_dots = get_alignment_dots(corrected_image[c], region_size=region_size, min_distance=min_distance, 
-                           threshold_abs=threshold_abs, num_peaks=num_peaks,eng=eng,radial_center=radial_center)
+                           threshold_abs=threshold_abs, num_peaks=num_peaks)
             exp_dots_list.append(exp_dots)
     else:
         for c in range(corrected_image.shape[1]):
@@ -262,14 +235,24 @@ def alignment_error(corrected_image, original_ref, dist_ori, region_size=7, min_
             tiff_max = np.max(corrected_image[:,c,:,:], axis=0)
             #get alignment dots per channel
             exp_dots = get_alignment_dots(tiff_max, region_size=region_size, min_distance=min_distance, 
-                           threshold_abs=threshold_abs, num_peaks=num_peaks,eng=eng,radial_center=radial_center)
+                           threshold_abs=threshold_abs, num_peaks=num_peaks)
             exp_dots_list.append(exp_dots)
 
     #get matching dots for each channel and get average distance per channel
     new_dist_by_channel = []
     old_dist_by_channel = []
     for i in range(len(original_ref)):
-        dists_new, ref_indices, fit_indices = nearest_neighbors(original_ref[i], exp_dots_list[i], max_dist=max_dist)
+        #convert lists to arrays
+        ref_points = np.array(original_ref[i])
+        fit_points = np.array(exp_dots_list[i])
+
+        #check if dots have nan, if so remove
+        ref_points = ref_points[~np.isnan(ref_points).any(axis=1)]
+        fit_points = fit_points[~np.isnan(fit_points).any(axis=1)]
+        
+        #get new distance
+        dists_new, _, _ = nearest_neighbors(ref_points, fit_points, max_dist=max_dist)
+        
         new_dist_by_channel.append(np.mean(dists_new))
         old_dist_by_channel.append(np.mean(dist_ori[i]))
     
@@ -287,8 +270,8 @@ def alignment_error(corrected_image, original_ref, dist_ori, region_size=7, min_
     return percent_improvement_list
     
 def fiducial_alignment_single(tiff_src, ref_src,region_size=7, min_distance=10, 
-                              threshold_abs=500, num_peaks=1000, max_dist=2,eng = None,
-                              radial_center = False,include_dapi=True, swapaxes=False, write = True):
+                              threshold_abs=500, num_peaks=1000, max_dist=2,
+                              include_dapi=True, swapaxes=False, write = True):
     """
     Parameters
     ----------
@@ -299,8 +282,6 @@ def fiducial_alignment_single(tiff_src, ref_src,region_size=7, min_distance=10,
     threshold_abs = absolute threshold for intensity
     num_peaks = number of dots detected
     max_dist = max distance for neighbor search
-    eng = none or matlab.engine.start_matlab() for radial centering
-    radial_center= bool to radial center instead of gaussian fit
     include_dapi = bool to include dapi for alignment
     swapaxes = bool to switch channel and z axes
     write = bool to write image
@@ -336,9 +317,9 @@ def fiducial_alignment_single(tiff_src, ref_src,region_size=7, min_distance=10,
         for c in range(number_of_channels):
             #get reference and experimental alignment dots
             ref_dots = get_alignment_dots(ref[c], region_size=region_size, min_distance=min_distance, 
-                           threshold_abs=threshold_abs, num_peaks=num_peaks,eng=eng, radial_center=radial_center)
+                           threshold_abs=threshold_abs, num_peaks=num_peaks)
             exp_dots = get_alignment_dots(tiff[c], region_size=region_size, min_distance=min_distance, 
-                           threshold_abs=threshold_abs, num_peaks=num_peaks,eng=eng, radial_center=radial_center)
+                           threshold_abs=threshold_abs, num_peaks=num_peaks)
             ref_dots_list.append(ref_dots)
             exp_dots_list.append(exp_dots) 
     else:
@@ -352,9 +333,9 @@ def fiducial_alignment_single(tiff_src, ref_src,region_size=7, min_distance=10,
             tiff_max = np.max(tiff[:,c,:,:], axis=0)
             #get alignment dots per channel
             ref_dots = get_alignment_dots(ref_max, region_size=region_size, min_distance=min_distance, 
-                           threshold_abs=threshold_abs, num_peaks=num_peaks,eng=eng,radial_center=radial_center)
+                           threshold_abs=threshold_abs, num_peaks=num_peaks)
             exp_dots = get_alignment_dots(tiff_max, region_size=region_size, min_distance=min_distance, 
-                           threshold_abs=threshold_abs, num_peaks=num_peaks,eng=eng,radial_center=radial_center)
+                           threshold_abs=threshold_abs, num_peaks=num_peaks)
             ref_dots_list.append(ref_dots)
             exp_dots_list.append(exp_dots)
             
@@ -411,7 +392,7 @@ def fiducial_alignment_single(tiff_src, ref_src,region_size=7, min_distance=10,
     error = alignment_error(transformed_image, ref_dots_list, ori_dist_list, 
                             region_size=region_size, min_distance=min_distance, 
                             threshold_abs=threshold_abs, num_peaks=num_peaks, 
-                            max_dist=max_dist, eng=eng,radial_center=radial_center)
+                            max_dist=max_dist)
     
     if write == True:
         print(output_path)
@@ -428,8 +409,8 @@ def fiducial_alignment_single(tiff_src, ref_src,region_size=7, min_distance=10,
         return transformed_image, error
 
 def fiducial_align_parallel(tiff_list, ref_src, region_size=7, min_distance=10, 
-                            threshold_abs=500, num_peaks=1000, max_dist=2,eng=None,
-                            radial_center = False,include_dapi=True, swapaxes=False, cores = 24):
+                            threshold_abs=500, num_peaks=1000, max_dist=2,
+                            include_dapi=True, swapaxes=False, cores = 24):
     """
     This function will run the fiducial alignment in parallel analyzing multiple images at once.
     
@@ -441,8 +422,6 @@ def fiducial_align_parallel(tiff_list, ref_src, region_size=7, min_distance=10,
     min_distance = minimum pixel distance between peaks for dot picking
     threshold_abs = absolute threshold value for peak detection
     num_peaks= number of desired dots
-    max_dist = maximum pixel distance for nearest neighbor
-    eng = none or matlab.engine.start_matlab() for radial centering
     include_dapi = bool to include dapi channel
     swapaxes = bool to switch z and c axes
     radial_center = bool to radial center instead of gaussian fit
@@ -457,29 +436,21 @@ def fiducial_align_parallel(tiff_list, ref_src, region_size=7, min_distance=10,
     
     #check if it is only 1 image
     if type(tiff_list) != list:
-        fiducial_alignment_single(tiff_list, ref_src,region_size=region_size, min_distance=min_distance, 
-                              threshold_abs=threshold_abs, num_peaks=num_peaks, max_dist=max_dist,eng = eng,
-                              radial_center = radial_center, include_dapi=include_dapi, swapaxes=swapaxes, write = True)
+        fiducial_alignment_single(tiff_list, ref_src,region_size=region_size, min_distance=min_distance,
+                                  threshold_abs=threshold_abs, num_peaks=num_peaks, max_dist=max_dist, 
+                                  include_dapi=include_dapi, swapaxes=swapaxes, write = True)
         print(f'Path {tiff_list} completed after {(time.time() - start)/60} minutes')
     else:
-        if eng == None:
-            with ProcessPoolExecutor(max_workers=cores) as exe:
-                futures = {}
-                for path in tiff_list:
-                    fut = exe.submit(fiducial_alignment_single, path, ref_src, region_size=region_size, 
-                                     min_distance=min_distance, threshold_abs=threshold_abs, num_peaks=num_peaks,
-                                     max_dist=max_dist,eng = eng, radial_center=radial_center,include_dapi=include_dapi,
-                                     swapaxes=swapaxes, write = True)
-                    futures[fut] = path
-                for fut in as_completed(futures):
-                    path = futures[fut]
-                    print(f'Path {path} completed after {(time.time() - start)/60} minutes')
-        #python multi processing does not work for matlab engine api so a for loop will be done instead
-        else:
+        with ProcessPoolExecutor(max_workers=cores) as exe:
+            futures = {}
             for path in tiff_list:
-                fiducial_alignment_single(path, ref_src,region_size=region_size, min_distance=min_distance, 
-                              threshold_abs=threshold_abs, num_peaks=num_peaks, max_dist=max_dist,eng = eng,
-                              radial_center = radial_center, include_dapi=include_dapi, swapaxes=swapaxes, write = True)
+                fut = exe.submit(fiducial_alignment_single, path, ref_src, region_size=region_size, 
+                                 min_distance=min_distance, threshold_abs=threshold_abs, num_peaks=num_peaks,
+                                 max_dist=max_dist,include_dapi=include_dapi,
+                                 swapaxes=swapaxes, write = True)
+                futures[fut] = path
+            for fut in as_completed(futures):
+                path = futures[fut]
                 print(f'Path {path} completed after {(time.time() - start)/60} minutes')
 
 def plot_error(path_to_files, num_hybcycles = 80, num_channels = 4, savefig = True, by_pos = False):

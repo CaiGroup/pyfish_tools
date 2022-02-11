@@ -12,7 +12,7 @@ JOB_ID = os.getenv('SLURM_ARRAY_TASK_ID', 0)
 print(f'This is task {JOB_ID}')
 
 #general path and position name
-directory = Path("/groups/CaiLab/personal/Lex/raw/Linus_10k_cleared_080918_NIH3T3/notebook_pyfiles/dapi_aligned/")
+directory = Path("/groups/CaiLab/personal/Lex/raw/082121_12k_nih3t3/notebook_pyfiles/dapi_aligned/")
 position_name = f'MMStack_Pos{JOB_ID}.ome.tif'
 
 # ##get all hybs with same position
@@ -30,21 +30,19 @@ files = [str(f) for f in files]
 
 # ##use this for normal alignment
 # #ref, _, _ = find_matching_files(directory, 'HybCycle_0' + f'/{position_name}') 
-ref = f"/groups/CaiLab/personal/Lex/raw/Linus_10k_cleared_080918_NIH3T3/notebook_pyfiles/max_projected/beads/{position_name}"
+ref = f"/groups/CaiLab/personal/Lex/raw/082121_12k_nih3t3/fiducials/{position_name}"
 
 tiff_list = files
 ref_src = ref
-region_size=7
+region_size=9
 min_distance=10
-threshold_abs=500
-num_peaks=500
-max_dist=2
-eng = None
-radial_center=False
-include_dapi=True
+threshold_abs=2000
+num_peaks=1000
+max_dist=1.2
+include_dapi=False
 swapaxes=True
-cores = 12
+cores = 32
 
 fiducial_align_parallel(tiff_list, ref_src, region_size=region_size, min_distance=min_distance, 
-                       threshold_abs=threshold_abs, num_peaks=num_peaks, max_dist=max_dist,eng=eng,
-                        radial_center=radial_center,include_dapi=include_dapi, swapaxes=swapaxes, cores=cores)
+                       threshold_abs=threshold_abs, num_peaks=num_peaks, max_dist=max_dist,
+                        include_dapi=include_dapi, swapaxes=swapaxes, cores=cores)
