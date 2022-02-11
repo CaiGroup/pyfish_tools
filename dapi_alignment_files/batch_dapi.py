@@ -8,12 +8,12 @@ JOB_ID = os.getenv('SLURM_ARRAY_TASK_ID', 0)
 print(f'This is task {JOB_ID}')
 
 #general path and position name
-directory = Path("/groups/CaiLab/personal/Lex/raw/Linus_10k_cleared_080918_NIH3T3/")
+directory = Path("/groups/CaiLab/personal/Lex/raw/082121_12k_nih3t3/")
 position_name = f'MMStack_Pos{JOB_ID}.ome.tif'
 
 ##get all hybs with same position
 ##use this for background alignment
-ref = directory / "beads" /position_name
+ref = directory / "fiducials" /position_name
 
 #use this for all hyb alignment
 files, _, _ = find_matching_files(directory, 'HybCycle_{hyb}' + f'/{position_name}')
