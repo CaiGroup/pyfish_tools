@@ -3,60 +3,47 @@ author: Katsuya Lex Colon
 updated: 12/03/21
 group: Cai Lab
 """
-import pandas as pd
+#general analysis packages
 import numpy as np
+import pandas as pd
+from sklearn.neighbors import NearestNeighbors
 
-def colocalizing_dots(df, channels=(0,2), hyb = 0, pixel_cutoff=2):
-    """Generates a distance matrix by euclidean metric then sorts to get nearest neighbor.
-    If the nearest neighbor has a euclidean pixel distance <= pixel_cutoff then the dots are colocalizing.
+def colocalizing_dots(df1, df2, radius=1):
+    """
+    Performs nearest neighbor search provided a given search radius.
+    If the nearest neighbor has a euclidean pixel distance <= radius then the dots are colocalizing.
     Parameters
     ----------
-    df = dataframe (hyb,ch,x,y,z,s,w)
-    channels = two channels that should colocalize
-    hyb = which hyb we are comparing
-    pixel_cutoff = upper bound of number of pixels away
+    df1 = first set of dots
+    df2 = second set of dots
+    radius = search radius
     """
     
-    #get specific hyb and isolate channel pairs
-    hyb_df = df[df["hyb"] == hyb]
-    hyb_split_ch1 = hyb_df[hyb_df["ch"]==channels[0]].reset_index(drop=True)
-    hyb_split_ch2 = hyb_df[hyb_df["ch"]==channels[1]].reset_index(drop=True)
+    #using sklearn nearest neighbor algorithm to find nearest dots
+    #initialize algorithm
+    neigh = NearestNeighbors(n_neighbors=2, radius=radius, metric="euclidean", n_jobs=1)
     
-    #convert to numpy array
-    arr1 = hyb_split_ch1[["x","y"]].values
-    arr2 = hyb_split_ch2[["x","y"]].values
-
-    #generated euclidean distance matrix
-    dis_mtx=np.zeros(shape=(len(arr1),len(arr2)))
-    for i in range(len(arr1)):
-        for j in range(len(arr2)):
-            l2 = np.linalg.norm(arr1[i,0:2]-arr2[j,0:2]) 
-            dis_mtx[i,j] = l2
-    #loop through and return nearest neighbor dot
-    #store pairs if they are <= pixel cutoff
-    store_pairs = []
-    for i in range(len(dis_mtx)):
-        nearest_dot_distance = sorted(dis_mtx[i])[0]
-        sorted_index = np.argsort(dis_mtx[i])[0]
-        if nearest_dot_distance <= pixel_cutoff:
-            store_pairs.append([i,sorted_index])
-        else:
+    #initialize neighbor
+    initial_seed = df1[["x","y"]]
+    #find neighbors for df1
+    neigh.fit(df2[["x","y"]])
+    distances,neighbors = neigh.radius_neighbors(initial_seed, radius, return_distance=True, sort_results=True)
+    
+    #nearest neighbor dot
+    neighbors_flattened = []
+    for i in range(len(neighbors)):
+        try:
+            neighbors_flattened.append([i,neighbors[i][0]])
+        except IndexError:
             continue
             
-    #convert pairs to array        
-    pairs = np.array(store_pairs)
-    
+    #keep dots that colocalize
+    new_df1 = df1.iloc[np.array(neighbors_flattened)[:,0]].reset_index(drop=True)
+    new_df2 = df2.iloc[np.array(neighbors_flattened)[:,1]].reset_index(drop=True)
+            
     #colocalization efficiency
-    eff = len(store_pairs)/((len(arr1)))
+    eff = len(new_df1)/max(len(df1), len(df2))
     
-    #keep rows with pairs
-    hyb_split_ch1 = hyb_split_ch1.iloc[pairs[:,0]]
-    hyb_split_ch2 = hyb_split_ch2.iloc[pairs[:,1]]
+    print("colocalization efficiency =",np.round(eff, 2))
     
-    #combine df
-    new_df = pd.concat([hyb_split_ch1,hyb_split_ch2])
-    new_df = new_df.reset_index(drop=True)
-    
-    print("colocalization efficiency =",np.round(eff, 1))
-    
-    return new_df, np.round(eff, 1)
+    return eff, new_df1, new_df2
