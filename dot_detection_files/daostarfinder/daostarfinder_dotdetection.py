@@ -653,9 +653,9 @@ def dot_detection(img_src, fwhm = 4.0, HybCycle=0, size_cutoff=3,
             #get bounding box
             try:
                 if len(img.shape)==3:
-                    blob = get_region_around(img[c-1], center=[y,x], size=5, edge='raise')
+                    blob = get_region_around(img[c-1], center=[y,x], size=7, edge='raise')
                 else:
-                    blob = get_region_around(img[z][c-1], center=[y,x], size=5, edge='raise')
+                    blob = get_region_around(img[z][c-1], center=[y,x], size=7, edge='raise')
             except IndexError:
                 area_list.append(0)
                 continue
