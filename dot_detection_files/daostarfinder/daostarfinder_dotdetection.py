@@ -12,7 +12,6 @@ from webfish_tools.util import find_matching_files
 #image analysis
 import tifffile as tf
 from skimage.filters import threshold_otsu, threshold_local
-from skimage.measure import label
 from photutils.detection import DAOStarFinder
 #general analysis
 import numpy as np
@@ -412,7 +411,7 @@ def find_threshold(img_src, threshold_min = 100,
             f.write(f"Threshold {element[0]} Counts {element[1]} Min_dots {element[2]} FWHM {fwhm}" + "\n")
         f.close()
         
-def get_region_around(im, center, size, normalize=True, edge='raise'):
+def get_region_around(im, center, size, edge='raise'):
     """
     This function will essentially get a bounding box around detected dots
     
@@ -421,7 +420,6 @@ def get_region_around(im, center, size, normalize=True, edge='raise'):
     im = image tiff
     center = x,y centers from dot detection
     size = size of bounding box
-    normalize = bool to normalize intensity
     edge = "raise" will output error message if dot is at border and
             "return" will adjust bounding box 
             
@@ -444,12 +442,8 @@ def get_region_around(im, center, size, normalize=True, edge='raise'):
     
     #slice out array of interest
     region = im[lower_bounds[0]:upper_bounds[0], lower_bounds[1]:upper_bounds[1]]
-    
-    #normalize intensity
-    if normalize:
-        return region / region.max()
-    else:
-        return region
+
+    return region
     
 def dot_detection(img_src, fwhm = 4.0, HybCycle=0, size_cutoff=3, 
                   opt_thresh=0.001,channel=1,pos=0,choose_thresh_set = 0, hyb_number=64,
@@ -532,16 +526,16 @@ def dot_detection(img_src, fwhm = 4.0, HybCycle=0, size_cutoff=3,
             #get bounding box
             try:
                 if len(img.shape)==3:
-                    blob = get_region_around(img[c-1], center=[y,x], size=5, normalize=True, edge='raise')
+                    blob = get_region_around(img[c-1], center=[y,x], size=7, edge='raise')
                 else:
-                    blob = get_region_around(img[z][c-1], center=[y,x], size=5, normalize=True, edge='raise')
+                    blob = get_region_around(img[z][c-1], center=[y,x], size=7, edge='raise')
             except IndexError:
                 area_list.append(0)
                 continue
             #estimate area of dot by local thresholding and summing binary mask
             try:
                 local_thresh = threshold_local(blob, block_size=7)
-                label_local = label(blob > local_thresh)
+                label_local = (blob > local_thresh)
                 area = np.sum(label_local)
                 area_list.append(area)
             except ValueError:
@@ -659,16 +653,16 @@ def dot_detection(img_src, fwhm = 4.0, HybCycle=0, size_cutoff=3,
             #get bounding box
             try:
                 if len(img.shape)==3:
-                    blob = get_region_around(img[c-1], center=[y,x], size=5, normalize=True, edge='raise')
+                    blob = get_region_around(img[c-1], center=[y,x], size=5, edge='raise')
                 else:
-                    blob = get_region_around(img[z][c-1], center=[y,x], size=5, normalize=True, edge='raise')
+                    blob = get_region_around(img[z][c-1], center=[y,x], size=5, edge='raise')
             except IndexError:
                 area_list.append(0)
                 continue
             #estimate area of dot by local thresholding and summing binary mask
             try:
                 local_thresh = threshold_local(blob, block_size=7)
-                label_local = label(blob > local_thresh)
+                label_local = (blob > local_thresh)
                 area = np.sum(label_local)
                 area_list.append(area)
             except ValueError:
