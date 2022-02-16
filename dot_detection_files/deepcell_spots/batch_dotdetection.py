@@ -16,7 +16,7 @@ files = [str(f) for f in files]
 #This list should contain all hybcycles for a given pos
 img_list = files
 #Probability threshold to be considered a spot (parameter of deep cell)
-probability_threshold = 0.9
+probability_threshold = 0.8
 #Cutoff for dot size beyond size_cutoff*std (from fitted gaussian)
 size_cutoff = 4
 #Path for output folder. Code will automatically make the folder.

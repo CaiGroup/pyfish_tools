@@ -171,7 +171,7 @@ def find_spots_parallel(img_list, probability_threshold = 0.9,
     #start time
     start = time.time()
     #run parallel processing per hyb
-    with ProcessPoolExecutor(max_workers=100) as exe:
+    with ProcessPoolExecutor(max_workers=32) as exe:
         futures = []
         for img_src in img_list:
             fut = exe.submit(find_spots, img_src, probability_threshold, size_cutoff)
