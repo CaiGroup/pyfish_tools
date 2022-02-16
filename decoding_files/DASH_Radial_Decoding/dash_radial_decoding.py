@@ -342,9 +342,13 @@ def radial_decoding(locations,num_barcodes = 4,
                     dot_traits = locations.iloc[neighbor_list2[i][j]]
                     #generate score table
                     trait_score = np.zeros(len(dot_traits))
-                    #rank dots
-                    int_score = np.argsort(dot_traits["flux"]).values[::-1]
-                    size_score = np.argsort(dot_traits["size"]).values[::-1]
+                    #rank dots and see if we are using flux or average intensity
+                    try:
+                        int_score = np.argsort(dot_traits["flux"]).values[::-1]
+                        size_score = np.argsort(dot_traits["size"]).values[::-1]
+                    except:
+                        int_score = np.argsort(dot_traits["average intensity"]).values[::-1]
+                        size_score = np.argsort(dot_traits["size"]).values[::-1]
                     #calculate best score
                     #note that distance is already sorted
                     for _ in range(len(trait_score)):
@@ -463,17 +467,10 @@ def radial_decoding_parallel(locations,codebook,num_barcodes = 4, radius=1,diff=
     code_table = np.zeros(shape=(len(dot_info), hybs)).astype(int)
     for i in range(len(dot_info)):
         code = dot_info[i][["hyb","ch"]].values
-        info = dot_info[i][["x","y","z","flux","max intensity","size"]].mean().values
-        info_list.append(info)
-        for j in range(len(code)):
-            code_table[i][int(code[j][0])] = int(code[j][1])
-    
-    #generate code table for decoding and store info about dots
-    info_list = []
-    code_table = np.zeros(shape=(len(dot_info), hybs)).astype(int)
-    for i in range(len(dot_info)):
-        code = dot_info[i][["hyb","ch"]].values
-        info = dot_info[i][["x","y","z","flux","max intensity","size"]].mean().values
+        try:
+            info = dot_info[i][["x","y","z","flux","max intensity","size"]].mean().values
+        except:
+            info = dot_info[i][["x","y","z","average intensity","peak intensity","size"]].mean().values
         info_list.append(info)
         for j in range(len(code)):
             code_table[i][int(code[j][0])] = int(code[j][1])
@@ -496,11 +493,11 @@ def radial_decoding_parallel(locations,codebook,num_barcodes = 4, radius=1,diff=
 
         #add gene names
         genes_locations = pd.DataFrame(info_list)
-        genes_locations.columns = ["x","y","z","flux","max intensity","size"]
+        genes_locations.columns = ["x","y","z","brightness","peak intensity","size"]
         genes_locations["genes"] = decoded_genes
         #add ambiguity score
         genes_locations["ambiguity score"] = ambiguity_scores_final
-        genes_locations = genes_locations[["genes", "x", "y","z","flux","max intensity", "size", "ambiguity score"]]  
+        genes_locations = genes_locations[["genes", "x", "y","z","brightness","peak intensity", "size", "ambiguity score"]]  
 
     elif diff == 1:
         #make other possible codebooks
@@ -535,12 +532,12 @@ def radial_decoding_parallel(locations,codebook,num_barcodes = 4, radius=1,diff=
                 
         #make final df
         genes_locations = pd.DataFrame(info_list)
-        genes_locations.columns = ["x","y","z","flux","max intensity","size"]
+        genes_locations.columns = ["x","y","z","brightness","peak intensity","size"]
         genes_locations["genes"] = decoded_genes
         genes_locations["ambiguity score"] = ambiguity_scores_final
         if include_undecoded ==  False:
             genes_locations = genes_locations[genes_locations["genes"] != "Undefined"]
-        genes_locations = genes_locations[["genes", "x", "y","z","flux","max intensity", "size", "ambiguity score"]]  
+        genes_locations = genes_locations[["genes", "x", "y","z","brightness","peak intensity", "size", "ambiguity score"]]  
     else:
         print("Sorry, no diff > 1 :(")
         sys.exit()
@@ -552,7 +549,7 @@ def radial_decoding_parallel(locations,codebook,num_barcodes = 4, radius=1,diff=
     return genes_locations, dot_idx_filtered
     
 def dash_radial_decoding(location_path, codebook_path,
-                         num_barcodes = 4, first_radius=1, second_radius=1,diff=0,
+                         num_barcodes = 4, first_radius=1, second_radius=1,third_radius=1,diff=0,
                          min_seed=4, hybs = 12, output_dir = "", 
                          include_undecoded = False, 
                          triple_decode=True, decode_across = False):
@@ -619,7 +616,7 @@ def dash_radial_decoding(location_path, codebook_path,
         #run decoding third pass with 2 pixel search
         try:
             decoded_3, indicies_used_3 = radial_decoding_parallel(new_locations_2, codebook,
-                        num_barcodes=num_barcodes, radius=2,diff=diff,
+                        num_barcodes=num_barcodes, radius=third_radius,diff=diff,
                         min_seed=min_seed, hybs = hybs, include_undecoded = include_undecoded, decode_across=decode_across)
             #in case include_undecoded is set to true
             if include_undecoded == True:
@@ -634,12 +631,7 @@ def dash_radial_decoding(location_path, codebook_path,
     
     #sort and reset index
     final_decoded = decoded_combined.sort_values("genes").reset_index(drop=True)
-    
-#     #make df of dots used (use for later for incorporating labels)
-#     flattened_indicies_used_2 = [element for sublist in indicies_used_2 for element in sublist]
-#     final_set = flattened_indicies_used + flattened_indicies_used_2
-#     final_set = pd.DataFrame(final_set)
-    
+
     #write files
     final_decoded.to_csv(str(output_path))
                          
