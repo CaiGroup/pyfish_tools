@@ -237,7 +237,7 @@ def sliding_lineregress(arr, window=10, reduce_cutoff = 2):
     
 def find_threshold(img_src, threshold_min = 100, 
                    threshold_max= 1000, interval=100, 
-                   HybCycle = 0, channel = 1,pos_start=5,pos_end=10, 
+                   HybCycle = 0, channel = 1, pos_list=None, 
                    reduce_cutoff= 2, window=10):
     
     """This function will find the optimal threshold to use during peak local max detection
@@ -249,8 +249,7 @@ def find_threshold(img_src, threshold_min = 100,
     interval = spacing between maximum and minimum
     HybCycle= which hybcycle the image belongs to
     channel = which channel to look at (1-4)
-    pos_start=pos number that it begins
-    pos_end = position number of where it ends
+    pos_list = list of position numbers
     reduce_cutoff = number of windows to go back in sliding_lineregress
     window = window size for sliding_lineregress
     
@@ -313,7 +312,7 @@ def find_threshold(img_src, threshold_min = 100,
                 print(f'Threshold {thresh} completed after {time.time() - start} seconds')
             print("completed tasks = ", len(futures))
             
-    for _ in np.arange(pos_start,pos_end+1,1):
+    for _ in pos_list:
         #read in textfiles
         if type(img_src)!=list:
             img_parent = Path(img_src).parent.parent.parent
@@ -447,7 +446,7 @@ def get_region_around(im, center, size, edge='raise'):
     
 def dot_detection(img_src, fwhm = 4.0, HybCycle=0, size_cutoff=3, 
                   opt_thresh=0.001,channel=1,pos=0,choose_thresh_set = 0, hyb_number=64,
-                  check_initial = True, optimize=False, output=False):
+                  optimize=False, output=False):
     
     """
     This function uses DAOStarFinder with thresholds obtained from find_threshold(). 
@@ -460,10 +459,9 @@ def dot_detection(img_src, fwhm = 4.0, HybCycle=0, size_cutoff=3,
     size_cutoff = number of standard deviation away from mean size area
     opt_thresh = threshold used during optimization
     channel = which channel to look at (1-4)
-    pos = position number (used in check initial True and to get FWHM)
+    pos = position number (used to get FWHM)
     choose_thresh_set = int for which threshold set you want to use
     hyb_number = total number of hybs for choose thresh set
-    check_initial = bool to check most strict threshold
     optimize = bool to test different threshold and min dots
     output = bool to output files
     
@@ -579,34 +577,23 @@ def dot_detection(img_src, fwhm = 4.0, HybCycle=0, size_cutoff=3,
         output_path = str(output_folder / Path(img_src).name)
         output_path = output_path.replace(".ome.tif",".csv")
         
-        #get threshold
-        if check_initial == True:
-            #take initial threshold parameter
-            gen_path = img_parent / "threshold_counts" / f"Channel_{channel}"/ f"HybCycle_{HybCycle}" / f"MMStack_Pos{pos}"/ f"optimal_threshold_HybCycle_{HybCycle}.txt"
-            opt_thresh = pd.read_csv(gen_path, sep="\t", header = None)
-            opt_thresh_list = opt_thresh[0][0].split(" ")
-            opt_thresh = float(opt_thresh_list[1])
-            
-            #get fwhm
-            fwhm = float(opt_thresh_list[7])
-        else:
-            #get optimal threshold after decoding verification
-            gen_path = img_parent / "dots_detected" /f"Channel_{channel}" /f"optimal_threshold_test_complete_ch{channel}.txt"
-            opt_thresh = pd.read_csv(gen_path, sep="\t", header = None)
-            #pick thresh set
-            opt_thresh_set = opt_thresh[0][choose_thresh_set]
+        #get optimal threshold after decoding verification
+        gen_path = img_parent / "dots_detected" /f"Channel_{channel}" /f"optimal_threshold_test_complete_ch{channel}.txt"
+        opt_thresh = pd.read_csv(gen_path, sep="\t", header = None)
+        #pick thresh set
+        opt_thresh_set = opt_thresh[0][choose_thresh_set]
 
-            #parse list of thresholds and pick correct one for each hyb
-            opt_thresh_set = opt_thresh_set.split(" ")
+        #parse list of thresholds and pick correct one for each hyb
+        opt_thresh_set = opt_thresh_set.split(" ")
 
-            #final optimal threshold sliced by hybcycle
-            opt_thresh = float(opt_thresh_set[HybCycle])
-            
-            #get fwhm
-            gen_path = img_parent / "threshold_counts" / f"Channel_{channel}"/ f"HybCycle_{HybCycle}" / f"MMStack_Pos{pos}"/ f"optimal_threshold_HybCycle_{HybCycle}.txt"
-            fwhm = pd.read_csv(gen_path, sep="\t", header = None)
-            fwhm_list = fwhm[0][0].split(" ")
-            fwhm = float(fwhm_list[7])
+        #final optimal threshold sliced by hybcycle
+        opt_thresh = float(opt_thresh_set[HybCycle])
+
+        #get fwhm
+        gen_path = img_parent / "threshold_counts" / f"Channel_{channel}"/ f"HybCycle_{HybCycle}" / f"MMStack_Pos{pos}"/ f"optimal_threshold_HybCycle_{HybCycle}.txt"
+        fwhm = pd.read_csv(gen_path, sep="\t", header = None)
+        fwhm_list = fwhm[0][0].split(" ")
+        fwhm = float(fwhm_list[7])
             
         #read image
         img = tf.imread(img_src)
@@ -698,8 +685,8 @@ def dot_detection(img_src, fwhm = 4.0, HybCycle=0, size_cutoff=3,
             return dots
  
 def dot_detection_parallel(img_src, HybCycle=0, size_cutoff=3, 
-                           channel=1, pos_start=0, pos_end=10, choose_thresh_set = 0, hyb_number=64,
-                           check_initial = False, optimize=False, output=True):
+                           channel=1, pos_list=None, choose_thresh_set = 0, 
+                           hyb_number=64, optimize=False, output=True):
     """
     This function will run dot detection in parallel, provided a list of images.
     
@@ -709,11 +696,9 @@ def dot_detection_parallel(img_src, HybCycle=0, size_cutoff=3,
     HybCycle = which hybcycle the image belongs to
     size_cutoff = number of standard deviation away from mean size area
     channel = which channel to look at (1-4)
-    pos_start = start position number if optimize is set to true
-    pos_end = end position number if optimize is set to true
+    pos_list = list of position numbers
     choose_thresh_set = int for which threshold set you want to use
     hyb_number = total number of hybs for choose thresh set
-    check_initial = check initial optimal threshold
     optimize = bool to test different threshold and min dots
     output = bool to output files
     
@@ -731,7 +716,7 @@ def dot_detection_parallel(img_src, HybCycle=0, size_cutoff=3,
 
             #read thresholds for each pos 
             opt_thresh_list = []
-            for i in np.arange(pos_start,pos_end+1,1):
+            for i in pos_list:
                 gen_path = img_parent / "threshold_counts" / f"Channel_{channel}"/ f"HybCycle_{HybCycle}"/ f"MMStack_Pos{i}"/f"optimal_threshold_HybCycle_{HybCycle}.txt"
                 opt_thresh_df = pd.read_csv(str(gen_path), sep="\t", header = None)
                 opt_thresh_list.append(opt_thresh_df)
@@ -754,11 +739,11 @@ def dot_detection_parallel(img_src, HybCycle=0, size_cutoff=3,
                 
             with ProcessPoolExecutor(max_workers=32) as exe:
                 futures = {}
-                pos = pos_start
+                pos = pos_list[0]
                 for opt_thresh in thresh_median:
                     fut = exe.submit(dot_detection, img_src, fwhm, HybCycle, size_cutoff,
                                      opt_thresh,channel,pos,choose_thresh_set,hyb_number,
-                                     check_initial, optimize, output)
+                                     optimize, output)
                     futures[fut] = opt_thresh
 
                 for fut in as_completed(futures):
@@ -769,7 +754,7 @@ def dot_detection_parallel(img_src, HybCycle=0, size_cutoff=3,
             futures = {}
             #will get optimum threshold automatially
             opt_thresh = None
-            pos = pos_start
+            pos = pos_list[0]
             for img in img_src:
                 #get hybcycle number
                 img_parent_cycle = Path(img).parent.name
@@ -779,7 +764,7 @@ def dot_detection_parallel(img_src, HybCycle=0, size_cutoff=3,
                 #dot detect
                 fut = exe.submit(dot_detection, img, fwhm, HybCycle_mod, size_cutoff,
                                  opt_thresh,channel,pos,choose_thresh_set,hyb_number,
-                                 check_initial, optimize, output)
+                                 optimize, output)
                 futures[fut] = img
 
             for fut in as_completed(futures):
