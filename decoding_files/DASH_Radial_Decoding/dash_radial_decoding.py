@@ -585,6 +585,9 @@ def dash_radial_decoding(location_path, codebook_path,
     codebook = codebook.set_index(codebook.columns[0])
     location_path_name = Path(location_path).name
     z_info = location_path_name.split("_")[2].replace(".csv","")
+    
+    #check to see if the necessary amount of hybs are present
+    assert len(locations["hyb"].unique()) == hybs, "Locations file is missing a hyb"
 
     #make directories
     Path(output_dir).mkdir(parents=True, exist_ok = True)
