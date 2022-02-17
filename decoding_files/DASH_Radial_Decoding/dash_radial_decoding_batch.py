@@ -10,19 +10,20 @@ print(f'This is task {JOB_ID}')
 
 #fill parameters
 locations_path = glob.glob(f"/groups/CaiLab/personal/Lex/raw/020422_20kdash_3t3/notebook_pyfiles/dots_detected/Pos0/*")
+# locations_path = glob.glob(f"/groups/CaiLab/personal/Lex/raw/020422_20kdash_3t3/notebook_pyfiles/dots_comb/channels_combined/Threshold_{JOB_ID}/*")
 codebook_path = "/groups/CaiLab/personal/Lex/raw/020422_20kdash_3t3/barcode_key/corrected_codebook_4channel_12hybs.csv"
 num_barcodes = 4
 #multiply radius by 100 to get search in nm
-first_radius = 3
-second_radius = 4
-third_radius = 4
+first_radius = 1.5
+second_radius = 2
+third_radius = 3
 diff=0
 min_seed=4
 hybs = 12
 include_undecoded = False
 triple_decode = True
 decode_across = True
-output_dir = f"/groups/CaiLab/personal/Lex/raw/020422_20kdash_3t3/notebook_pyfiles/decoded/deepcell"
+output_dir = f"/groups/CaiLab/personal/Lex/raw/020422_20kdash_3t3/notebook_pyfiles/decoded/deepcell/seed_4/"
 
 if len(locations_path) > 1:
     for locations in locations_path:

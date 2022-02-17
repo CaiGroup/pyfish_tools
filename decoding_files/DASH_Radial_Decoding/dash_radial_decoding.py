@@ -13,8 +13,7 @@ from collections import Counter
 from concurrent.futures import ProcessPoolExecutor, as_completed
 #path management
 from pathlib import Path
-#code management
-import sys
+
 
 def filter_dots_fast(dots_idx, min_seed=4):
     """Keep unique sets that appear >= min_seed times.
@@ -417,6 +416,9 @@ def radial_decoding_parallel(locations,codebook,num_barcodes = 4, radius=1,diff=
     gene_locations.csv
     """
     
+    #make sure diff is not greater than 1
+    assert diff < 2, "Diff cannot be > 1"
+    
     #parallel processing for nearest neighbor computation for each barcode
     with ProcessPoolExecutor(max_workers=num_barcodes) as exe:
         futures = []
@@ -538,9 +540,6 @@ def radial_decoding_parallel(locations,codebook,num_barcodes = 4, radius=1,diff=
         if include_undecoded ==  False:
             genes_locations = genes_locations[genes_locations["genes"] != "Undefined"]
         genes_locations = genes_locations[["genes", "x", "y","z","brightness","peak intensity", "size", "ambiguity score"]]  
-    else:
-        print("Sorry, no diff > 1 :(")
-        sys.exit()
         
     #final gene locations file
     genes_locations = genes_locations.sort_values("genes").reset_index(drop=True)
@@ -587,7 +586,7 @@ def dash_radial_decoding(location_path, codebook_path,
     z_info = location_path_name.split("_")[2].replace(".csv","")
     
     #check to see if the necessary amount of hybs are present
-    assert len(locations["hyb"].unique()) == hybs, "Locations file is missing a hyb"
+    assert len(locations["hyb"].unique()) >= hybs, "Locations file is missing a hyb"
 
     #make directories
     Path(output_dir).mkdir(parents=True, exist_ok = True)
