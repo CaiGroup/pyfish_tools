@@ -313,7 +313,7 @@ def find_threshold(img_src, threshold_min = 100,
                 print(f'Threshold {thresh} completed after {time.time() - start} seconds')
             print("completed tasks = ", len(futures))
             
-    for _ in np.arange(pos_start,pos_end,1):
+    for _ in np.arange(pos_start,pos_end+1,1):
         #read in textfiles
         if type(img_src)!=list:
             img_parent = Path(img_src).parent.parent.parent
@@ -731,7 +731,7 @@ def dot_detection_parallel(img_src, HybCycle=0, size_cutoff=3,
 
             #read thresholds for each pos 
             opt_thresh_list = []
-            for i in np.arange(pos_start,pos_end,1):
+            for i in np.arange(pos_start,pos_end+1,1):
                 gen_path = img_parent / "threshold_counts" / f"Channel_{channel}"/ f"HybCycle_{HybCycle}"/ f"MMStack_Pos{i}"/f"optimal_threshold_HybCycle_{HybCycle}.txt"
                 opt_thresh_df = pd.read_csv(str(gen_path), sep="\t", header = None)
                 opt_thresh_list.append(opt_thresh_df)
