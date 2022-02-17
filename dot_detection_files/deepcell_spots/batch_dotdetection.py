@@ -1,4 +1,4 @@
-from deepcell_spots_detection import find_spots_parallel
+from deepcell_spots_detection import find_spots_all
 from pathlib import Path
 import os
 from webfish_tools.util import find_matching_files
@@ -16,12 +16,15 @@ files = [str(f) for f in files]
 #This list should contain all hybcycles for a given pos
 img_list = files
 #Probability threshold to be considered a spot (parameter of deep cell)
-probability_threshold = 0.8
+probability_threshold = 0.85
 #Cutoff for dot size beyond size_cutoff*std (from fitted gaussian)
 size_cutoff = 4
 #Path for output folder. Code will automatically make the folder.
-output_folder = "/groups/CaiLab/personal/Lex/raw/020422_20kdash_3t3/notebook_pyfiles/dots_detected"
+output_folder = "/groups/CaiLab/personal/Lex/raw/020422_20kdash_3t3/notebook_pyfiles/dots_detected_deepcell"
 #If your data set is within channel encoded then set this true.
 encoded_within_channel = False
+#run parallel processing
+parallel = True
 
-find_spots_parallel(img_list, probability_threshold, size_cutoff, output_folder, encoded_within_channel)
+if __name__ == "__main__":
+    find_spots_all(img_list, probability_threshold, size_cutoff, output_folder, encoded_within_channel, parallel)

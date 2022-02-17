@@ -156,8 +156,9 @@ def find_spots(img_src, probability_threshold = 0.9, size_cutoff = 3):
     
     return df_final
 
-def find_spots_parallel(img_list, probability_threshold = 0.9, 
-                        size_cutoff = 3, output_folder="", encoded_within_channel=False):
+def find_spots_all(img_list, probability_threshold = 0.9, 
+                        size_cutoff = 3, output_folder="", 
+                        encoded_within_channel=False, parallel=True):
     """
     This function will run deep cell spots in parallel for each hyb.
     
@@ -166,20 +167,28 @@ def find_spots_parallel(img_list, probability_threshold = 0.9,
     size_cutoff = number of sigmas away from the mean for size to keep
     output_folder = path to where you want the output
     encoded_within_channel = bool to split dots by channels
+    parallel = bool to run concurrent futures
     """
     
     #start time
     start = time.time()
     #run parallel processing per hyb
-    with ProcessPoolExecutor(max_workers=32) as exe:
-        futures = []
-        for img_src in img_list:
-            fut = exe.submit(find_spots, img_src, probability_threshold, size_cutoff)
-            futures.append(fut)
+    #sometimes parallel processing doesn't work for some datasets depending on density and number of hybs
+    if parallel == True:
+        with ProcessPoolExecutor(max_workers=32) as exe:
+            futures = []
+            for img_src in img_list:
+                fut = exe.submit(find_spots, img_src, probability_threshold, size_cutoff)
+                futures.append(fut)
 
-    #collect result from futures objects
-    result_list = [fut.result() for fut in futures]
-    
+        #collect result from futures objects
+        result_list = [fut.result() for fut in futures]
+    else:
+        result_list = []
+        for img_src in img_list:
+            dots = find_spots(img_src, probability_threshold, size_cutoff)
+            result_list.append(dots)
+            
     #concatenate all hybs
     combined_df = pd.concat(result_list)
     combined_df = combined_df.reset_index(drop=True)
