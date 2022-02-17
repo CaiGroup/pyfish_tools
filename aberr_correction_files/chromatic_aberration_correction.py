@@ -188,7 +188,7 @@ def nearest_neighbors_transform(ref_points, fit_points, max_dist=None):
     fit_pts_corr = fit_points[fit_inds]
     
     #estimate affine matrix using RANSAC
-    tform = cv2.estimateAffine2D(fit_pts_corr, ref_pts_corr, ransacReprojThreshold=0.5)[0]
+    tform = cv2.estimateAffine2D(fit_pts_corr, ref_pts_corr, ransacReprojThreshold=1.0)[0]
 
     return tform, dists
 
