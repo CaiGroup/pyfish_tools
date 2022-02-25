@@ -1,9 +1,3 @@
-"""
-author: Katsuya Lex Colon
-updated: 02/14/21
-group: Cai Lab
-"""
-
 from sklearn.neighbors import NearestNeighbors
 import numpy as np
 import pandas as pd
@@ -69,16 +63,17 @@ def neighbor_search(locations, hybs=12, num_barcodes=4, seed=0, radius=1):
     return neighbor_list
 
 def count_neighbors(neighbor_list):
-     """
+    """
     counts neighbors across barcoding rounds
     
     Parameters
     ---------
     neighbor_list = list of neighbors outputted from neighbor_search()
     
-    """
-        
+    """    
+    
     neigh_count_list = []
+    
     for brcd_round in neighbor_list:
         #get number of neighbors per dot
         neighbor_count = [len(brcd_round[i]) for i in range(len(brcd_round))]
