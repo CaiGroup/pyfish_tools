@@ -1,8 +1,18 @@
-from sklearn.neighbors import NearestNeighbors
-from scipy.stats import halfnorm
+"""
+author: Katsuya Lex Colon
+group: Cai Lab
+date: 02/28/22
+"""
+
+#general packages
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+#nearest neighbors
+from sklearn.neighbors import NearestNeighbors
+#fitting
+from scipy.stats import halfnorm
+
 
 def dot_displacement(ref, moving, radius=2):
     """
