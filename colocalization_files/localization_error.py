@@ -51,7 +51,7 @@ def dot_displacement(ref, moving, radius=2):
     #combine
     distances_arr = np.concatenate([distances_neg,distances_arr])
     
-    #fit half normal distribution
+    #fit gaussian distribution
     mu, std = norm.fit(distances_arr) 
     xmin, xmax = min(distances_arr), max(distances_arr)
     x = np.linspace(xmin, xmax, 100)
