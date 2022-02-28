@@ -1,18 +1,8 @@
-"""
-author: Katsuya Lex Colon
-group: Cai Lab
-date: 02/28/22
-"""
-
-#general packages
+from sklearn.neighbors import NearestNeighbors
+from scipy.stats import norm
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-#nearest neighbors
-from sklearn.neighbors import NearestNeighbors
-#fitting
-from scipy.stats import halfnorm
-
 
 def dot_displacement(ref, moving, radius=2):
     """
@@ -55,33 +45,40 @@ def dot_displacement(ref, moving, radius=2):
     #make 1d array
     distances_arr = np.array(distances_flattened).ravel()
     
+    #get negative values
+    distances_neg = -(np.array(distances_flattened).ravel())
+    
+    #combine
+    distances_arr = np.concatenate([distances_neg,distances_arr])
+    
     #fit half normal distribution
-    mu, std = halfnorm.fit(distances_arr) 
+    mu, std = norm.fit(distances_arr) 
     xmin, xmax = min(distances_arr), max(distances_arr)
-    x = np.linspace(xmin, xmax, 500)
-    p = halfnorm.pdf(x, mu, std)
+    x = np.linspace(xmin, xmax, 100)
+    p = norm.pdf(x, mu, std)
     
     #get half maximum
     half_max = max(p)/2
     
     #get half width at half maximum
-    index_hwhm = np.where(p > max(p)/2)[0][-1]
+    index_hwhm_1 = np.where(p > max(p)/2)[0][-1]
     
-    #get displacement by multiplying the hwhm by 2
-    displacement = (x[index_hwhm])*2
+    #get displacement by looking at fullwidth
+    displacement = x[index_hwhm_1]*2
     
     #plot histogram
-    plt.hist(distances_arr, density=True, bins=50)
+    plt.hist(distances_arr, density=True, bins=15)
     #plot distribution
-    plt.plot(x,p, label="Half Normal Fitted Data")
+    plt.plot(x,p, label="Gaussian Fitted Data")
     #plot half max
     plt.axhline(half_max, color="red")
     #plot full width
-    plt.axvline(displacement/2, color="red", label="HWHM")
+    plt.axvline(displacement/2, color="red", label="FWHM")
+    plt.axvline(-displacement/2, color="red")
     plt.legend()
     sns.despine()
     plt.ylabel("Probability density")
-    plt.xlabel("Distances in pixels")
+    plt.xlabel("Relative distances (pixels)")
     plt.show()
     
-    return np.mean(distances_arr), displacement
+    return displacement
