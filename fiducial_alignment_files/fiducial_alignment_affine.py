@@ -1,7 +1,7 @@
 """
 authors: Katsuya Lex Colon and Lincoln Ombelets
 group: Cai Lab
-updated: 12/03/21
+updated: 02/28/22
 """
 #basic analysis package
 import numpy as np
@@ -15,6 +15,8 @@ from util import pil_imread
 import tifffile as tf
 import cv2
 import sklearn.neighbors as nbrs
+#fitting
+from scipy.stats import norm
 #parallel processing
 from concurrent.futures import ProcessPoolExecutor, as_completed
 #organization packages
@@ -27,7 +29,7 @@ warnings.filterwarnings("ignore")
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-def get_region_around(im, center, size, normalize=True, edge='raise'):
+def get_region_around(im, center, size, edge='raise'):
     """
     This function will essentially get a bounding box around detected dots
     
@@ -36,7 +38,6 @@ def get_region_around(im, center, size, normalize=True, edge='raise'):
     im = image tiff
     center = x,y centers from dot detection
     size = size of bounding box
-    normalize = bool to normalize intensity
     edge = "raise" will output error message if dot is at border and
             "return" will adjust bounding box 
             
@@ -60,11 +61,61 @@ def get_region_around(im, center, size, normalize=True, edge='raise'):
     #slice out array of interest
     region = im[lower_bounds[0]:upper_bounds[0], lower_bounds[1]:upper_bounds[1]]
     
-    #normalize intensity
-    if normalize:
-        return region / region.max()
-    else:
-        return region
+    return region
+    
+def dot_displacement(dist_arr, show_plot=True):
+    """
+    This function will calculate the localization precision by fitting a 1d gaussian
+    to a distance array obtained from colocalizing dots. The full width half maximum of this
+    1D gaussian will correspond to displacement.
+    
+    Parameters
+    ----------
+    dist_arr: 1D distance array
+    output_folder: path to output error and plots
+    
+    Return
+    ----------
+    displacement
+    """
+    
+    #create positive and negative distance array
+    dist_arr = np.concatenate([-dist_arr,dist_arr])
+    
+    #fit gaussian distribution
+    mu, std = norm.fit(dist_arr) 
+    xmin, xmax = min(dist_arr), max(dist_arr)
+    x = np.linspace(xmin, xmax, 500)
+    p = norm.pdf(x, mu, std)
+    
+    #get half maximum of gaussian
+    half_max = max(p)/2
+    
+    #get half width at half maximum
+    index_hwhm = np.where(p > max(p)/2)[0][-1]
+    
+    #get displacement by looking at fullwidth
+    displacement = x[index_hwhm]*2
+    
+    if show_plot == True:
+        #plot histogram
+        plt.hist(dist_arr, density=True, bins=50)
+        #plot distribution
+        plt.plot(x,p, label="Gaussian Fitted Data")
+        #plot half max
+        plt.axhline(half_max, color="red")
+        #plot full width
+        plt.axvline(displacement/2, color="red", label="FWHM")
+        plt.axvline(-displacement/2, color="red")
+        plt.legend()
+        sns.despine()
+        plt.ylabel("Probability density")
+        plt.xlabel("Relative distances (pixels)")
+        plt.show()
+        plt.clf()
+    
+    return displacement
+
     
 def get_alignment_dots(image, region_size=7, min_distance=10, 
                        threshold_abs=500, num_peaks=1000):
@@ -161,7 +212,7 @@ def nearest_neighbors(ref_points, fit_points, max_dist=None):
     
     return dists, ref_indices, fit_indices
     
-def nearest_neighbors_transform(ref_points, fit_points, max_dist=None):
+def nearest_neighbors_transform(ref_points, fit_points, max_dist=None, ransac_threshold = 0.5):
     """
     This function will take two lists of non-corresponding points and identify corresponding points less than max_dist apart
     using nearest_neighbors(). Then it will find a transform that wil bring the second set of dots to the first.
@@ -172,6 +223,7 @@ def nearest_neighbors_transform(ref_points, fit_points, max_dist=None):
     ref_points = list of x,y coord of ref
     fit_points = list of x,y coord of raw
     max_dist = maximum allowed distance apart two points can be in neighbor search
+    ransac_threshold = adjust the max allowed error in pixels
     
     Returns
     -------
@@ -194,69 +246,48 @@ def nearest_neighbors_transform(ref_points, fit_points, max_dist=None):
     fit_pts_corr = fit_points[fit_inds]
     
     #estimate affine matrix using RANSAC
-    tform = cv2.estimateAffine2D(fit_pts_corr, ref_pts_corr, ransacReprojThreshold=1.0)[0]
+    tform = cv2.estimateAffine2D(fit_pts_corr, ref_pts_corr, ransacReprojThreshold=ransac_threshold)[0]
 
-    return tform, dists
+    return tform, dists, ref_pts_corr, fit_pts_corr
 
-def alignment_error(corrected_image, original_ref, dist_ori, region_size=7, min_distance=10, 
-                       threshold_abs=500, num_peaks=1000, max_dist=2):
+def alignment_error(ref_points_affine, moving_points_affine, 
+                    ori_dist_list, tform_list, max_dist=2):
     
     """
-   This function will calculate the average error in distance from reference of the tranformed image.
+   This function will calculate localization precision by obtaining FWHM of corrected distance array.
    
    Parameters
    ----------
-   corrected_image = already transformed image
-   original_ref = reference dots used to estimate transform
-   dist_ori = original distance calculated prior to transform
-   region_size = bounding box size (best to use odd number)
-   min_distance = number of pixels away between peaks
-   threshold_abs = the absolute intenstiy threshold
-   num_peaks = number of dots detected
-   max_dist = number of pixels for search radius to find matching dots
+   ref_points_affine = reference points used in transform
+   moving_points_affine = points that are moving to reference
+   ori_dist_list = original distance calculated prior to transform
+   tform_list = list of affine transform matrix
+   max_dist = number of allowed pixels two dots can be from each other
    
    Returns
    -------
-   percent improved in alignment as well as distance error
+   percent improved in alignment as well as alignment error
+   """
     
-    """
-    
-    #Get dots per channel for corrected image
-    exp_dots_list = []
-    if len(corrected_image.shape) == 3:
-        for c in range(corrected_image.shape[0]):
-            #get alignment dots
-            exp_dots = get_alignment_dots(corrected_image[c], region_size=region_size, min_distance=min_distance, 
-                           threshold_abs=threshold_abs, num_peaks=num_peaks)
-            exp_dots_list.append(exp_dots)
-    else:
-        for c in range(corrected_image.shape[1]):
-            #max project image
-            tiff_max = np.max(corrected_image[:,c,:,:], axis=0)
-            #get alignment dots per channel
-            exp_dots = get_alignment_dots(tiff_max, region_size=region_size, min_distance=min_distance, 
-                           threshold_abs=threshold_abs, num_peaks=num_peaks)
-            exp_dots_list.append(exp_dots)
-
-    #get matching dots for each channel and get average distance per channel
+    #apply transform to each moving point and calculate displacement 
     new_dist_by_channel = []
     old_dist_by_channel = []
-    for i in range(len(original_ref)):
-        #convert lists to arrays
-        ref_points = np.array(original_ref[i])
-        fit_points = np.array(exp_dots_list[i])
-
-        #check if dots have nan, if so remove
-        ref_points = ref_points[~np.isnan(ref_points).any(axis=1)]
-        fit_points = fit_points[~np.isnan(fit_points).any(axis=1)]
+    for i in range(len(moving_points_affine)):
+        #reformat points
+        moving = moving_points_affine[i].reshape(1, moving_points_affine[i].shape[0], moving_points_affine[i].shape[1])
+        #perform transform on 2 coord points
+        tform_points = cv2.transform(moving, tform_list[i])[0]
         
         #get new distance
-        dists_new, _, _ = nearest_neighbors(ref_points, fit_points, max_dist=max_dist)
+        dists_new, _, _ = nearest_neighbors(ref_points_affine[i], tform_points, max_dist=max_dist)
         
-        new_dist_by_channel.append(np.mean(dists_new))
-        old_dist_by_channel.append(np.mean(dist_ori[i]))
+        #calculate localization precision
+        displacement_new = dot_displacement(dists_new)
+        displacement_old = dot_displacement(ori_dist_list[i], show_plot=False)
+        new_dist_by_channel.append(displacement_new)
+        old_dist_by_channel.append(displacement_old)
     
-    #calculate percent improvement and average distance off
+    #calculate percent improvement
     percent_improvement_list = []
     for i in range(len(new_dist_by_channel)):
         percent_change = ((new_dist_by_channel[i]-old_dist_by_channel[i])/old_dist_by_channel[i])
@@ -270,7 +301,7 @@ def alignment_error(corrected_image, original_ref, dist_ori, region_size=7, min_
     return percent_improvement_list
     
 def fiducial_alignment_single(tiff_src, ref_src,region_size=7, min_distance=10, 
-                              threshold_abs=500, num_peaks=1000, max_dist=2,
+                              threshold_abs=500, num_peaks=1000, max_dist=2,ransac_threshold=0.5,
                               include_dapi=True, swapaxes=False, write = True):
     """
     Parameters
@@ -282,6 +313,7 @@ def fiducial_alignment_single(tiff_src, ref_src,region_size=7, min_distance=10,
     threshold_abs = absolute threshold for intensity
     num_peaks = number of dots detected
     max_dist = max distance for neighbor search
+    ransac_threshold = adjust the max allowed error in pixels
     include_dapi = bool to include dapi for alignment
     swapaxes = bool to switch channel and z axes
     write = bool to write image
@@ -339,13 +371,18 @@ def fiducial_alignment_single(tiff_src, ref_src,region_size=7, min_distance=10,
             ref_dots_list.append(ref_dots)
             exp_dots_list.append(exp_dots)
             
-    #get affine transform matrix (RANSAC) for each channel
+    #get affine transform matrix, original distance, reference points and moving points used for each channel
     tform_list = []
     ori_dist_list = []
+    ref_points_used= []
+    fit_points_used= []
     for i in range(len(ref_dots_list)):
-        tform, ori_dist = nearest_neighbors_transform(ref_dots_list[i], exp_dots_list[i], max_dist=max_dist)
+        tform, ori_dist, ref_pts, fit_pts = nearest_neighbors_transform(ref_dots_list[i], exp_dots_list[i],
+                                                               max_dist=max_dist,ransac_threshold=ransac_threshold)
         ori_dist_list.append(ori_dist)
         tform_list.append(tform)
+        ref_points_used.append(ref_pts)
+        fit_points_used.append(fit_pts)
         
     #apply tform to each channel and across z 
     corr_stack = []
@@ -353,10 +390,10 @@ def fiducial_alignment_single(tiff_src, ref_src,region_size=7, min_distance=10,
         #check if it is one z
         if len(tiff.shape) == 3:
             if include_dapi == True:
-                corr_image = cv2.warpAffine(tiff[i],tform_list[i],dsize=(tiff[i].shape[0],tiff[i].shape[1]))
+                corr_image = cv2.warpAffine(tiff[i],tform_list[i],dsize=(tiff[i].shape[1],tiff[i].shape[0]))
                 corr_stack.append(corr_image)
             else:
-                corr_image = cv2.warpAffine(tiff[i],tform_list[i],dsize=(tiff[i].shape[0],tiff[i].shape[1]))
+                corr_image = cv2.warpAffine(tiff[i],tform_list[i],dsize=(tiff[i].shape[1],tiff[i].shape[0]))
                 corr_stack.append(corr_image)
                 #tform list length should be minus dapi if include_dapi == False
                 #so we do -2 here to get the last i in loop
@@ -369,10 +406,10 @@ def fiducial_alignment_single(tiff_src, ref_src,region_size=7, min_distance=10,
             z_stack_dapi = []
             for z in range(tiff.shape[0]):
                 if include_dapi == True:
-                    corr_image = cv2.warpAffine(tiff[z][i],tform_list[i],dsize=(tiff[z][i].shape[0],tiff[z][i].shape[1]))
+                    corr_image = cv2.warpAffine(tiff[z][i],tform_list[i],dsize=(tiff[z][i].shape[1],tiff[z][i].shape[0]))
                     z_stack.append(corr_image)
                 else:
-                    corr_image = cv2.warpAffine(tiff[z][i],tform_list[i],dsize=(tiff[z][i].shape[0],tiff[z][i].shape[1]))
+                    corr_image = cv2.warpAffine(tiff[z][i],tform_list[i],dsize=(tiff[z][i].shape[1],tiff[z][i].shape[0]))
                     z_stack.append(corr_image)
                     #tform list length should be minus dapi if include_dapi == False
                     #so we do -2 here to get the last i in loop
@@ -389,10 +426,7 @@ def fiducial_alignment_single(tiff_src, ref_src,region_size=7, min_distance=10,
        transformed_image = np.swapaxes(np.array(corr_stack),0,1)
     
     #check alignment error
-    error = alignment_error(transformed_image, ref_dots_list, ori_dist_list, 
-                            region_size=region_size, min_distance=min_distance, 
-                            threshold_abs=threshold_abs, num_peaks=num_peaks, 
-                            max_dist=max_dist)
+    error = alignment_error(ref_points_used, fit_points_used, ori_dist_list, tform_list, max_dist)
     
     if write == True:
         print(output_path)
@@ -409,7 +443,7 @@ def fiducial_alignment_single(tiff_src, ref_src,region_size=7, min_distance=10,
         return transformed_image, error
 
 def fiducial_align_parallel(tiff_list, ref_src, region_size=7, min_distance=10, 
-                            threshold_abs=500, num_peaks=1000, max_dist=2,
+                            threshold_abs=500, num_peaks=1000, max_dist=2,ransac_threshold=0.5,
                             include_dapi=True, swapaxes=False, cores = 24):
     """
     This function will run the fiducial alignment in parallel analyzing multiple images at once.
@@ -422,9 +456,10 @@ def fiducial_align_parallel(tiff_list, ref_src, region_size=7, min_distance=10,
     min_distance = minimum pixel distance between peaks for dot picking
     threshold_abs = absolute threshold value for peak detection
     num_peaks= number of desired dots
+    max_dist = max distance for neighbor search
+    ransac_threshold = adjust the max allowed error in pixels
     include_dapi = bool to include dapi channel
     swapaxes = bool to switch z and c axes
-    radial_center = bool to radial center instead of gaussian fit
     cores = number of cores to use
     
     Returns
@@ -438,6 +473,7 @@ def fiducial_align_parallel(tiff_list, ref_src, region_size=7, min_distance=10,
     if type(tiff_list) != list:
         fiducial_alignment_single(tiff_list, ref_src,region_size=region_size, min_distance=min_distance,
                                   threshold_abs=threshold_abs, num_peaks=num_peaks, max_dist=max_dist, 
+                                  ransac_threshold=ransac_threshold,
                                   include_dapi=include_dapi, swapaxes=swapaxes, write = True)
         print(f'Path {tiff_list} completed after {(time.time() - start)/60} minutes')
     else:
@@ -446,6 +482,7 @@ def fiducial_align_parallel(tiff_list, ref_src, region_size=7, min_distance=10,
             for path in tiff_list:
                 fut = exe.submit(fiducial_alignment_single, path, ref_src, region_size=region_size, 
                                  min_distance=min_distance, threshold_abs=threshold_abs, num_peaks=num_peaks,
+                                 ransac_threshold=ransac_threshold,
                                  max_dist=max_dist,include_dapi=include_dapi,
                                  swapaxes=swapaxes, write = True)
                 futures[fut] = path
