@@ -56,7 +56,8 @@ def get_region_around(im, center, size, edge='raise'):
     
     return region
         
-def find_spots(img_src, probability_threshold = 0.9, size_cutoff = 3):
+def find_spots(img_src, probability_threshold = 0.9, 
+               size_cutoff = 3, pos = None):
     """
     This function will find dots using deepcell spots
     
@@ -65,6 +66,7 @@ def find_spots(img_src, probability_threshold = 0.9, size_cutoff = 3):
     img_src = path to image
     probability_threshold = parameter for deepcell spots
     size_cutoff = number of sigmas away from the mean for size to keep
+    pos = store pos info for parallel processing if we are doing jobs by hyb
     """
     
     #get hyb information
@@ -154,27 +156,32 @@ def find_spots(img_src, probability_threshold = 0.9, size_cutoff = 3):
     #reorganize df
     df_final = df_final[["hyb","ch","x","y","z","size","peak intensity","average intensity"]]
     
-    return df_final
-
+    if pos != None:
+        return df_final, pos
+    else:
+        return df_final
+    
 def find_spots_all(img_list, probability_threshold = 0.9, 
-                        size_cutoff = 3, output_folder="", 
-                        encoded_within_channel=False, parallel=True):
+                   size_cutoff = 3, output_folder="", 
+                   encoded_within_channel=False, 
+                   job_by_hyb = True):
     """
     This function will run deep cell spots in parallel for each hyb.
     
+    Parameters
+    ----------
     img_list = list of paths for images
     probability_threshold = parameter for deepcell spots
     size_cutoff = number of sigmas away from the mean for size to keep
     output_folder = path to where you want the output
     encoded_within_channel = bool to split dots by channels
-    parallel = bool to run concurrent futures
+    job_by_hyb = bool on whether jobs are split by hybs
     """
     
     #start time
     start = time.time()
     #run parallel processing per hyb
-    #sometimes parallel processing doesn't work for some datasets depending on density and number of hybs
-    if parallel == True:
+    if job_by_hyb == False:
         with ProcessPoolExecutor(max_workers=32) as exe:
             futures = []
             for img_src in img_list:
@@ -184,39 +191,73 @@ def find_spots_all(img_list, probability_threshold = 0.9,
         #collect result from futures objects
         result_list = [fut.result() for fut in futures]
     else:
-        result_list = []
-        for img_src in img_list:
-            dots = find_spots(img_src, probability_threshold, size_cutoff)
-            result_list.append(dots)
-            
-    #concatenate all hybs
-    combined_df = pd.concat(result_list)
-    combined_df = combined_df.reset_index(drop=True)
+        with ProcessPoolExecutor(max_workers=32) as exe:
+            futures = []
+            for img_src in img_list:
+                #get pos info
+                pos = Path(img_src).name.split("_")[1].split(".")[0].replace("Pos","")
+                fut = exe.submit(find_spots, img_src, probability_threshold, size_cutoff, pos=int(pos))
+                futures.append(fut)
 
-    #write csv
-    if encoded_within_channel == True:
-        #make output directory
-        pos = Path(img_list[0]).name.split("_")[1]
-        pos = pos.split(".")[0]
-        new_output_folder = Path(output_folder) / pos
-        for c in combined_df["ch"].unique():
-            new_output_folder = new_output_folder / f"Channel_{c}"
+        #collect result from futures objects
+        result_list = [fut.result()[0] for fut in futures]
+        #collect pos list
+        pos_list = [fut.result()[1] for fut in futures]
+ 
+    if job_by_hyb == False:      
+        #concatenate all hybs
+        combined_df = pd.concat(result_list)
+        combined_df = combined_df.reset_index(drop=True)
+
+        #write csv
+        if encoded_within_channel == True:
+            #make output directory
+            pos = Path(img_list[0]).name.split("_")[1]
+            pos = pos.split(".")[0]
+            new_output_folder = Path(output_folder) / pos
+            for c in combined_df["ch"].unique():
+                new_output_folder = new_output_folder / f"Channel_{c}"
+                new_output_folder.mkdir(parents=True, exist_ok=True)
+                for z in combined_df["z"].unique():
+                    combined_df_cz = combined_df[(combined_df["ch"]==c) & (combined_df["z"]==z)].reset_index(drop=True)
+                    combined_df_cz.to_csv(str(new_output_folder / f"locations_z_{z}.csv"))
+        else:
+            #make output directory
+            pos = Path(img_list[0]).name.split("_")[1]
+            pos = pos.split(".")[0]
+            new_output_folder = Path(output_folder) / pos
             new_output_folder.mkdir(parents=True, exist_ok=True)
             for z in combined_df["z"].unique():
-                combined_df_cz = combined_df[(combined_df["ch"]==c) & (combined_df["z"]==z)].reset_index(drop=True)
-                combined_df_cz.to_csv(str(new_output_folder / f"locations_z_{z}.csv"))
+                combined_df_z = combined_df[combined_df["z"]==z].reset_index(drop=True)
+                combined_df_z.to_csv(str(Path(new_output_folder)/ f"locations_z_{z}.csv"))
+
+        print(f"This task took {(time.time()-start)/60} min")
     else:
-        #make output directory
-        pos = Path(img_list[0]).name.split("_")[1]
-        pos = pos.split(".")[0]
-        new_output_folder = Path(output_folder) / pos
-        new_output_folder.mkdir(parents=True, exist_ok=True)
-        for z in combined_df["z"].unique():
-            combined_df_z = combined_df[combined_df["z"]==z].reset_index(drop=True)
-            combined_df_z.to_csv(str(Path(new_output_folder)/ f"locations_z_{z}.csv"))
-    
-    print(f"This task took {(time.time()-start)/60} min")
-    
+        #write out each result
+        if encoded_within_channel == True:
+            #make output directory
+            for i in range(len(pos_list)):
+                #write to specific pos
+                new_output_folder = Path(output_folder) / f"Pos_{pos_list[i]}"
+                for c in result_list[i]["ch"].unique():
+                    #separate channels
+                    new_output_folder_ch = new_output_folder / f"Channel_{c}"
+                    new_output_folder_ch.mkdir(parents=True, exist_ok=True)
+                    for z in result_list[i]["z"].unique():
+                        #separate z and record hyb number in file name
+                        df_cz = result_list[i][(result_list[i]["ch"]==c) & (result_list[i]["z"]==z)].reset_index(drop=True)
+                        hyb_num = result_list[i]["hyb"].unique()[0]
+                        df_cz.to_csv(str(new_output_folder_ch / f"locations_z_{z}_hyb_{hyb_num}.csv"))
+        else:
+            #make output directory
+            for i in range(len(pos_list)):
+                #write to specific pos
+                new_output_folder = Path(output_folder) / f"Pos_{pos_list[i]}"
+                new_output_folder.mkdir(parents=True, exist_ok=True)
+                for z in result_list[i]["z"].unique():
+                    df_z = result_list[i][result_list[i]["z"]==z].reset_index(drop=True)
+                    hyb_num = result_list[i]["hyb"].unique()[0]
+                    df_z.to_csv(str(new_output_folder/ f"locations_z_{z}_hyb_{hyb_num}.csv"))
     
     
     
