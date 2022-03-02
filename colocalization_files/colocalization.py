@@ -47,7 +47,7 @@ def colocalizing_dots(df1, df2, radius=1, return_dots_not_coloc=False):
     new_df2 = df2.iloc[np.array(neighbors_flattened)[:,1]].reset_index(drop=True)
     
     #colocalization efficiency
-    eff = len(new_df1)/max(len(df1), len(df2))
+    eff = len(new_df1)/len(df1)
     
     print("colocalization efficiency =",np.round(eff, 2))
    
