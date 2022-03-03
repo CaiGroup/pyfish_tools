@@ -1,9 +1,3 @@
-"""
-author: Katsuya Lex Colon
-updated: 12/03/21
-group: Cai Lab
-"""
-
 import numpy as np
 import pandas as pd
 
@@ -28,15 +22,13 @@ def barcode_key_converter_within(codebook, num_hybs = 64, num_barcodes = 4, ch=1
     col_names = codebook.columns
 
     for i in range(len(codebook)):
-        ps1 = int(codebook.iloc[i][col_names[0]])
-        ps2 = int(codebook.iloc[i][col_names[1]])
-        ps3 = int(codebook.iloc[i][col_names[2]])
-        ps4 = int(codebook.iloc[i][col_names[3]])
-        table[i,(ps1-1)] = ch
-        table[i,(ps2-1)+offset] = ch
-        table[i,(ps3-1)+(offset*2)] = ch
-        table[i,(ps4-1)+(offset*3)] = ch
-
+        ps_list = []
+        for j in range(num_barcodes):
+            ps_list.append(int(codebook.iloc[i][col_names[j]]))
+        k=0
+        for ps in ps_list:
+            table[i,(ps-1)+(offset*k)] = ch
+            k+=1
     codebook_converted = pd.DataFrame(table)
     codebook_converted.index = codebook.index
 
