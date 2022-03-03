@@ -1,7 +1,7 @@
 """
 authors: Katsuya Lex Colon and Lincoln Ombelets
 group: Cai Lab
-updated: 02/28/22
+updated: 03/03/22
 """
 #basic analysis package
 import numpy as np
@@ -280,6 +280,9 @@ def alignment_error(ref_points_affine, moving_points_affine,
         
         #get new distance
         dists_new, _, _ = nearest_neighbors(ref_points_affine[i], tform_points, max_dist=max_dist)
+        
+        #remove distances beyond 2 pixels as they are most likely outliers after transform
+        dists_new = dists_new[dists_new <= 2]
         
         #calculate localization precision
         displacement_new = dot_displacement(dists_new)
