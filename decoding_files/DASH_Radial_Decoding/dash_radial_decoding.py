@@ -596,12 +596,6 @@ def dash_radial_decoding(location_path, codebook_path,
                     num_barcodes=num_barcodes, radius=first_radius,diff=diff,
                     min_seed=min_seed, hybs = hybs, include_undecoded = False, decode_across=decode_across)
     
-    #only get the indicies of decoded genes (excluding undefined)
-    #the index on decoded will correspond to the same index in indicies used
-    indicies_used_df = decoded_1.index.tolist()
-    #isolate used indicies in dot indicies list
-    indicies_used_1 = list(map(indicies_used_1.__getitem__, indicies_used_df))
-    
     #only keep top 10% of highly expressed genes
     if decode_high_exp_genes == True:
         #collapse into gene counts
@@ -616,6 +610,12 @@ def dash_radial_decoding(location_path, codebook_path,
         highexpgenes = counts_df_true["index"][:int((len(counts_df_true)*.1))]
         #only take out highly expressed genes
         decoded_1 = decoded_1.loc[decoded_1["genes"].isin(highexpgenes.to_list())]
+        indicies_used_df = decoded_1.index.tolist()
+        #isolate used indicies in dot indicies list
+        indicies_used_1 = list(map(indicies_used_1.__getitem__, indicies_used_df))
+    else:
+        #only get the indicies of decoded genes (excluding undefined)
+        #the index on decoded will correspond to the same index in indicies used
         indicies_used_df = decoded_1.index.tolist()
         #isolate used indicies in dot indicies list
         indicies_used_1 = list(map(indicies_used_1.__getitem__, indicies_used_df))
