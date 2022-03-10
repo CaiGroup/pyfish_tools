@@ -60,9 +60,7 @@ def organize_files_pos(pos_path, num_z=2, num_hybs=80):
                 df_all = [pd.read_csv(str(df)) for df in comb_files]
                 df_concat = pd.concat(df_all).reset_index(drop=True)
                 df_concat.to_csv(str(channel / f"locations_z_{z}.csv"))
-                files_remove = glob.glob(str(channel / "*_hyb_*.csv"))
-                for file in files_remove:
-                    os.remove(file)
+                
             else:
                 missing_hybs = check_hyb_files(comb_files, num_hybs)
                 position = pos_path.name
@@ -73,6 +71,9 @@ def organize_files_pos(pos_path, num_z=2, num_hybs=80):
                 else:
                     with open("missing_hybs.txt","w+") as f:
                         f.write(f"{channel_num}, {position}, z= {z}, hybs missing = {missing_hybs}\n")
+        files_remove = glob.glob(str(channel / "*_hyb_*.csv"))
+        for file in files_remove:
+            os.remove(file)
                     
     
 def organize_files_parallel(path, num_z=2, num_hybs=80):
