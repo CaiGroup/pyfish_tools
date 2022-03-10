@@ -1,5 +1,5 @@
 """
-authors: Katsuya Lex Colon and Lincoln Ombelets
+author: Katsuya Lex Colon
 group: Cai Lab
 updated: 03/03/22
 """

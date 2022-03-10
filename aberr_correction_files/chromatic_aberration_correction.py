@@ -467,6 +467,9 @@ def chromatic_corr_offsets(tiff_src,region_size=7, min_distance=10,
         for element in error:
             f.write(str(element[0]) + " " + str(element[1]) + " " + str(element[2]) + "\n")
     f.close()
+    
+    error = pd.DataFrame(error)
+    error.columns = ["Channels (Reference Excluded)","Percent Improvement","FWHM"]
         
     return transformed_image, error, tform_list
 
