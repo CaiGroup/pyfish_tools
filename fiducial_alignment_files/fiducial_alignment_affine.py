@@ -443,6 +443,9 @@ def fiducial_alignment_single(tiff_src, ref_src,region_size=7, min_distance=10,
                 f.write(str(element[0]) + " " + str(element[1]) + " " + str(element[2]) + "\n")
         f.close()
     else:    
+        error = pd.DataFrame(error)
+        error.columns = ["Channels (Reference Excluded)","Percent Improvement","FWHM"]
+        
         return transformed_image, error
 
 def fiducial_align_parallel(tiff_list, ref_src, region_size=7, min_distance=10, 
