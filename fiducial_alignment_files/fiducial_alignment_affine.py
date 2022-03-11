@@ -98,8 +98,10 @@ def dot_displacement(dist_arr, show_plot=True):
     displacement = x[index_hwhm]*2
     
     if show_plot == True:
+        #calculate number of bins based on sturge's rule
+        bins = round(1 + 3.322*np.log(len(dist_arr)))
         #plot histogram
-        plt.hist(dist_arr, density=True, bins=50)
+        plt.hist(dist_arr, density=True, bins=bins)
         #plot distribution
         plt.plot(x,p, label="Gaussian Fitted Data")
         #plot half max
@@ -116,9 +118,35 @@ def dot_displacement(dist_arr, show_plot=True):
     
     return displacement
 
+def centroid_offset(x, y, x_g, y_g, region_size):
+    """
+    Returns corrected centroids
+    Parameters
+    ----------
+    x = uncorrected x coord
+    y = uncorrected y coord
+    x_g = gaussian fitted x 
+    y_g = gaussian fitted y
+    region_size = size of bounding box
+    """
+    #calculate offset
+    y_offset = np.abs(y_g-(region_size // 2))
+    x_offset = np.abs(x_g-(region_size // 2))
+
+    #apply offset to dots
+    if y_g > (region_size // 2):
+        y = y+y_offset
+    else:
+        y = y-y_offset
+    if x_g > (region_size // 2):
+        x = x+x_offset
+    else:
+        x = x-x_offset
     
-def get_alignment_dots(image, region_size=7, min_distance=10, 
-                       threshold_abs=500, num_peaks=1000):
+    return x,y
+    
+def get_alignment_dots(image, ref_coord = None, region_size=7, min_distance=10, 
+                       threshold_abs=500, num_peaks=1000, use_ref_coord=False):
     """
     This funtion will pick dots using skimage.feature.peak_local_max then generate a bounding box
     for that dot. The isolated dot will then be fitted with a 2d gaussian  or radial centered to get subpixel centers.
@@ -126,43 +154,52 @@ def get_alignment_dots(image, region_size=7, min_distance=10,
     Parameters
     ----------
     image = image tiff
+    ref_coord = reference coordinates
     region_size = size of bounding box (use odd number)
     min_distance = minimum number of pixels separating peaks (arg for peal_local_max)
     threshold_abs = minimum absolute pixel intensity
     num_peaks = number of desired dots
+    use_ref_coord = bool to use reference coordinates to locate dots in moving image
     
     Returns
     -------
     centroids
     """
+    if use_ref_coord == False:
+        #pick out bright dots
+        dot_cands = peak_local_max(
+            image, 
+            min_distance=min_distance, 
+            threshold_abs=threshold_abs, 
+            num_peaks=num_peaks
+        )
+    else:
+        #convert reference coordinates to int
+        dot_cands = np.array(ref_coord).astype(int)
+        #swap columns to make it y,x
+        dot_cands = dot_cands[:,[1, 0]]
 
-    #pick out bright dots
-    dot_cands = peak_local_max(
-        image, 
-        min_distance=min_distance, 
-        threshold_abs=threshold_abs, 
-        num_peaks=num_peaks
-    )
-   
     #gaussian fit dots to get subpixel centroids
     #cand should by y,x coord
     centroids = []
     for cand in dot_cands:
         try:
+            #get initial fit
             im_data = get_region_around(image, cand, region_size)
             x_g, y_g = centroid_2dg(im_data)
-            y_offset = np.abs(y_g-(region_size // 2))
-            x_offset = np.abs(x_g-(region_size // 2))
-            #apply offset to dots
-            if y_g > (region_size // 2):
-                y = cand[0]+y_offset
-            else:
-                y = cand[0]-y_offset
-            if x_g > (region_size // 2):
-                x = cand[1]+x_offset
-            else:
-                x = cand[1]-x_offset
-            centroids.append([x, y])
+            
+            #get corrected coordinates
+            x,y = centroid_offset(cand[1], cand[0], x_g, y_g, region_size)
+                
+            #generate adjusted bounding box and fit again
+            #this step will be important if the fiducial is off by 1 pixel
+            im_data = get_region_around(image, [int(y), int(x)], region_size)
+            x_g, y_g = centroid_2dg(im_data)
+            
+            #get corrected coordinates
+            x_fin,y_fin = centroid_offset(int(x), int(y), x_g, y_g, region_size)
+            
+            centroids.append([x_fin, y_fin])
         except ValueError:
             continue
         except IndexError:
@@ -305,7 +342,7 @@ def alignment_error(ref_points_affine, moving_points_affine,
     
 def fiducial_alignment_single(tiff_src, ref_src,region_size=7, min_distance=10, 
                               threshold_abs=500, num_peaks=1000, max_dist=2,ransac_threshold=0.5,
-                              include_dapi=True, swapaxes=False, write = True):
+                              include_dapi=True, use_ref_coord=False, swapaxes=False, write = True):
     """
     Parameters
     ----------
@@ -318,6 +355,7 @@ def fiducial_alignment_single(tiff_src, ref_src,region_size=7, min_distance=10,
     max_dist = max distance for neighbor search
     ransac_threshold = adjust the max allowed error in pixels
     include_dapi = bool to include dapi for alignment
+    use_ref_coord = bool to use reference coordinates to locate dots in moving image
     swapaxes = bool to switch channel and z axes
     write = bool to write image
     
@@ -330,8 +368,8 @@ def fiducial_alignment_single(tiff_src, ref_src,region_size=7, min_distance=10,
     output_folder = Path(orig_image_dir) / "fiducial_aligned"
     hybcycle = Path(tiff_src).parent.name
     output_path = output_folder / hybcycle / Path(tiff_src).name
-    
     output_path.parent.mkdir(parents=True, exist_ok=True)
+    
     #read in image
     if swapaxes == True:
         tiff = pil_imread(tiff_src, swapaxes=True)
@@ -351,10 +389,15 @@ def fiducial_alignment_single(tiff_src, ref_src,region_size=7, min_distance=10,
             number_of_channels = tiff.shape[0]-1
         for c in range(number_of_channels):
             #get reference and experimental alignment dots
-            ref_dots = get_alignment_dots(ref[c], region_size=region_size, min_distance=min_distance, 
-                           threshold_abs=threshold_abs, num_peaks=num_peaks)
-            exp_dots = get_alignment_dots(tiff[c], region_size=region_size, min_distance=min_distance, 
-                           threshold_abs=threshold_abs, num_peaks=num_peaks)
+            ref_dots = get_alignment_dots(ref[c], ref_coord=None, region_size=region_size, min_distance=min_distance, 
+                           threshold_abs=threshold_abs, num_peaks=num_peaks, use_ref_coord=False)
+            if use_ref_coord == False:
+                exp_dots = get_alignment_dots(tiff[c], ref_coord=None, region_size=region_size, min_distance=min_distance, 
+                               threshold_abs=threshold_abs, num_peaks=num_peaks, use_ref_coord=False)
+            else:
+                exp_dots = get_alignment_dots(tiff[c], ref_coord=ref_dots, region_size=region_size, min_distance=min_distance, 
+                               threshold_abs=threshold_abs, num_peaks=num_peaks, use_ref_coord=True)
+                
             ref_dots_list.append(ref_dots)
             exp_dots_list.append(exp_dots) 
     else:
@@ -367,10 +410,14 @@ def fiducial_alignment_single(tiff_src, ref_src,region_size=7, min_distance=10,
             ref_max = np.max(ref[:,c,:,:], axis=0)
             tiff_max = np.max(tiff[:,c,:,:], axis=0)
             #get alignment dots per channel
-            ref_dots = get_alignment_dots(ref_max, region_size=region_size, min_distance=min_distance, 
-                           threshold_abs=threshold_abs, num_peaks=num_peaks)
-            exp_dots = get_alignment_dots(tiff_max, region_size=region_size, min_distance=min_distance, 
-                           threshold_abs=threshold_abs, num_peaks=num_peaks)
+            ref_dots = get_alignment_dots(ref_max, ref_coord=None, region_size=region_size, min_distance=min_distance, 
+                           threshold_abs=threshold_abs, num_peaks=num_peaks, use_ref_coord=False)
+            if use_ref_coord == False:
+                exp_dots = get_alignment_dots(tiff_max, ref_coord=None, region_size=region_size, min_distance=min_distance, 
+                           threshold_abs=threshold_abs, num_peaks=num_peaks, use_ref_coord=False)
+            else:
+                exp_dots = get_alignment_dots(tiff_max, ref_coord=ref_dots, region_size=region_size, min_distance=min_distance, 
+                           threshold_abs=threshold_abs, num_peaks=num_peaks, use_ref_coord=True)
             ref_dots_list.append(ref_dots)
             exp_dots_list.append(exp_dots)
             
@@ -444,13 +491,13 @@ def fiducial_alignment_single(tiff_src, ref_src,region_size=7, min_distance=10,
         f.close()
     else:    
         error = pd.DataFrame(error)
-        error.columns = ["Channels (Reference Excluded)","Percent Improvement","FWHM"]
+        error.columns = ["Channels","Percent Improvement","FWHM"]
         
         return transformed_image, error
 
 def fiducial_align_parallel(tiff_list, ref_src, region_size=7, min_distance=10, 
                             threshold_abs=500, num_peaks=1000, max_dist=2,ransac_threshold=0.5,
-                            include_dapi=True, swapaxes=False, cores = 24):
+                            include_dapi=True, use_ref_coord = False, swapaxes=False, cores = 24):
     """
     This function will run the fiducial alignment in parallel analyzing multiple images at once.
     
@@ -465,6 +512,7 @@ def fiducial_align_parallel(tiff_list, ref_src, region_size=7, min_distance=10,
     max_dist = max distance for neighbor search
     ransac_threshold = adjust the max allowed error in pixels
     include_dapi = bool to include dapi channel
+    use_ref_coord = bool to use reference coordinates to locate dots in moving image
     swapaxes = bool to switch z and c axes
     cores = number of cores to use
     
@@ -480,7 +528,7 @@ def fiducial_align_parallel(tiff_list, ref_src, region_size=7, min_distance=10,
         fiducial_alignment_single(tiff_list, ref_src,region_size=region_size, min_distance=min_distance,
                                   threshold_abs=threshold_abs, num_peaks=num_peaks, max_dist=max_dist, 
                                   ransac_threshold=ransac_threshold,
-                                  include_dapi=include_dapi, swapaxes=swapaxes, write = True)
+                                  include_dapi=include_dapi, use_ref_coord= use_ref_coord, swapaxes=swapaxes, write = True)
         print(f'Path {tiff_list} completed after {(time.time() - start)/60} minutes')
     else:
         with ProcessPoolExecutor(max_workers=cores) as exe:
@@ -489,7 +537,7 @@ def fiducial_align_parallel(tiff_list, ref_src, region_size=7, min_distance=10,
                 fut = exe.submit(fiducial_alignment_single, path, ref_src, region_size=region_size, 
                                  min_distance=min_distance, threshold_abs=threshold_abs, num_peaks=num_peaks,
                                  ransac_threshold=ransac_threshold,
-                                 max_dist=max_dist,include_dapi=include_dapi,
+                                 max_dist=max_dist,include_dapi=include_dapi, use_ref_coord= use_ref_coord,
                                  swapaxes=swapaxes, write = True)
                 futures[fut] = path
             for fut in as_completed(futures):
