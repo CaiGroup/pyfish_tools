@@ -33,7 +33,7 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 warnings.filterwarnings("ignore")
 
 def background_correct_image(stack, correction_algo, stack_bkgrd=None, z=2, size=2048, 
-                             gamma = 1.4, sigma=40, match_hist =True, subtract=True, divide=False):
+                             gamma = 1.4, kern=5, sigma=40, match_hist =True, subtract=True, divide=False):
     '''
    This function will background correct raw images. There are several correction algorithms that can be used (SigmaClipping_and_Gamma_C,Gaussian_and_Gamma_Correction, and LSR_Backgound_Correction).
    Additionally, one can choose to use final or initial background image for subtraction if stack_bkgrd (background image array) is provided. 
@@ -45,6 +45,7 @@ def background_correct_image(stack, correction_algo, stack_bkgrd=None, z=2, size
    z = number of z slices
    size = image size
    gamma = gamma enhancment values
+   kern = kernel size
    sigma = sigma value for gaussian blurring
    match_hist = bool to match histograms of blurred image
    subtract = bool to subtract blurred image from raw
@@ -83,7 +84,7 @@ def background_correct_image(stack, correction_algo, stack_bkgrd=None, z=2, size
                     corrected_channel = correction_algo(channel)
                 else:
                     if correction_algo == Gaussian_and_Gamma_Correction:
-                        corrected_channel = correction_algo(channel, gamma, sigma, 
+                        corrected_channel = correction_algo(channel, gamma, sigma, kern,
                                                             match_hist, subtract, divide)
                     else:
                         corrected_channel = correction_algo(channel, gamma)
@@ -119,10 +120,10 @@ def SigmaClipping_and_Gamma_C(image, gamma):
     
     return sigma_clipped_contrast_ench_Gamma_c
 
-def Gaussian_and_Gamma_Correction(image, gamma, sigma, match_hist =True, subtract=True, divide=False):
+def Gaussian_and_Gamma_Correction(image, gamma, sigma, kern = 5, match_hist =True, subtract=True, divide=False):
     """ Background Correction via Background Elimination (estimated by Gaussian), followed by Gamma Correction"""
-    #gaussian blur image
-    image_blur = ndimage.gaussian_filter(image, sigma)
+    #2d gaussian blur image
+    image_blur = cv2.GaussianBlur(image,(kern,kern),sigma)
     if divide == False:
         #subtract gaussian blurred background
         if (match_hist == True) and (subtract == True):
@@ -132,6 +133,8 @@ def Gaussian_and_Gamma_Correction(image, gamma, sigma, match_hist =True, subtrac
             image_background_eliminated= image - image_blur
             image_background_eliminated[image_background_eliminated<0] = 0 
     else:
+        #1d convolution is better for evening out background
+        image_blur = ndimage.gaussian_filter(image, sigma)
         #divide gaussian blurred background to even out illumination
         image_background_eliminated= image/((image_blur)/np.mean(image_blur))
     #adjust contrast by gamma enhancement
@@ -357,7 +360,7 @@ def low_pass_gaussian(image, kern=3):
             z_slice.append(channel_slice)
         return np.array(z_slice)
 
-def deconvolute_one(image_path, image_ref, sigma_hpgb = 1, kern_rl = 5, 
+def deconvolute_one(image_path, image_ref, sigma_hpgb = 1, kern_hpgb=5, kern_rl = 5, 
                     kern_lpgb = 3, sigma=(1.8,1.6,1.5,1.3), radius=(4,4,4,4),
                     model="gaussian", microscope="boc",
                     size=9,min_distance=10,threshold_abs=1000,
@@ -373,6 +376,7 @@ def deconvolute_one(image_path, image_ref, sigma_hpgb = 1, kern_rl = 5,
     sigma_hpgb = sigma for high-pass gaussian blur
     kern_rl = kernel size for Richardson-Lucy deconvolution
     kern_lpgb = kernel size for low-pass gaussian blur
+    kern_hpgb = kernel size for high-pass gaussian blur
     sigma = channel specific sigma values for RL-deconvolution (not used if microscope is defined)
     radius = channel specific radius for airy disc psf (fill always)
     model = "gaussian" or "airy_disc" psf
@@ -441,14 +445,14 @@ def deconvolute_one(image_path, image_ref, sigma_hpgb = 1, kern_rl = 5,
         size = image.shape[2]
         print('background correction...')
         hpgb_image = background_correct_image(image,Gaussian_and_Gamma_Correction, 
-                                              stack_bkgrd, z, size, gamma, sigma_hpgb,
+                                              stack_bkgrd, z, size, gamma, kern_hpgb, sigma_hpgb,
                                               match_hist, subtract, divide) 
     else:
         z=1
         size = image.shape[2]
         print('background correction...')
         hpgb_image = background_correct_image(image,Gaussian_and_Gamma_Correction, 
-                                              stack_bkgrd, z, size,gamma, sigma_hpgb,
+                                              stack_bkgrd, z, size,gamma,kern_hpgb, sigma_hpgb,
                                               match_hist, subtract, divide) 
     #perform deconvolution
     print('deconvolution...')
@@ -469,7 +473,7 @@ def deconvolute_one(image_path, image_ref, sigma_hpgb = 1, kern_rl = 5,
         print('writing image')
         tf.imwrite(output_path, rl_img_hpgb)
             
-def deconvolute_many(images, image_ref, sigma_hpgb = 1, kern_rl = 5, 
+def deconvolute_many(images, image_ref, sigma_hpgb = 1, kern_hpgb = 5, kern_rl = 5, 
                     kern_lpgb = 3, sigma=(1.8,1.6,1.5,1.3), radius=(4,4,4,4),
                     model="gaussian", microscope="boc",
                     size=9,min_distance=10,threshold_abs=1000,
@@ -483,6 +487,7 @@ def deconvolute_many(images, image_ref, sigma_hpgb = 1, kern_rl = 5,
     images = list of image paths
     image_ref = path to reference image for removing fiducials
     sigma_hpgb = sigma for high-pass gaussian blur
+    kern_hpgb = kernel size for high-pass gaussian blur
     kern_rl = kernel size for Richardson-Lucy deconvolution
     kern_lpgb = kernel size for low-pass gaussian blur
     sigma = channel specific sigma values for RL-deconvolution (not used if microscope is defined)
@@ -509,7 +514,7 @@ def deconvolute_many(images, image_ref, sigma_hpgb = 1, kern_rl = 5,
     
     if type(images) != list:
         deconvolute_one(images, image_ref, 
-                       sigma_hpgb=sigma_hpgb, kern_rl=kern_rl, 
+                       sigma_hpgb=sigma_hpgb,kern_hpgb=kern_hpgb, kern_rl=kern_rl, 
                        kern_lpgb=kern_lpgb, sigma=sigma, radius=radius,model=model, microscope=microscope,
                        size=size,min_distance=min_distance,threshold_abs=threshold_abs,gamma=gamma,hyb_offset=hyb_offset,
                        num_peaks=num_peaks, edge=edge, swapaxes=swapaxes,
@@ -519,7 +524,7 @@ def deconvolute_many(images, image_ref, sigma_hpgb = 1, kern_rl = 5,
         with ProcessPoolExecutor(max_workers=12) as exe:
             futures = {}
             for path in images:
-                fut = exe.submit(deconvolute_one, path, image_ref, sigma_hpgb=sigma_hpgb, kern_rl=kern_rl, 
+                fut = exe.submit(deconvolute_one, path, image_ref, sigma_hpgb=sigma_hpgb,kern_hpgb=kern_hpgb, kern_rl=kern_rl, 
                        kern_lpgb=kern_lpgb, sigma=sigma, radius=radius,model=model, microscope=microscope,
                        size=size,min_distance=min_distance,threshold_abs=threshold_abs,gamma=gamma,hyb_offset=hyb_offset,
                        num_peaks=num_peaks, edge=edge, swapaxes=swapaxes,
@@ -532,7 +537,7 @@ def deconvolute_many(images, image_ref, sigma_hpgb = 1, kern_rl = 5,
                 print(f'Path {path} completed after {time.time() - start} seconds')
                 
 def bkgrd_corr_one(image_path, correction_type = None, stack_bkgrd=None, swapaxes=False, 
-                   z=2, size=2048, gamma = 1.4, sigma = 40, rb_radius=5, hyb_offset=0,
+                   z=2, size=2048, gamma = 1.4, kern_hpgb=5, sigma = 40, rb_radius=5, hyb_offset=0,
                    rollingball = False, lowpass=True, match_hist=True, subtract=True, divide=False):
     """
     background correct one image only
@@ -545,8 +550,9 @@ def bkgrd_corr_one(image_path, correction_type = None, stack_bkgrd=None, swapaxe
     swapaxes=bool to swapaxes
     z=number of z
     size=x and y shape
-    gamma = int
-    sigma = int
+    gamma = int for gamma enhancement
+    kern_hpgb = kernel size for hpgb 
+    sigma = number of sigmas for hpgb
     rb_radius = rolling ball size
     hyb_offset = number of hybcycles to subtract for file name adjustment
     lowpass = do a low pass gaussian filter
@@ -588,10 +594,10 @@ def bkgrd_corr_one(image_path, correction_type = None, stack_bkgrd=None, swapaxe
     #background correct
     if type(stack_bkgrd) != type(None):
         corr_img = background_correct_image(image, correction_type, bkgrd, 
-                                            z, size, gamma, sigma, match_hist, subtract, divide)
+                                            z, size, gamma, kern_hpgb, sigma, match_hist, subtract, divide)
     else:
         corr_img = background_correct_image(image, correction_type, stack_bkgrd,
-                                            z, size, gamma, sigma, match_hist, subtract, divide)
+                                            z, size, gamma, kern_hpgb, sigma, match_hist, subtract, divide)
     
     #do rolling ball subtraction
     if rollingball == True:
@@ -616,7 +622,7 @@ def bkgrd_corr_one(image_path, correction_type = None, stack_bkgrd=None, swapaxe
         tf.imwrite(str(output_path), corr_img)
 
 def correct_many(images, correction_type = None, stack_bkgrd=None, swapaxes=False,
-                 z=2, size=2048, gamma = 1.4, sigma=40, rb_radius=5, hyb_offset=0,
+                 z=2, size=2048, gamma = 1.4,kern_hpgb=5, sigma=40, rb_radius=5, hyb_offset=0,
                  rollingball=False, lowpass = True, match_hist=True, subtract=True, divide=False):
     """
     function to correct all image
@@ -642,13 +648,14 @@ def correct_many(images, correction_type = None, stack_bkgrd=None, swapaxes=Fals
     
     if type(images) != list:
         bkgrd_corr_one(images, correction_type,stack_bkgrd, swapaxes, z, size,  
-                       gamma, sigma, rb_radius, hyb_offset, rollingball, lowpass,  match_hist, subtract, divide)
+                       gamma, kern_hpgb,sigma, rb_radius, hyb_offset, rollingball, 
+                       lowpass,  match_hist, subtract, divide)
     else:
         with ProcessPoolExecutor(max_workers=12) as exe:
             futures = {}
             for path in images:
                 fut = exe.submit(bkgrd_corr_one, path, correction_type, stack_bkgrd,
-                                 swapaxes, z, size,  gamma, sigma,rb_radius,hyb_offset,
+                                 swapaxes, z, size,  gamma,kern_hpgb, sigma, rb_radius,hyb_offset,
                                  rollingball, lowpass,  match_hist, subtract, divide)
                 futures[fut] = path
 
