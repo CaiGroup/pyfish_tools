@@ -541,16 +541,13 @@ def radial_decoding_parallel(locations,codebook,num_barcodes = 4, radius=1,diff=
             genes_locations = genes_locations[genes_locations["genes"] != "Undefined"]
         genes_locations = genes_locations[["genes", "x", "y","z","brightness","peak intensity", "size", "ambiguity score"]]  
         
-    #final gene locations file
-    genes_locations = genes_locations.sort_values("genes").reset_index(drop=True)
-    
     #return first set of decoded dots and their corresponding indicies
     return genes_locations, dot_idx_filtered
     
 def dash_radial_decoding(location_path, codebook_path,
                          num_barcodes = 4, first_radius=1, second_radius=1,third_radius=1,diff=0,
                          min_seed=4, hybs = 12, output_dir = "", 
-                         include_undecoded = False, 
+                         include_undecoded = False, decode_high_exp_genes = True,
                          triple_decode=True, decode_across = False):
     """
     This function will perform radial decoding on all barcodes as reference. Dot sequences
@@ -564,13 +561,15 @@ def dash_radial_decoding(location_path, codebook_path,
     location_path = path to location.csv
     codebook_path = path to codebook showing at which channel and hyb a dot should appear
     num_barcodes = number of total barcodes
-    radius = search radius using euclidean metric
-    diff = allowed barcode drops
-    min_seed = number of barcode seeds
-    cores = number of cores should match number of barcodes
+    first_radius = first search radius in pixels
+    second_radius = second search radius in pixels
+    third_radius = third search radius in pixels
+    diff = allowed pseudocolor drops
+    min_seed = number of times the same pseudocolor appears with changing reference
     hybs = total number of hybs
     output_dir = directory to where you want the file outputted
     include_undecoded = bool to output the undecoded dots
+    decode_high_exp_genes = decode highly expressed genes first
     triple_decode=bool to perform another around of decoding
     decode_across = bool for decoding across
     
@@ -597,6 +596,33 @@ def dash_radial_decoding(location_path, codebook_path,
                     num_barcodes=num_barcodes, radius=first_radius,diff=diff,
                     min_seed=min_seed, hybs = hybs, include_undecoded = False, decode_across=decode_across)
     
+    #only keep top 10% of highly expressed genes
+    if decode_high_exp_genes == True:
+        #collapse into gene counts
+        counts_df = Counter(decoded_1["genes"])
+        #change to df
+        counts_df = pd.DataFrame.from_dict(counts_df, orient='index').reset_index()
+        #remove fakes
+        counts_df_false = counts_df[counts_df["index"].str.startswith('fake')]
+        counts_df_true = counts_df.drop(counts_df_false.index).reset_index(drop=True)
+        #sort and identify top 10% highly expressed genes
+        counts_df_true = counts_df_true.sort_values(0, ascending=False).reset_index(drop=True)
+        highexpgenes = counts_df_true["index"][:int((len(counts_df_true)*.1))]
+        #only take out highly expressed genes
+        decoded_1 = decoded_1.loc[decoded_1["genes"].isin(highexpgenes.to_list())]
+        indicies_used_df = decoded_1.index.tolist()
+        #isolate used indicies in dot indicies list
+        indicies_used_1 = list(map(indicies_used_1.__getitem__, indicies_used_df))
+    else:
+        #only get the indicies of decoded genes (excluding undefined)
+        #the index on decoded will correspond to the same index in indicies used
+        indicies_used_df = decoded_1.index.tolist()
+        #isolate used indicies in dot indicies list
+        indicies_used_1 = list(map(indicies_used_1.__getitem__, indicies_used_df))
+        
+    #output results from first pass
+    decoded_1.sort_values("genes").to_csv(str(output_path).replace("finalgenes","round1"))
+    
     #flatten 1st set of indicies used list
     flattened_indicies_used = [element for sublist in indicies_used_1 for element in sublist]
     
@@ -609,20 +635,26 @@ def dash_radial_decoding(location_path, codebook_path,
                                                           min_seed=min_seed, hybs = hybs, include_undecoded = include_undecoded, 
                                                           decode_across=decode_across)
     if triple_decode == True:
+        #output results from second pass
+        decoded_combined = pd.concat([decoded_1, decoded_2])
+        decoded_combined.sort_values("genes").reset_index(drop=True).to_csv(str(output_path).replace("finalgenes","round2"))
+        #remove undefineds and get index of only decoded genes
+        decoded_2 =  decoded_2[decoded_2["genes"] != "Undefined"]
+        indicies_used_df = decoded_2.index.tolist()
+        #isolate used indicies in dot indicies list
+        indicies_used_2 = list(map(indicies_used_2.__getitem__, indicies_used_df))
+        
         #flatten 2nd set of indicies used list
         flattened_indicies_used_2 = [element for sublist in indicies_used_2 for element in sublist]
 
         #remove already decoded dots
         new_locations_2 = new_locations.drop(flattened_indicies_used_2).reset_index(drop=True)
 
-        #run decoding third pass with 2 pixel search
+        #run decoding third pass
         try:
             decoded_3, indicies_used_3 = radial_decoding_parallel(new_locations_2, codebook,
                         num_barcodes=num_barcodes, radius=third_radius,diff=diff,
                         min_seed=min_seed, hybs = hybs, include_undecoded = include_undecoded, decode_across=decode_across)
-            #in case include_undecoded is set to true
-            if include_undecoded == True:
-                decoded_2 = decoded_2[decoded_2["genes"] != "Undefined"]
             #combine decoded dfs
             decoded_combined = pd.concat([decoded_1, decoded_2, decoded_3])
         except:

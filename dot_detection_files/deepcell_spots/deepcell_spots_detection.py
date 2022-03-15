@@ -71,8 +71,11 @@ def find_spots(img_src, probability_threshold = 0.9,
     
     #get hyb information
     hybcycle = Path(img_src).parent.name
-    hyb_num = hybcycle.split("_")[1]
-    
+    if hybcycle.find("HybCycle") != -1:
+        hyb_num = hybcycle.split("_")[1]
+    else:
+        hyb_num = 0
+        
     #read image as z,c,x,y
     img = tf.imread(img_src)
     #reformat image if there is no z's
@@ -216,11 +219,11 @@ def find_spots_all(img_list, probability_threshold = 0.9,
             pos = pos.split(".")[0]
             new_output_folder = Path(output_folder) / pos
             for c in combined_df["ch"].unique():
-                new_output_folder = new_output_folder / f"Channel_{c}"
-                new_output_folder.mkdir(parents=True, exist_ok=True)
+                new_output_folder_ch = new_output_folder / f"Channel_{c}"
+                new_output_folder_ch.mkdir(parents=True, exist_ok=True)
                 for z in combined_df["z"].unique():
                     combined_df_cz = combined_df[(combined_df["ch"]==c) & (combined_df["z"]==z)].reset_index(drop=True)
-                    combined_df_cz.to_csv(str(new_output_folder / f"locations_z_{z}.csv"))
+                    combined_df_cz.to_csv(str(new_output_folder_ch / f"locations_z_{z}.csv"))
         else:
             #make output directory
             pos = Path(img_list[0]).name.split("_")[1]
