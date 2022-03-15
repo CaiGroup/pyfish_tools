@@ -619,6 +619,9 @@ def dash_radial_decoding(location_path, codebook_path,
         indicies_used_df = decoded_1.index.tolist()
         #isolate used indicies in dot indicies list
         indicies_used_1 = list(map(indicies_used_1.__getitem__, indicies_used_df))
+        
+    #output results from first pass
+    decoded_1.sort_values("genes").to_csv(str(output_path).replace("finalgenes","round1"))
     
     #flatten 1st set of indicies used list
     flattened_indicies_used = [element for sublist in indicies_used_1 for element in sublist]
@@ -632,6 +635,9 @@ def dash_radial_decoding(location_path, codebook_path,
                                                           min_seed=min_seed, hybs = hybs, include_undecoded = include_undecoded, 
                                                           decode_across=decode_across)
     if triple_decode == True:
+        #output results from second pass
+        decoded_combined = pd.concat([decoded_1, decoded_2])
+        decoded_combined.sort_values("genes").reset_index(drop=True).to_csv(str(output_path).replace("finalgenes","round2"))
         #remove undefineds and get index of only decoded genes
         decoded_2 =  decoded_2[decoded_2["genes"] != "Undefined"]
         indicies_used_df = decoded_2.index.tolist()
