@@ -97,16 +97,6 @@ def background_correct_image(stack, correction_algo, stack_bkgrd=None, z=2, size
         corrected_stack.append(corrected_z_slice)
     return np.array(corrected_stack)
 
-#def tophat_background(image, kern=3):
-#    """tophat raw then initial background subtraction"""
-#    Getting the kernel to be used in Top-Hat
-#    filterSize =(kern, kern)
-#    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, filterSize)
-#    Applying the Top-Hat operation
-#    tophat_img = cv2.morphologyEx(image,cv2.MORPH_TOPHAT, kernel)
-#    
-#    return tophat_img
-
 def SigmaClipping_and_Gamma_C(image, gamma):
     """Background Correction via Background Elimination 
     (estimated by sigma-clipped background), followed by Gamma Correction"""
@@ -122,10 +112,24 @@ def SigmaClipping_and_Gamma_C(image, gamma):
 
 def Gaussian_and_Gamma_Correction(image, gamma, sigma, kern = 5, match_hist =True, subtract=True, divide=False):
     """ Background Correction via Background Elimination (estimated by Gaussian), followed by Gamma Correction"""
-    #2d gaussian blur image
-    image_blur = cv2.GaussianBlur(image,(kern,kern),sigma)
-    if divide == False:
+    if (divide == False) and (subtract == True):
+        #2d gaussian blur image
+        image_blur = cv2.GaussianBlur(image,(kern,kern),sigma)
         #subtract gaussian blurred background
+        if (match_hist == True) and (subtract == True):
+            image_background_eliminated= image - match_histograms(image_blur, image)
+            image_background_eliminated[image_background_eliminated<0] = 0 
+        elif (match_hist == False) and (subtract == True):
+            image_background_eliminated= image - image_blur
+            image_background_eliminated[image_background_eliminated<0] = 0 
+            
+    elif (divide == True) and (subtract == True):
+        #1d convolution is better for evening out background
+        image_blur = ndimage.gaussian_filter(image, 30)
+        #divide gaussian blurred background to even out illumination
+        image_background_even= image/((image_blur)/np.mean(image_blur))
+        #2d gaussian blur image
+        image_blur = cv2.GaussianBlur(image_background_even,(kern,kern),sigma)
         if (match_hist == True) and (subtract == True):
             image_background_eliminated= image - match_histograms(image_blur, image)
             image_background_eliminated[image_background_eliminated<0] = 0 
@@ -134,13 +138,11 @@ def Gaussian_and_Gamma_Correction(image, gamma, sigma, kern = 5, match_hist =Tru
             image_background_eliminated[image_background_eliminated<0] = 0 
     else:
         #1d convolution is better for evening out background
-        image_blur = ndimage.gaussian_filter(image, sigma)
+        image_blur = ndimage.gaussian_filter(image, 30)
         #divide gaussian blurred background to even out illumination
         image_background_eliminated= image/((image_blur)/np.mean(image_blur))
     #adjust contrast by gamma enhancement
     contrast_ench_Gamma_c = adjust_gamma(image_background_eliminated, gamma)
-    #rescale image by constant factor
-    contrast_ench_Gamma_c = (contrast_ench_Gamma_c/np.mean(contrast_ench_Gamma_c))*100
     
     return contrast_ench_Gamma_c
 
@@ -360,6 +362,40 @@ def low_pass_gaussian(image, kern=3):
             z_slice.append(channel_slice)
         return np.array(z_slice)
 
+def scale_int(image, p_min=80, p_max=100):
+    """
+    This function will scale the intensities for each position. The following code was adapted from starfish.
+    Parameters
+    ----------
+    image = image stack (z,c,x,y)
+    p_min = minimum percentile
+    p_max = maximum percentile
+    """
+    #check the shape of image
+    if len(image.shape)==3:
+        image = image.reshape(1,image.shape[0],image.shape[1],image.shape[2])
+     
+    final_stack = []
+    for z in range(image.shape[0]):
+        z_stack = []
+        for c in range(image.shape[1]):
+            #slice out image
+            img_slice = image[z,c,:,:]
+            #get the min and max percentile values
+            v_min, v_max = np.percentile(img_slice, [p_min, p_max])
+            #clip and set min to 0
+            image_set_zero = img_slice.clip(min=v_min, max=v_max) - np.float32(v_min)
+            #scale image to max value
+            max_int = np.max(image_set_zero)
+            image_scaled = image_set_zero/max_int
+            z_stack.append(image_scaled)
+        final_stack.append(z_stack)
+    
+    #final image
+    scaled_stack = np.array(final_stack)
+    
+    return scaled_stack
+
 def deconvolute_one(image_path, image_ref, sigma_hpgb = 1, kern_hpgb=5, kern_rl = 5, 
                     kern_lpgb = 3, sigma=(1.8,1.6,1.5,1.3), radius=(4,4,4,4),
                     model="gaussian", microscope="boc",
@@ -537,8 +573,9 @@ def deconvolute_many(images, image_ref, sigma_hpgb = 1, kern_hpgb = 5, kern_rl =
                 print(f'Path {path} completed after {time.time() - start} seconds')
                 
 def bkgrd_corr_one(image_path, correction_type = None, stack_bkgrd=None, swapaxes=False, 
-                   z=2, size=2048, gamma = 1.4, kern_hpgb=5, sigma = 40, rb_radius=5, hyb_offset=0,
-                   rollingball = False, lowpass=True, match_hist=True, subtract=True, divide=False):
+                   z=2, size=2048, gamma = 1.4, kern_hpgb=5, sigma = 40, rb_radius=5, hyb_offset=0, p_min=80,
+                   p_max = 99.999, norm_int = True, rollingball = False, 
+                   lowpass=True, match_hist=True, subtract=True, divide=False):
     """
     background correct one image only
     
@@ -555,20 +592,23 @@ def bkgrd_corr_one(image_path, correction_type = None, stack_bkgrd=None, swapaxe
     sigma = number of sigmas for hpgb
     rb_radius = rolling ball size
     hyb_offset = number of hybcycles to subtract for file name adjustment
-    lowpass = do a low pass gaussian filter
+    p_min = minimum percentile
+    p_max = maximum percentile
+    norm_int = bool to normalize intensity
     rollingball = do a rolling ball subtraction
-    lowpass = bool to blur image with gaussian
+    lowpass = do a low pass gaussian filter
     match_hist = bool to match histograms of blurred image
     subtract = bool to subtract blurred image from raw
     divide = bool to divide blurred image from raw
     """
-   
+    #output path
     orig_image_dir = Path(image_path).parent.parent
     output_folder = Path(orig_image_dir).with_name('pre_processed_images')
     output_path = output_folder / Path(image_path).relative_to(orig_image_dir)
+    
     if hyb_offset != 0:
         hyb_number = int(output_path.parent.name.split("_")[1])
-        new_number = "HybCycle_" + str(hyb_number-offset)
+        new_number = "HybCycle_" + str(hyb_number-hyb_offset)
         pos_name = Path(image_path).name
         output_path = output_path.parent.parent / new_number /pos_name
         output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -616,29 +656,40 @@ def bkgrd_corr_one(image_path, correction_type = None, stack_bkgrd=None, swapaxe
     if lowpass == True:
         print('low pass gaussian and writing image...')
         lpgb = low_pass_gaussian(corr_img, kern = 3)
+        if norm_int == True:
+            lpgb = scale_int(lpgb, p_min=p_min, p_max=p_max)
         tf.imwrite(str(output_path), lpgb)
     else:
+        if norm_int == True:
+            corr_img = scale_int(corr_img, p_min=p_min, p_max=p_max)
         print('writing image')
         tf.imwrite(str(output_path), corr_img)
 
 def correct_many(images, correction_type = None, stack_bkgrd=None, swapaxes=False,
-                 z=2, size=2048, gamma = 1.4,kern_hpgb=5, sigma=40, rb_radius=5, hyb_offset=0,
+                 z=2, size=2048, gamma = 1.4,kern_hpgb=5, sigma=40, rb_radius=5, hyb_offset=0,p_min=80,
+                 p_max = 99.999, norm_int = True,
                  rollingball=False, lowpass = True, match_hist=True, subtract=True, divide=False):
     """
     function to correct all image
     
     Parameters
     ----------
-    images = path to multiple images
+    image_path= path to image
     correction_type = which correction algo to use
     stack_bkgrd = 4 or 3d array of background image
     swapaxes=bool to swapaxes
     z=number of z
     size=x and y shape
-    gamma=int
-    sigma = int
+    gamma = int for gamma enhancement
+    kern_hpgb = kernel size for hpgb 
+    sigma = number of sigmas for hpgb
+    rb_radius = rolling ball size
+    hyb_offset = number of hybcycles to subtract for file name adjustment
+    p_min = minimum percentile
+    p_max = maximum percentile
+    norm_int = bool to normalize intensity
     rollingball = do a rolling ball subtraction
-    lowpass = do a low pass gaussian filter 
+    lowpass = do a low pass gaussian filter
     match_hist = bool to match histograms of blurred image
     subtract = bool to subtract blurred image from raw
     divide = bool to divide blurred image from raw
@@ -648,14 +699,18 @@ def correct_many(images, correction_type = None, stack_bkgrd=None, swapaxes=Fals
     
     if type(images) != list:
         bkgrd_corr_one(images, correction_type,stack_bkgrd, swapaxes, z, size,  
-                       gamma, kern_hpgb,sigma, rb_radius, hyb_offset, rollingball, 
+                       gamma, kern_hpgb,sigma, rb_radius, hyb_offset, p_min,
+                       p_max, norm_int, rollingball, 
                        lowpass,  match_hist, subtract, divide)
+        
+        
     else:
         with ProcessPoolExecutor(max_workers=12) as exe:
             futures = {}
             for path in images:
                 fut = exe.submit(bkgrd_corr_one, path, correction_type, stack_bkgrd,
                                  swapaxes, z, size,  gamma,kern_hpgb, sigma, rb_radius,hyb_offset,
+                                 p_min, p_max, norm_int,
                                  rollingball, lowpass,  match_hist, subtract, divide)
                 futures[fut] = path
 
