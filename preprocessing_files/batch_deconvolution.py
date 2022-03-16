@@ -39,7 +39,7 @@ bkgrd_sub = False #bool to perform background subtraction
 remove_fiducial = False #bool to remove fiducials
 match_hist=False #bool to enhance gaussian blurred image for high pass filter
 subtract=False #bool to perform high pass filter
-divide=True #bool to even out illumination (if this is true then subtract will automatically be false).
+divide=True #bool to even out illumination 
 
 deconvolute_many(images=images, image_ref=image_ref, 
                  sigma_hpgb=sigma_hpgb, kern_hpgb=kern_hpgb, kern_rl=kern_rl, 
