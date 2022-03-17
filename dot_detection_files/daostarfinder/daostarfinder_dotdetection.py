@@ -546,24 +546,35 @@ def dot_detection(img_src, fwhm = 4.0, HybCycle=0, size_cutoff=3,
         dots = dots[["hyb","ch","x","y","z", "flux","max intensity", "size"]]
         #write out plot
         output_path_adj = output_path.replace(".csv", f"_{opt_thresh}.csv")
-        #filter by size
-        mu, std = norm.fit(dots["size"]) #fit gaussian to size dataset
-        plt.hist(dots["size"], density=True, bins=20)
-        xmin, xmax = plt.xlim()
-        x = np.linspace(xmin, xmax, 100)
-        p = norm.pdf(x, mu, std)
-        plt.plot(x,p, label="Gaussian Fitted Data")
-        plt.axvline(mu+(size_cutoff*std), ls="--", c = "red")
-        plt.axvline(mu-(size_cutoff*std), ls="--",c = "red")
-        plt.xlabel("Area by pixel")
-        plt.ylabel("Proportion")
+        if size_cutoff != None:
+            #filter by size
+            mu, std = norm.fit(dots["size"]) #fit gaussian to size dataset
+            plt.hist(dots["size"], density=True, bins=20)
+            xmin, xmax = plt.xlim()
+            x = np.linspace(xmin, xmax, 100)
+            p = norm.pdf(x, mu, std)
+            dots = dots[(dots["size"] < (mu+(size_cutoff*std))) 
+                                    & (dots["size"] > (mu-(size_cutoff*std)))]
+            plt.plot(x,p, label="Gaussian Fitted Data")
+            plt.axvline(mu+(size_cutoff*std), ls="--", c = "red")
+            plt.axvline(mu-(size_cutoff*std), ls="--",c = "red")
+            plt.xlabel("Area by pixel")
+            plt.ylabel("Density")
+        else:
+            #filter by size
+            mu, std = norm.fit(dots["size"]) #fit gaussian to size dataset
+            plt.hist(dots["size"], density=True, bins=20)
+            xmin, xmax = plt.xlim()
+            x = np.linspace(xmin, xmax, 100)
+            p = norm.pdf(x, mu, std)
+            plt.plot(x,p, label="Gaussian Fitted Data")
+            plt.xlabel("Area by pixel")
+            plt.ylabel("Density")
         if output == True:
             plt.savefig(str(output_folder) + f"/size_hist_{opt_thresh}.png", dpi = 300)
         plt.show()
         plt.clf()
         #write out final filtered dots
-        dots = dots[(dots["size"] < (mu+(size_cutoff*std))) 
-                                    & (dots["size"] > (mu-(size_cutoff*std)))]
         if output == True:
             dots.to_csv(output_path_adj)
         else:
@@ -662,23 +673,37 @@ def dot_detection(img_src, fwhm = 4.0, HybCycle=0, size_cutoff=3,
         dots = dots[["hyb","ch","x","y","z", "flux","max intensity", "size"]]
         #write out plot
         output_path_adj = output_path.replace(".csv", f"_{opt_thresh}.csv")
-        #filter by size
-        mu, std = norm.fit(dots["size"]) #fit gaussian to size dataset
-        plt.hist(dots["size"], density=True, bins=20)
-        xmin, xmax = plt.xlim()
-        x = np.linspace(xmin, xmax, 100)
-        p = norm.pdf(x, mu, std)
-        plt.plot(x,p, label="Gaussian Fitted Data")
-        plt.axvline(mu+(size_cutoff*std), ls="--", c = "red")
-        plt.axvline(mu-(size_cutoff*std), ls="--",c = "red")
-        plt.xlabel("Area by pixel")
-        plt.ylabel("Proportion")
-        plt.savefig(str(output_folder) + f"/size_hist_{opt_thresh}.png", dpi = 300)
+        if size_cutoff != None:
+            #filter by size
+            mu, std = norm.fit(dots["size"]) #fit gaussian to size dataset
+            dots = dots[(dots["size"] < (mu+(size_cutoff*std))) 
+                                    & (dots["size"] > (mu-(size_cutoff*std)))]
+            plt.hist(dots["size"], density=True, bins=20)
+            xmin, xmax = plt.xlim()
+            x = np.linspace(xmin, xmax, 100)
+            p = norm.pdf(x, mu, std)
+            plt.plot(x,p, label="Gaussian Fitted Data")
+            plt.axvline(mu+(size_cutoff*std), ls="--", c = "red")
+            plt.axvline(mu-(size_cutoff*std), ls="--",c = "red")
+            plt.xlabel("Area by pixel")
+            plt.ylabel("Density")
+            plt.savefig(str(output_folder) + f"/size_hist_{opt_thresh}.png", dpi = 300)
+        else:
+            #filter by size
+            mu, std = norm.fit(dots["size"]) #fit gaussian to size dataset
+            plt.hist(dots["size"], density=True, bins=20)
+            xmin, xmax = plt.xlim()
+            x = np.linspace(xmin, xmax, 100)
+            p = norm.pdf(x, mu, std)
+            plt.plot(x,p, label="Gaussian Fitted Data")
+            plt.xlabel("Area by pixel")
+            plt.ylabel("Density")
+            plt.savefig(str(output_folder) + f"/size_hist_{opt_thresh}.png", dpi = 300)
+                       
         plt.show()
         plt.clf()
+                        
         #write out final filtered dots
-        dots = dots[(dots["size"] < (mu+(size_cutoff*std))) 
-                                    & (dots["size"] > (mu-(size_cutoff*std)))]
         if output == True:
             dots.to_csv(output_path)
         else:
