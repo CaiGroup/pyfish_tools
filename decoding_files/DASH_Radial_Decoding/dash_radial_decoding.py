@@ -13,6 +13,7 @@ from collections import Counter
 from concurrent.futures import ProcessPoolExecutor, as_completed
 #path management
 from pathlib import Path
+import sys
 
 
 def filter_dots_fast(dots_idx, min_seed=4):
