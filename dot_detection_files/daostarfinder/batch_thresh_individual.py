@@ -9,7 +9,7 @@ JOB_ID = os.getenv('SLURM_ARRAY_TASK_ID', 0)
 
 print(f'This is task {JOB_ID}')
 #general image directory
-directory = Path("/groups/CaiLab/personal/Lex/raw/020422_20kdash_3t3/notebook_pyfiles/pre_processed_images/")
+directory = Path("/groups/CaiLab/personal/Lex/raw/031322_11kgenes_experiment/notebook_pyfiles/pre_processed_images/")
 #jobs will be split by hybs
 hybcycle = f"HybCycle_{JOB_ID}"
 #gen path with hyb
@@ -20,8 +20,8 @@ files = [str(f) for f in path_pos]
 #organize paths numerically
 key = [int(re.search('MMStack_Pos(\\d+)', f).group(1)) for f in files]
 paths_fin = list(np.array(files)[np.argsort(key)])
-#only use first 3 pos
-paths_use=paths_fin[0:3]
+#only use first 5 pos
+paths_use=paths_fin[0:5]
 #grab pos number list
 pos_list = []
 for path in paths_use:
@@ -29,8 +29,8 @@ for path in paths_use:
     pos_list.append(int(pos_num))
 
 #parameters
-threshold_min  = 20 #starting minimum threshold 
-threshold_max = 800 #ending maximum threshold
+threshold_min  = 0.01 #starting minimum threshold 
+threshold_max = 0.8 #ending maximum threshold
 interval = 100 #interval between min and max
 HybCycle = JOB_ID #JOB id from slurm task array
 channel = 4 #which channel (1-4)
