@@ -52,9 +52,14 @@ def combine_dot_files(path_dots, hyb_start=0,hyb_end=63,num_HybCycle=32, pos= 0,
         for i in np.arange(hyb_start, hyb_end+1, 1):
             dots_folders= Path(path_dots) / f"HybCycle_{i}"
             dot_files = list(dots_folders.glob(f'MMStack_Pos{pos}_*.csv'))
+            #check if threshold starts with 0 and is a float
+            is_float = str(dot_files[0]).split("_")[-1].replace(".csv","").split(".")
             #organize files numerically
-            key = [int(re.search(f'Pos{pos}_(\\d+)*', str(f)).group(1)) for f in dot_files]
-            sort_paths = list(np.array(dot_files)[np.argsort(key)])
+            if len(is_float) == 2 and int(is_float[0]) == 0:
+                sort_paths = sorted(dot_files)
+            else:
+                key = [int(re.search(f'Pos{pos}_(\\d+)*', str(f)).group(1)) for f in dot_files]
+                sort_paths = list(np.array(dot_files)[np.argsort(key)])
             dot_path_list.append(sort_paths)
 
         #if num of thresholded csv is <11 then duplicate the lowest threshold
