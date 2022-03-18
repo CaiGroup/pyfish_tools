@@ -1,7 +1,7 @@
 """
 author: Katsuya Lex Colon
 group: Cai Lab
-date: 02/03/22
+date: 03/18/22
 """
 
 #general package
@@ -9,13 +9,15 @@ import numpy as np
 import time
 #image processing
 from skimage.segmentation import clear_border, find_boundaries
+from scipy import ndimage
 import tifffile as tf
 #file management
+import os
 from pathlib import Path
 #parallel processing
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-def edge_deletion(img_src, output_dir = None):
+def edge_deletion(img_src, output_dir = None, have_seg_img = True):
     """
     This function will delete 2 pixels between masks that touch, and 
     remove masks that are on the borders
@@ -24,6 +26,8 @@ def edge_deletion(img_src, output_dir = None):
     ----------
     img_src = location of labeled image
     output_dir = string of output directory
+    have_seg_img = bool for whether you have segmentation image
+    
     """
     #read image
     labeled_img = tf.imread(img_src)
@@ -33,6 +37,24 @@ def edge_deletion(img_src, output_dir = None):
     outline = find_boundaries(remove_border, mode='outer')
     #invert boolean mask and delete masks that touch
     new_masks = np.invert(outline) * remove_border
+    
+    if have_seg_img == True:
+        #find shift path 
+        src = Path(img_src)
+        parent = src.parent
+        while "dapi_aligned" not in os.listdir(parent):
+            parent = parent.parent
+        #get segmentation shift 
+        shift_path = parent/"dapi_aligned"/"segmentation"
+        #check if file is present
+        assert os.path.isdir(str(shift_path)), "Make sure you have a folder called segmentation in dapi_aligned directory"
+        #get pos info
+        pos = src.name.split("_")[1].split(".")[0]
+        pos_name = pos + "_shift.txt"
+        #read in shift
+        shift = np.loadtxt(str(shift_path/pos_name))
+        #apply shift to mask
+        new_masks = ndimage.shift(new_masks,shift)
     
     #make output directory
     output_dir = Path(output_dir)
