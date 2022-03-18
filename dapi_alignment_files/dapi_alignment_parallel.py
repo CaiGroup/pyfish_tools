@@ -1,7 +1,7 @@
 """
 author: Katsuya Lex Colon
 group: Cai Lab
-updated: 12/03/21
+updated: 03/18/22
 """
 
 from skimage import registration
@@ -12,10 +12,6 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from util import pil_imread
 
-    
-def memuse():
-    import psutil, os
-    return psutil.Process(os.getpid()).memory_info()[0]/float(2**20)
 
 def dapi_alignment_single(ref,moving):
     """A function to obtain translational offsets using phase correlation. Image input should have the format z,c,x,y.
@@ -36,8 +32,6 @@ def dapi_alignment_single(ref,moving):
     
     image_ref = pil_imread(ref, swapaxes=True)
     image_moving = pil_imread(moving, swapaxes=True)
-    
-    print('image read: ', memuse())
     
     #get dapi channel for reference and moving assuming it is at the end
     dapi_ref = image_ref.shape[1]-1
@@ -63,6 +57,10 @@ def dapi_alignment_single(ref,moving):
     del layer
     #write images
     tf.imwrite(str(output_path),np.swapaxes(corr_stack,0,1))
+    #write shift
+    pos = output_path.name.split("_")[1].replace(".ome.tif","_shift.txt")
+    shift_output = output_path.parent/pos
+    np.savetxt(str(shift_output),shift)
     del corr_stack
 
 def dapi_alignment_parallel(image_ref,images_moving):
