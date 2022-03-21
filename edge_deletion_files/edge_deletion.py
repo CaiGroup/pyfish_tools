@@ -69,20 +69,21 @@ def edge_deletion(img_src, output_dir = None, have_seg_img = True):
     #write mask
     tf.imwrite(str(output_path), new_masks)
     
-def edge_deletion_parallel(img_src_list, output_dir=None):
+def edge_deletion_parallel(img_src_list, output_dir=None,  have_seg_img = True):
     """
     Will perform edge deletion in parallel provided a list of image paths
     Parameters
     ----------
     img_src_list = locations of labeled images
     output_dir = string of output directory
+    have_seg_img = bool for whether you have segmentation image
     """
     start = time.time()
     
     with ThreadPoolExecutor(max_workers=32) as exe:
         futures = {}
         for img in img_src_list:
-            fut = exe.submit(edge_deletion, img, output_dir = output_dir)
+            fut = exe.submit(edge_deletion, img, output_dir = output_dir,  have_seg_img = have_seg_img)
             futures[fut] = img
 
         for fut in as_completed(futures):
