@@ -71,9 +71,12 @@ def organize_files_pos(pos_path, num_z=2, num_hybs=80):
                 else:
                     with open("missing_hybs.txt","w+") as f:
                         f.write(f"{channel_num}, {position}, z= {z}, hybs missing = {missing_hybs}\n")
-        files_remove = glob.glob(str(channel / "*_hyb_*.csv"))
-        for file in files_remove:
-            os.remove(file)
+                        
+    if os.path.isfile("missing_hybs.txt") ==  False:
+        for channel in channel_files:
+            files_remove = glob.glob(str(channel / "*_hyb_*.csv"))
+            for file in files_remove:
+                os.remove(file)
                     
     
 def organize_files_parallel(path, num_z=2, num_hybs=80):

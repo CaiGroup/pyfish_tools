@@ -55,6 +55,8 @@ def edge_deletion(img_src, output_dir = None, have_seg_img = True):
         shift = np.loadtxt(str(shift_path/pos_name))
         #apply shift to mask
         new_masks = ndimage.shift(new_masks,shift)
+        #delete edges again if shift caused a mask to be on the edge
+        new_masks = clear_border(new_masks)
     
     #make output directory
     output_dir = Path(output_dir)
