@@ -1,7 +1,7 @@
 """
 author: Katsuya Lex Colon
 group: Cai Lab
-updated: 01/17/22
+updated: 03/21/22
 """
 
 #general analysis packages
@@ -666,7 +666,48 @@ def dash_radial_decoding(location_path, codebook_path,
     
     #sort and reset index
     final_decoded = decoded_combined.sort_values("genes").reset_index(drop=True)
-
+    
     #write files
     final_decoded.to_csv(str(output_path))
+    
+    #---------------------------------------------------------------------------------------------
+    #output used and unused dot locations
+    locations1 = locations.loc[flattened_indicies_used]
+    
+    if triple_decode == False:
+        #flatten 2nd set of indicies used list
+        flattened_indicies_used_2 = [element for sublist in indicies_used_2 for element in sublist]
+        
+    locations2 = new_locations.loc[flattened_indicies_used_2]
+    
+    if triple_decode == True:
+        #in case there was no output from triple decode
+        try:
+            #flatten 3rd set of indicies used list
+            flattened_indicies_used_3 = [element for sublist in indicies_used_3 for element in sublist]
+            locations3 = new_locations_2.loc[flattened_indicies_used_3]
+            #combine used dots
+            dots_used = pd.concat([locations1,locations2,locations3]).reset_index(drop=True)
+            #remove used dots
+            dots_unused = new_locations_2.drop(flattened_indicies_used_3).reset_index(drop=True)
+            #write out used dots
+            dots_used.to_csv(str(output_path.parent / "dots_used.csv"))
+            #write out unused dots
+            dots_unused.to_csv(str(output_path.parent / "dots_unused.csv"))
+        except:
+            dots_used = pd.concat([locations1,locations2]).reset_index(drop=True)
+             #write out used dots
+            dots_used.to_csv(str(output_path.parent / "dots_used.csv"))   
+            #write out unused dots
+            new_locations_2.to_csv(str(output_path.parent / "dots_unused.csv"))
+    else:
+        #remove already decoded dots
+        dots_unused= new_locations.drop(flattened_indicies_used_2).reset_index(drop=True)
+        #combined dots used
+        dots_used = pd.concat([locations1,locations2]).reset_index(drop=True)
+        #write out used dots
+        dots_used.to_csv(str(output_path.parent / "dots_used.csv"))
+        #write out unused dots
+        dots_unused.to_csv(str(output_path.parent / "dots_unused.csv"))
+    
                          
