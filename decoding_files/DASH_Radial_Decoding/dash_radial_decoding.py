@@ -770,5 +770,13 @@ def dash_radial_decoding(location_path, codebook_path,
         dots_used.to_csv(str(output_path.parent / f"dots_used_z_{z_info}.csv"))
         #write out unused dots
         dots_unused.to_csv(str(output_path.parent / f"dots_unused_z_{z_info}.csv"))
+        
+    #Output percent decoded
+    percent_decoded = str(round(((len(dots_used)/len(locations)) * 100),2))
+    percent_output = output_path.parent / f"percent_decoded_z_{z_info}.txt
+    with open(str(percent_output),"w+") as f:
+        f.write(f'Percent of dots decoded = {percent_decoded}')
+        f.close()
+    
     
                          
