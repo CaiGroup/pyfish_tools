@@ -544,10 +544,31 @@ def radial_decoding_parallel(locations,codebook,num_barcodes = 4, radius=1,diff=
         
     #return first set of decoded dots and their corresponding indicies
     return genes_locations, dot_idx_filtered
+
+def return_highly_expressed_names(decoded):
+    """
+    Returns list of top 5% of highly expressed genes
+    Parameters
+    -----------
+    decoded = decoded genes csv file
+    """
+    
+    #collapse into gene counts
+    counts_df = Counter(decoded["genes"])
+    #change to df
+    counts_df = pd.DataFrame.from_dict(counts_df, orient='index').reset_index()
+    #remove fakes
+    counts_df_false = counts_df[counts_df["index"].str.startswith('fake')]
+    counts_df_true = counts_df.drop(counts_df_false.index).reset_index(drop=True)
+    #sort and identify top 5% highly expressed genes
+    counts_df_true = counts_df_true.sort_values(0, ascending=False).reset_index(drop=True)
+    highexpgenes = counts_df_true["index"][:int((len(counts_df_true)*0.05))].to_list()
+    
+    return highexpgenes
     
 def dash_radial_decoding(location_path, codebook_path,
                          num_barcodes = 4, first_radius=1, second_radius=1,third_radius=1,diff=0,
-                         min_seed=4, hybs = 12, output_dir = "", 
+                         min_seed=4, high_exp_seed=1, hybs = 12, output_dir = "", 
                          include_undecoded = False, decode_high_exp_genes = True,
                          triple_decode=True, decode_across = False):
     """
@@ -567,6 +588,7 @@ def dash_radial_decoding(location_path, codebook_path,
     third_radius = third search radius in pixels
     diff = allowed pseudocolor drops
     min_seed = number of times the same pseudocolor appears with changing reference
+    high_exp_seed = number of min seeds to identify highly expressed genes
     hybs = total number of hybs
     output_dir = directory to where you want the file outputted
     include_undecoded = bool to output the undecoded dots
@@ -578,11 +600,18 @@ def dash_radial_decoding(location_path, codebook_path,
     --------
     gene_locations.csv
     """
-    #read in files and collect z info
+    #read in flocations file and drop unnamed columns
     locations = pd.read_csv(location_path)
+    unwanted_columns = []
+    for names in locations.columns:
+        if "Unnamed" in names:
+            unwanted_columns.append(names)
+    locations = locations.drop(unwanted_columns, axis=1)
+    #read in codebook
     codebook = pd.read_csv(codebook_path)
     codebook = codebook.set_index(codebook.columns[0])
     location_path_name = Path(location_path).name
+    #collect z info
     z_info = location_path_name.split("_")[2].replace(".csv","")
     
     #check to see if the necessary amount of hybs are present
@@ -592,43 +621,68 @@ def dash_radial_decoding(location_path, codebook_path,
     Path(output_dir).mkdir(parents=True, exist_ok = True)
     output_path = Path(output_dir) / f"diff_{diff}_minseed_{min_seed}_z_{z_info}_finalgenes.csv"
     
-    #run decoding first pass
-    decoded_1, indicies_used_1 = radial_decoding_parallel(locations, codebook,
+    #only keep top 5% of highly expressed genes
+    if decode_high_exp_genes == True:
+        #run decoding first pass
+        decoded_1, indicies_used_1 = radial_decoding_parallel(locations, codebook,
+                    num_barcodes=num_barcodes, radius=first_radius, diff=diff,
+                    min_seed=high_exp_seed, hybs = hybs, include_undecoded = False, decode_across=decode_across)
+        #get highly expressed genes
+        highexpgenes = return_highly_expressed_names(decoded_1)
+        #initialize loop
+        highexpgenes_2 = highexpgenes.copy()
+        locations_temp = locations.copy()
+        #record of highly expressed decoded genes
+        record_genes = []
+        record_dots_used = []
+        while set(highexpgenes) & set(highexpgenes_2) != set():
+            #only used ones that overlap
+            highexpgenes_overlap = list(set(highexpgenes) & set(highexpgenes_2))
+            #only take out highly expressed genes
+            decoded_1 = decoded_1.loc[decoded_1["genes"].isin(highexpgenes_overlap)]
+            record_genes.append(decoded_1)
+            indicies_used_df = decoded_1.index.tolist()
+            #isolate used indicies in dot indicies list
+            indicies_used_1 = list(map(indicies_used_1.__getitem__, indicies_used_df))
+            #flatten 1st set of indicies used list
+            flattened_indicies_used = [element for sublist in indicies_used_1 for element in sublist]
+            #record used dots
+            record_dots_used.append(locations_temp.iloc[flattened_indicies_used])
+            #remove already decoded dots
+            locations_temp = locations_temp.drop(flattened_indicies_used).reset_index(drop=True)
+            #run decoding with 0.75 pixel search
+            decoded_1, indicies_used_1 = radial_decoding_parallel(locations_temp, codebook,
+                                                                  num_barcodes=num_barcodes, radius=first_radius,diff=diff,
+                                                                  min_seed=high_exp_seed, hybs = hybs, 
+                                                                  include_undecoded = False, 
+                                                                  decode_across=decode_across)
+            #get new highly expressed gene list
+            highexpgenes_2 = return_highly_expressed_names(decoded_1)
+        #remove last item in record dots used after exitting loop
+        del record_dots_used[-1]
+        #combine final highly expressed genes
+        decoded_1 = pd.concat(record_genes).reset_index(drop=True)
+        #use locations temp after exitting loop for second round
+        new_locations = locations_temp.copy()
+        del locations_temp
+        
+    else:
+        #run decoding first pass
+        decoded_1, indicies_used_1 = radial_decoding_parallel(locations, codebook,
                     num_barcodes=num_barcodes, radius=first_radius,diff=diff,
                     min_seed=min_seed, hybs = hybs, include_undecoded = False, decode_across=decode_across)
-    
-    #only keep top 10% of highly expressed genes
-    if decode_high_exp_genes == True:
-        #collapse into gene counts
-        counts_df = Counter(decoded_1["genes"])
-        #change to df
-        counts_df = pd.DataFrame.from_dict(counts_df, orient='index').reset_index()
-        #remove fakes
-        counts_df_false = counts_df[counts_df["index"].str.startswith('fake')]
-        counts_df_true = counts_df.drop(counts_df_false.index).reset_index(drop=True)
-        #sort and identify top 10% highly expressed genes
-        counts_df_true = counts_df_true.sort_values(0, ascending=False).reset_index(drop=True)
-        highexpgenes = counts_df_true["index"][:int((len(counts_df_true)*.1))]
-        #only take out highly expressed genes
-        decoded_1 = decoded_1.loc[decoded_1["genes"].isin(highexpgenes.to_list())]
-        indicies_used_df = decoded_1.index.tolist()
-        #isolate used indicies in dot indicies list
-        indicies_used_1 = list(map(indicies_used_1.__getitem__, indicies_used_df))
-    else:
         #only get the indicies of decoded genes (excluding undefined)
         #the index on decoded will correspond to the same index in indicies used
         indicies_used_df = decoded_1.index.tolist()
         #isolate used indicies in dot indicies list
         indicies_used_1 = list(map(indicies_used_1.__getitem__, indicies_used_df))
+        #flatten 1st set of indicies used list
+        flattened_indicies_used = [element for sublist in indicies_used_1 for element in sublist]
+        #remove already decoded dots
+        new_locations = locations.drop(flattened_indicies_used).reset_index(drop=True)
         
     #output results from first pass
     decoded_1.sort_values("genes").to_csv(str(output_path).replace("finalgenes","round1"))
-    
-    #flatten 1st set of indicies used list
-    flattened_indicies_used = [element for sublist in indicies_used_1 for element in sublist]
-    
-    #remove already decoded dots
-    new_locations = locations.drop(flattened_indicies_used).reset_index(drop=True)
     
     #run decoding second pass with same or different search radius
     decoded_2, indicies_used_2 = radial_decoding_parallel(new_locations, codebook,
@@ -659,6 +713,9 @@ def dash_radial_decoding(location_path, codebook_path,
             #combine decoded dfs
             decoded_combined = pd.concat([decoded_1, decoded_2, decoded_3])
         except:
+            with open("decoding_message.txt", "w+") as f:
+                f.write("Triple decoding did not yield anything.")
+                f.close()
             decoded_combined = pd.concat([decoded_1, decoded_2])   
     else:
         #combine decoded dfs
@@ -670,44 +727,48 @@ def dash_radial_decoding(location_path, codebook_path,
     #write files
     final_decoded.to_csv(str(output_path))
     
-    #---------------------------------------------------------------------------------------------
     #output used and unused dot locations
-    locations1 = locations.loc[flattened_indicies_used]
-    
+    #---------------------------------------------------------------------------------------------
+    #collection dots used in round 1 decoding
+    if decode_high_exp_genes == True:
+        locations1 = pd.concat(record_dots_used).reset_index(drop=True)
+    else:
+        locations1 = locations.iloc[flattened_indicies_used]
+        
+    #collect dots used in second round
     if triple_decode == False:
         #flatten 2nd set of indicies used list
         flattened_indicies_used_2 = [element for sublist in indicies_used_2 for element in sublist]
-        
-    locations2 = new_locations.loc[flattened_indicies_used_2]
+    locations2 = new_locations.iloc[flattened_indicies_used_2]
     
     if triple_decode == True:
         #in case there was no output from triple decode
         try:
             #flatten 3rd set of indicies used list
             flattened_indicies_used_3 = [element for sublist in indicies_used_3 for element in sublist]
-            locations3 = new_locations_2.loc[flattened_indicies_used_3]
+            locations3 = new_locations_2.iloc[flattened_indicies_used_3]
             #combine used dots
             dots_used = pd.concat([locations1,locations2,locations3]).reset_index(drop=True)
             #remove used dots
             dots_unused = new_locations_2.drop(flattened_indicies_used_3).reset_index(drop=True)
             #write out used dots
-            dots_used.to_csv(str(output_path.parent / "dots_used.csv"))
+            dots_used.to_csv(str(output_path.parent / f"dots_used_z_{z_info}.csv"))
             #write out unused dots
-            dots_unused.to_csv(str(output_path.parent / "dots_unused.csv"))
+            dots_unused.to_csv(str(output_path.parent / f"dots_unused_z_{z_info}.csv"))
         except:
             dots_used = pd.concat([locations1,locations2]).reset_index(drop=True)
              #write out used dots
-            dots_used.to_csv(str(output_path.parent / "dots_used.csv"))   
+            dots_used.to_csv(str(output_path.parent / f"dots_used_z_{z_info}.csv"))   
             #write out unused dots
-            new_locations_2.to_csv(str(output_path.parent / "dots_unused.csv"))
+            new_locations_2.to_csv(str(output_path.parent / f"dots_unused_z_{z_info}.csv"))
     else:
         #remove already decoded dots
         dots_unused= new_locations.drop(flattened_indicies_used_2).reset_index(drop=True)
         #combined dots used
         dots_used = pd.concat([locations1,locations2]).reset_index(drop=True)
         #write out used dots
-        dots_used.to_csv(str(output_path.parent / "dots_used.csv"))
+        dots_used.to_csv(str(output_path.parent / f"dots_used_z_{z_info}.csv"))
         #write out unused dots
-        dots_unused.to_csv(str(output_path.parent / "dots_unused.csv"))
+        dots_unused.to_csv(str(output_path.parent / f"dots_unused_z_{z_info}.csv"))
     
                          
