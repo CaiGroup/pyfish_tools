@@ -635,6 +635,8 @@ def dash_radial_decoding(location_path, codebook_path,
         #record of highly expressed decoded genes
         record_genes = []
         record_dots_used = []
+        #for keeping track of loops
+        loop = 0
         while set(highexpgenes) & set(highexpgenes_2) != set():
             #only used ones that overlap
             highexpgenes_overlap = list(set(highexpgenes) & set(highexpgenes_2))
@@ -658,8 +660,10 @@ def dash_radial_decoding(location_path, codebook_path,
                                                                   decode_across=decode_across)
             #get new highly expressed gene list
             highexpgenes_2 = return_highly_expressed_names(decoded_1)
+            loop += 1
         #remove last item in record dots used after exitting loop
-        del record_dots_used[-1]
+        if loop > 1:
+            del record_dots_used[-1]
         #combine final highly expressed genes
         decoded_1 = pd.concat(record_genes).reset_index(drop=True)
         #use locations temp after exitting loop for second round
@@ -773,7 +777,7 @@ def dash_radial_decoding(location_path, codebook_path,
         
     #Output percent decoded
     percent_decoded = str(round(((len(dots_used)/len(locations)) * 100),2))
-    percent_output = output_path.parent / f"percent_decoded_z_{z_info}.txt
+    percent_output = output_path.parent / f"percent_decoded_z_{z_info}.txt"
     with open(str(percent_output),"w+") as f:
         f.write(f'Percent of dots decoded = {percent_decoded}')
         f.close()
