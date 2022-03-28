@@ -3,5 +3,5 @@ Scripts and jupyter notebooks used for the analysis of seqFISH DASH. SeqFISH DAS
 
 ### For now, just copy the scripts into a folder named notebook_pyfiles in your raw images directory. 
 ```
-mkdir notebook_pyfiles && cp -r seqFISH_DASH/* /path/to/raw/images/notebook_pyfiles
+cp -r /path/to/seqFISH_DASH /path/to/raw/images/notebook_pyfiles
 ```
