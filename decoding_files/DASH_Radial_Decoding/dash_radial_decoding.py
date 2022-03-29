@@ -1,7 +1,7 @@
 """
 author: Katsuya Lex Colon
 group: Cai Lab
-updated: 03/21/22
+updated: 03/27/22
 """
 
 #general analysis packages
@@ -17,15 +17,17 @@ import sys
 
 
 def filter_dots_fast(dots_idx, min_seed=4):
-    """Keep unique sets that appear >= min_seed times.
+    """
+    Keep unique sets that appear >= min_seed times.
+    
     Parameters
     ----------
-    dots_idx = list of dot sets as tuples
-    min_seed = number of times a dot sequence should appear
+    dots_idx: list of dot sets as tuples
+    min_seed: number of times a dot sequence should appear
     
     Returns
     --------
-    filtered_set = dots that appeared >= min_seed times
+    filtered_set: dots that appeared >= min_seed times
     """
     
     #generate frozen set
@@ -42,12 +44,17 @@ def filter_dots_fast(dots_idx, min_seed=4):
 
 def score_codewords(code_list,codeword_hash, distance_hash):
     """
-    This function will pick best overall codeword
+    This function will pick best overall codeword.
+    
     Parameters
     ----------
     code_list: list of codword sets we are trying to compare
     codeword_hash: a hash table to return overall codeword score
     distance_hash: a hash table to return overall distance for codeword
+    
+    Returns
+    ---------
+    best_code: best scoring codeword
     """
     #keep score and distance for each dot sequence
     track_score = []
@@ -67,11 +74,17 @@ def score_codewords(code_list,codeword_hash, distance_hash):
 def recover_codes(code_list, best_codeword):
     """
     This function will try to recover codewords if the dots selected 
-    from score_codewords() function is not repeated in the other choices
+    from score_codewords() function is not repeated in the other choices.
+    
     Parameters
     ----------
     code_list: list of codeword sets we analyzed from score_codewords()
     best_codeword: the best codeword set chosen from score_codewords()
+    
+    Returns
+    ----------
+    recovered_codes: codewords that were recovered if the dots are 
+    different from the best_codeword
     """
     #store winner history
     winner_history = set()
@@ -89,22 +102,22 @@ def recover_codes(code_list, best_codeword):
     return recovered_codes
 
 def pick_best_codeword(filtered_set, codeword_scores,total_distances):
-    """This function will try to pick between multiple codewords based on codeword
+    """
+    This function will try to pick between multiple codewords based on codeword
     score generated from radial_decoding function and overall codeword distance.
-    If there is only one choice, then it will just use that.
     
     Parameters
     ----------
-    filtered_set = ouput from filter_dots_fast
-    codeword_scores = output from radial decoding
-    total_distances = output from radial decoding
+    filtered_set: ouput from filter_dots_fast
+    codeword_scores: output from radial decoding
+    total_distances: output from radial decoding
     
     Returns
     ----------
-    complete_set = final set of dots that are unique and high scoring
+    complete_set: final set of dots that are unique and high scoring
     """
     
-    #group all sets with any matching dot indicies
+    #group all sets with any matching dot indicies using individual unique dot sets as queries
     matching_element_list = []
     #make a copy of list for searching
     search_set = filtered_set.copy()
@@ -122,12 +135,31 @@ def pick_best_codeword(filtered_set, codeword_scores,total_distances):
             history_element.add(item)
         matching_element_list.append(temp)
 
-    #isolate only lists > 1
-    filter_list = []
-    for sublist in matching_element_list:
-        if len(sublist) > 1:
-            filter_list.append(sublist)
-            
+    #group again to combine list of dot sets that have any common dot sequence
+    new_set = []
+    #keep record of which indicies were combined
+    history_of_comb = []
+    #keep record of which indicies have been used
+    history_index = []
+    for i in range(len(matching_element_list)):
+        #create copy of list of sets
+        comb_set = matching_element_list[i].copy()
+        #check if any dot set overlaps with any other list of sets
+        for dot_set in matching_element_list[i]:
+            for j in range(len(matching_element_list)):
+                #if dot set overlaps with another list of sets combine them
+                if (dot_set in matching_element_list[j]) and (i!=j) and (set([i,j]) not in history_of_comb):
+                    comb_set += matching_element_list[j]
+                    history_of_comb.append(set([i,j]))
+                    history_index += [i,j]
+        #check to see if anything was combined and if index was used already
+        if (len(comb_set) == len(matching_element_list[i])) and (i not in history_index):
+            new_set.append(matching_element_list[i])
+        elif (len(comb_set) == len(matching_element_list[i])) and (i in history_index):
+            continue
+        else:
+            new_set.append(list(set(comb_set)))
+
     #generate hash table for codeword score
     codeword_hash = {}
     for i in range(len(codeword_scores)):
@@ -137,7 +169,7 @@ def pick_best_codeword(filtered_set, codeword_scores,total_distances):
             codeword_hash.update({tuple(sorted(codeword_scores[i][0])):new_value})
         else:
             codeword_hash.update({tuple(sorted(codeword_scores[i][0])):codeword_scores[i][1]})
-            
+
     #generate hash table for total distance
     distance_hash = {}
     for i in range(len(total_distances)):
@@ -147,19 +179,37 @@ def pick_best_codeword(filtered_set, codeword_scores,total_distances):
             distance_hash.update({tuple(sorted(total_distances[i][0])):new_value})
         else:
             distance_hash.update({tuple(sorted(total_distances[i][0])):total_distances[i][1]})
-            
+
     #pick the best final codewords
     final_codewords = []
-    for codes in filter_list:
+    #store best dot sequence
+    #there is a small probability that a specific dot set could still end up in two separate lists, this step will account for that
+    final_history = set()
+    for codes in new_set:
         #get best code word from list of sets
         best_code = score_codewords(codes,codeword_hash, distance_hash)
-        #store winner
+        #check if best code was already chosen
+        while best_code & final_history:
+            codes.remove(best_code)
+            try:
+                best_code = score_codewords(codes,codeword_hash, distance_hash)
+            except ValueError:
+                best_code = 0
+                break
+        if best_code == 0:
+            continue
+        #keep record
+        for dot_idx in best_code:
+            final_history.add(dot_idx)
         final_codewords.append(list(best_code))
         #check to see if we can recover any codewords
         recovered_codes = recover_codes(codes, best_code)
-        #if there is one returned, we will add to final
-        if len(recovered_codes) == 1:
+        #if there is one returned and it has not been picked before we will add to final
+        if (len(recovered_codes) == 1) and (recovered_codes[0] & final_history == set()):
             final_codewords.append(list(recovered_codes[0]))
+            #keep record
+            for dot_idx in recovered_codes[0]:
+                final_history.add(dot_idx)
         #if nothing is returned then we will continue
         elif len(recovered_codes) == 0:
             continue
@@ -168,63 +218,72 @@ def pick_best_codeword(filtered_set, codeword_scores,total_distances):
             while len(recovered_codes) != 0:
                 #find the best codeword in recovered list
                 best_2 = score_codewords(recovered_codes,codeword_hash, distance_hash)
-                final_codewords.append(list(best_2))
+                while best_2 & final_history:
+                    recovered_codes.remove(best_2)
+                    if (len(recovered_codes) == 1) and (recovered_codes[0] & final_history == set()):
+                        best_2 = recovered_codes[0]
+                        break
+                    elif len(recovered_codes) == 0:
+                        break
+                    else:
+                        best_2 = score_codewords(recovered_codes,codeword_hash, distance_hash)
+                if len(recovered_codes) == 0:
+                    continue
+                else:
+                    final_codewords.append(list(best_2))
+                #keep record
+                for dot_idx in best_2:
+                    final_history.add(dot_idx)
                 #check to see if we can recover any codewords again
                 recovered_2 = recover_codes(recovered_codes, best_2)
                 #if there is one choice returned we can add
                 #otherwise we will repeat loop or end loop
-                if len(recovered_2) == 1:
+                if (len(recovered_2) == 1) and (recovered_2[0] & final_history == set()):
                     final_codewords.append(list(recovered_2[0]))
+                    #keep record
+                    for dot_idx in recovered_2[0]:
+                        final_history.add(dot_idx)
+                    break
+                elif (len(recovered_2) == 1) and (recovered_2[0] & final_history):
+                    break
                 #reassign recovered_codes
-                recovered_codes = recovered_2      
-    
-    #get the truly unique ones from matching_element_list
-    filter_list_unique = []
-    for sublist in matching_element_list:
-        if len(sublist) == 1:
-            filter_list_unique.append(list(sublist[0]))
-    
-    #combine the two unique sets
-    complete_set = filter_list_unique+final_codewords 
-    
+                recovered_codes = recovered_2.copy()
+
     #delete some variables
     del matching_element_list
-    del filter_list
+    del new_set
     del search_set
     del history_element
     del codeword_hash
     del distance_hash
-    del final_codewords
-    del filter_list_unique
     
-    return complete_set
+    return final_codewords
     
 def radial_decoding(locations,num_barcodes = 4, 
                     radius=np.sqrt(2),diff=0,
-                    seed=0, hybs = 12, decode_across = False):
+                    seed=0, hybs = 12):
     """
-    
-    This function will decode dots utilizing kNN algorithm from sklearn with a euclidean distance 
-    metric. Essentially, a defined search radius will be used to identify nearby dots. Dot sequence will be
-    determined using a score based metric incorporating distance, intensity, and size. Dot sequences that appear n
-    number of time defined by min seed will be kept. A table will be generated for each unnamed
-    gene, at which a codebook will act as a hash table for identification. This decoder should operate
-    similarly to MATLAB decoding. However, this decoder can be used for seqFISH DASH datasets, and will try to
-    assign ambiguous dots.
+    This function will decode dots utilizing kNN algorithm from sklearn using the euclidean formula
+    as a measure of distance. Essentially, a defined search radius will be used to identify nearby dots. 
+    Dot sequence will be determined using a score-based metric incorporating distance, intensity, and size. 
+    Dot sequences that appear n number of time defined by min seed will be kept. A table will be generated for each unnamed
+    gene, at which a codebook will act as a hash table for identification. 
     
     Parameters
     ----------
-    locations = locations.csv file
-    num_barcodes = number of total barcodes
-    radius = search radius using euclidean metric
-    diff = allowed barcode drops
-    seed = which barcode set to use as reference
-    hybs = total number of hybs
-    decode_across = bool for decoding across
+    locations: locations.csv file
+    num_barcodes: number of total barcodes
+    radius: search radius using euclidean metric
+    diff: allowed barcode drops
+    seed: which barcode set to use as reference
+    hybs: total number of hybs
     
     Returns
     --------
-    dot indicies that were determined to be the best sequence
+    dot_idx: best picked dot indicies 
+    ambiguity_scores: sum of all neighbors for each unique set of dot indicies
+    codeword_score_list: score for each possible codeword
+    total_distance_list: total distance for each possible codeword
     
     """
     #using sklearn nearest neighbor algorithm to find nearest dots
@@ -332,53 +391,35 @@ def radial_decoding(locations,num_barcodes = 4,
                 else:
                     total_distance_values += distance_list2[i][j-1][0]
             else:
-                if decode_across == False:
-                    #generate scoring system
-                    dist_values = (np.linspace(0,2,len(neighbor_list2[i][j])+1)/2)[::-1]
-                    int_values = (np.linspace(0,1,len(neighbor_list2[i][j])+1)/2)[::-1]
-                    size_values = (np.linspace(0,0.5,len(neighbor_list2[i][j])+1)/2)[::-1]
-                    #get dot traits
-                    #note that pandas iloc preserve order matching slice order
-                    dot_traits = locations.iloc[neighbor_list2[i][j]]
-                    #generate score table
-                    trait_score = np.zeros(len(dot_traits))
-                    #rank dots and see if we are using flux or average intensity
-                    try:
-                        int_score = np.argsort(dot_traits["flux"]).values[::-1]
-                        size_score = np.argsort(dot_traits["size"]).values[::-1]
-                    except:
-                        int_score = np.argsort(dot_traits["average intensity"]).values[::-1]
-                        size_score = np.argsort(dot_traits["size"]).values[::-1]
-                    #calculate best score
-                    #note that distance is already sorted
-                    for _ in range(len(trait_score)):
-                        trait_score[int_score[_]] += int_values[_]
-                        trait_score[_] += dist_values[_]
-                        trait_score[size_score[_]] += size_values[_]
-                    #get highest scoring index, then get all scores
-                    best_dot_idx = np.argmax(trait_score)
-                    temp.append(neighbor_list2[i][j][best_dot_idx])
-                    ambiguity += len(neighbor_list2[i][j])
-                    codeword_score += trait_score[best_dot_idx]
-                    total_distance_values += distance_list2[i][j-1][best_dot_idx]
-                else:
-                    #int and size will have no contribution to choice only distance
-                    dist_values = (np.linspace(0,2,len(neighbor_list2[i][j])+1)/2)[::-1]
-                    #get dot traits
-                    #note that pandas iloc preserve order matching slice order
-                    dot_traits = locations.iloc[neighbor_list2[i][j]]
-                    #generate score table
-                    trait_score = np.zeros(len(dot_traits))
-                    #calculate best score
-                    #note that distance is already sorted
-                    for _ in range(len(trait_score)):
-                        trait_score[_] += dist_values[_]
-                    #get highest scoring index, then get all scores
-                    best_dot_idx = np.argmax(trait_score)
-                    temp.append(neighbor_list2[i][j][best_dot_idx])
-                    ambiguity += len(neighbor_list2[i][j])
-                    codeword_score += trait_score[best_dot_idx]
-                    total_distance_values += distance_list2[i][j-1][best_dot_idx]
+                #generate scoring system
+                dist_values = (np.linspace(0,2,len(neighbor_list2[i][j])+1)/2)[::-1]
+                int_values = (np.linspace(0,1,len(neighbor_list2[i][j])+1)/2)[::-1]
+                size_values = (np.linspace(0,0.5,len(neighbor_list2[i][j])+1)/2)[::-1]
+                #get dot traits
+                #note that pandas iloc preserve order matching slice order
+                dot_traits = locations.iloc[neighbor_list2[i][j]]
+                #generate score table
+                trait_score = np.zeros(len(dot_traits))
+                #rank dots and see if we are using flux or average intensity
+                try:
+                    int_score = np.argsort(dot_traits["flux"]).values[::-1]
+                    size_score = np.argsort(dot_traits["size"]).values[::-1]
+                except:
+                    int_score = np.argsort(dot_traits["average intensity"]).values[::-1]
+                    size_score = np.argsort(dot_traits["size"]).values[::-1]
+                #calculate best score
+                #note that distance is already sorted
+                for _ in range(len(trait_score)):
+                    trait_score[int_score[_]] += int_values[_]
+                    trait_score[_] += dist_values[_]
+                    trait_score[size_score[_]] += size_values[_]
+                #get highest scoring index, then get all scores
+                best_dot_idx = np.argmax(trait_score)
+                temp.append(neighbor_list2[i][j][best_dot_idx])
+                ambiguity += len(neighbor_list2[i][j])
+                codeword_score += trait_score[best_dot_idx]
+                total_distance_values += distance_list2[i][j-1][best_dot_idx]
+               
         #calculate final scores
         ambiguity_score_final = ambiguity-len(neighbor_list2[i])
         codeword_score -= ambiguity_score_final 
@@ -397,24 +438,24 @@ def radial_decoding(locations,num_barcodes = 4,
     return dot_idx,ambiguity_scores,codeword_score_list,total_distance_list
 
 def radial_decoding_parallel(locations,codebook,num_barcodes = 4, radius=1,diff=0,
-                             min_seed=4, hybs = 12, include_undecoded = False, decode_across = False):
+                             min_seed=4, hybs = 12, include_undecoded = False):
     """This function will perform radial decoding on all barcodes as reference. Dot sequences
     that appear n number of times defined by min seed will be kept.
     Parameters 
     ----------
-    locations = location.csv file
-    codebook = codebook.csv
-    num_barcodes = number of total barcodes
-    radius = search radius using euclidean metric
-    diff = allowed barcode drops
-    min_seed = number of barcode seeds
-    hybs = total number of hybs
-    include_undecoded = bool to output the undecoded dots
-    decode_across = bool for decoding across
+    locations: location.csv file
+    codebook: codebook.csv
+    num_barcodes: number of total barcodes
+    radius: search radius using euclidean metric
+    diff: allowed barcode drops
+    min_seed: number of barcode seeds
+    hybs: total number of hybs
+    include_undecoded: bool to output the undecoded dots
     
     Returns
     --------
-    gene_locations.csv
+    genes_locations: gene locations df 
+    dot_idx_filtered: dot indicies used
     """
     
     #make sure diff is not greater than 1
@@ -427,7 +468,7 @@ def radial_decoding_parallel(locations,codebook,num_barcodes = 4, radius=1,diff=
             seed = i
             fut = exe.submit(radial_decoding, locations,
                              num_barcodes, radius,diff,
-                             seed, hybs, decode_across)
+                             seed, hybs)
             futures.append(fut)
             
     #collect result from futures objects
@@ -453,18 +494,18 @@ def radial_decoding_parallel(locations,codebook,num_barcodes = 4, radius=1,diff=
             amb_dict.update({tuple(sorted(ambiguity_list[i][0])):new_value})
         else:
             amb_dict.update({tuple(sorted(ambiguity_list[i][0])):ambiguity_list[i][1]})
-        
+
     #make list of ambiguity scores for each dot sequence index
     ambiguity_scores_final =[]
     for i in range(len(dot_idx_filtered)):
         score = amb_dict[tuple(sorted(dot_idx_filtered[i]))]
         ambiguity_scores_final.append(score)
-    
+
     #isolate dot info for barcode sets
     dot_info = []
     for idx in dot_idx_filtered:
         dot_info.append(locations.iloc[idx])
-        
+
     #generate code table for decoding and store info about dots
     info_list = []
     code_table = np.zeros(shape=(len(dot_info), hybs)).astype(int)
@@ -477,7 +518,7 @@ def radial_decoding_parallel(locations,codebook,num_barcodes = 4, radius=1,diff=
         info_list.append(info)
         for j in range(len(code)):
             code_table[i][int(code[j][0])] = int(code[j][1])
-    
+
     if diff == 0:
         #convert codebook to hash table
         hash_table = {}
@@ -514,14 +555,14 @@ def radial_decoding_parallel(locations,codebook,num_barcodes = 4, radius=1,diff=
                 codeword[locations_adj[i]] = 0
                 new_codewords.append(codeword)
             potential_codebooks.append(new_codewords)
-        
+
         #add codebooks to hash table
         hash_table = {}
         for i in range(len(potential_codebooks)):
             for j in range(len(potential_codebooks[i])):
                 codeword = {tuple(potential_codebooks[i][j].tolist()):codebook.iloc[i].name}
                 hash_table.update(codeword)
-                
+
         #using hash table for decoding
         decoded_genes = []
         for i in range(len(code_table)):
@@ -532,7 +573,7 @@ def radial_decoding_parallel(locations,codebook,num_barcodes = 4, radius=1,diff=
             #these are essentially uncorrectable
             except KeyError:
                 decoded_genes.append("Undefined")
-                
+
         #make final df
         genes_locations = pd.DataFrame(info_list)
         genes_locations.columns = ["x","y","z","brightness","peak intensity","size"]
@@ -547,10 +588,15 @@ def radial_decoding_parallel(locations,codebook,num_barcodes = 4, radius=1,diff=
 
 def return_highly_expressed_names(decoded):
     """
-    Returns list of top 5% of highly expressed genes
+    Returns list of top 10% of highly expressed genes
+    
     Parameters
     -----------
-    decoded = decoded genes csv file
+    decoded: decoded genes csv file
+    
+    Returns
+    --------
+    highexpgenes: list of highly expressed gene names
     """
     
     #collapse into gene counts
@@ -562,7 +608,7 @@ def return_highly_expressed_names(decoded):
     counts_df_true = counts_df.drop(counts_df_false.index).reset_index(drop=True)
     #sort and identify top 5% highly expressed genes
     counts_df_true = counts_df_true.sort_values(0, ascending=False).reset_index(drop=True)
-    highexpgenes = counts_df_true["index"][:int((len(counts_df_true)*0.05))].to_list()
+    highexpgenes = counts_df_true["index"][:int((len(counts_df_true)*0.10))].to_list()
     
     return highexpgenes
     
@@ -570,35 +616,33 @@ def dash_radial_decoding(location_path, codebook_path,
                          num_barcodes = 4, first_radius=1, second_radius=1,third_radius=1,diff=0,
                          min_seed=4, high_exp_seed=1, hybs = 12, output_dir = "", 
                          include_undecoded = False, decode_high_exp_genes = True,
-                         triple_decode=True, decode_across = False):
+                         triple_decode=True):
     """
     This function will perform radial decoding on all barcodes as reference. Dot sequences
-    that appear n number of times defined by min seed will be kept. Additionally, this function will run
-    radial_decoding parallel three times. The first pass is to decode most of the crowded dots, the second pass
-    will be with those dots removed, and the third will be with the dots removed from second round. Each round will recover 
-    significantly less than the previous round. Three rounds should maximize recovery. 
+    that appear n number of times defined by min seed will be kept. Three rounds of decoding can be 
+    performed with expanding radii. Additional features include the decoding of highly expressed genes first
+    and removing those dots for next iterative rounds of decoding.
     
     Parameters 
     ----------
-    location_path = path to location.csv
-    codebook_path = path to codebook showing at which channel and hyb a dot should appear
-    num_barcodes = number of total barcodes
-    first_radius = first search radius in pixels
-    second_radius = second search radius in pixels
-    third_radius = third search radius in pixels
-    diff = allowed pseudocolor drops
-    min_seed = number of times the same pseudocolor appears with changing reference
-    high_exp_seed = number of min seeds to identify highly expressed genes
-    hybs = total number of hybs
-    output_dir = directory to where you want the file outputted
-    include_undecoded = bool to output the undecoded dots
-    decode_high_exp_genes = decode highly expressed genes first
-    triple_decode=bool to perform another around of decoding
-    decode_across = bool for decoding across
+    location_path: path to location.csv
+    codebook_path: path to codebook showing at which channel and hyb a dot should appear
+    num_barcodes: number of total barcodes
+    first_radius: first search radius in pixels
+    second_radius: second search radius in pixels
+    third_radius: third search radius in pixels
+    diff: allowed pseudocolor drops
+    min_seed: number of times the same pseudocolor appears with changing reference
+    high_exp_seed: number of min seeds to identify highly expressed genes
+    hybs: total number of hybs
+    output_dir: directory to where you want the file outputted
+    include_undecoded: bool to output the undecoded dots
+    decode_high_exp_genes: decode highly expressed genes first
+    triple_decode: bool to perform another around of decoding
     
     Returns
     --------
-    gene_locations.csv
+    gene_locations.csv: final locations file for each gene
     """
     #read in flocations file and drop unnamed columns
     locations = pd.read_csv(location_path)
@@ -626,7 +670,7 @@ def dash_radial_decoding(location_path, codebook_path,
         #run decoding first pass
         decoded_1, indicies_used_1 = radial_decoding_parallel(locations, codebook,
                     num_barcodes=num_barcodes, radius=first_radius, diff=diff,
-                    min_seed=high_exp_seed, hybs = hybs, include_undecoded = False, decode_across=decode_across)
+                    min_seed=high_exp_seed, hybs = hybs, include_undecoded = False)
         #get highly expressed genes
         highexpgenes = return_highly_expressed_names(decoded_1)
         #initialize loop
@@ -652,12 +696,11 @@ def dash_radial_decoding(location_path, codebook_path,
             record_dots_used.append(locations_temp.iloc[flattened_indicies_used])
             #remove already decoded dots
             locations_temp = locations_temp.drop(flattened_indicies_used).reset_index(drop=True)
-            #run decoding with 0.75 pixel search
+            #run decoding with defined pixel search
             decoded_1, indicies_used_1 = radial_decoding_parallel(locations_temp, codebook,
                                                                   num_barcodes=num_barcodes, radius=first_radius,diff=diff,
                                                                   min_seed=high_exp_seed, hybs = hybs, 
-                                                                  include_undecoded = False, 
-                                                                  decode_across=decode_across)
+                                                                  include_undecoded = False)
             #get new highly expressed gene list
             highexpgenes_2 = return_highly_expressed_names(decoded_1)
             loop += 1
@@ -674,7 +717,7 @@ def dash_radial_decoding(location_path, codebook_path,
         #run decoding first pass
         decoded_1, indicies_used_1 = radial_decoding_parallel(locations, codebook,
                     num_barcodes=num_barcodes, radius=first_radius,diff=diff,
-                    min_seed=min_seed, hybs = hybs, include_undecoded = False, decode_across=decode_across)
+                    min_seed=min_seed, hybs = hybs, include_undecoded = False)
         #only get the indicies of decoded genes (excluding undefined)
         #the index on decoded will correspond to the same index in indicies used
         indicies_used_df = decoded_1.index.tolist()
@@ -691,8 +734,7 @@ def dash_radial_decoding(location_path, codebook_path,
     #run decoding second pass with same or different search radius
     decoded_2, indicies_used_2 = radial_decoding_parallel(new_locations, codebook,
                                                           num_barcodes=num_barcodes, radius=second_radius,diff=diff,
-                                                          min_seed=min_seed, hybs = hybs, include_undecoded = include_undecoded, 
-                                                          decode_across=decode_across)
+                                                          min_seed=min_seed, hybs = hybs, include_undecoded = include_undecoded)
     if triple_decode == True:
         #output results from second pass
         decoded_combined = pd.concat([decoded_1, decoded_2])
@@ -713,7 +755,7 @@ def dash_radial_decoding(location_path, codebook_path,
         try:
             decoded_3, indicies_used_3 = radial_decoding_parallel(new_locations_2, codebook,
                         num_barcodes=num_barcodes, radius=third_radius,diff=diff,
-                        min_seed=min_seed, hybs = hybs, include_undecoded = include_undecoded, decode_across=decode_across)
+                        min_seed=min_seed, hybs = hybs, include_undecoded = include_undecoded)
             #combine decoded dfs
             decoded_combined = pd.concat([decoded_1, decoded_2, decoded_3])
         except:
