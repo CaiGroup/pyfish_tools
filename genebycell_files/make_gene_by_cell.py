@@ -22,8 +22,12 @@ def make_genebycell(gene_loc_dir, output_dir = None, check_thresholds=True, chan
     if check_thresholds == True:
         #go through each threshold csv
         for i in range(len(gene_loc_dir)):
+            Threshold = ""
+            parent_dir = Path(gene_loc_dir[i]).parent
             #get threshold number
-            Threshold = Path(gene_loc_dir[i]).parent.name
+            while Threshold.find("Threshold") == -1:
+                Threshold = parent_dir.name
+                parent_dir = parent_dir.parent
             #across all channels or not
             if channel == "all":
                 final_output = Path(output_dir) / Threshold / "genebycell.csv"
