@@ -52,6 +52,8 @@ def combine_dot_files(path_dots, hyb_start=0,hyb_end=63,num_HybCycle=32, pos= 0,
         for i in np.arange(hyb_start, hyb_end+1, 1):
             dots_folders= Path(path_dots) / f"HybCycle_{i}"
             dot_files = list(dots_folders.glob(f'MMStack_Pos{pos}_*.csv'))
+            if dot_files == []:
+                raise Exception(f"Missing Pos {pos} in HybCycle_{i}")
             #check if threshold starts with 0 and is a float
             is_float = str(dot_files[0]).split("_")[-1].replace(".csv","").split(".")
             #organize files numerically
