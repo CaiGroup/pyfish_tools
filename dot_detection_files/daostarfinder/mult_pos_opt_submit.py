@@ -10,7 +10,7 @@ channel_list = np.arange(1,5,1)
 for pos in pos_list:
     for channel in channel_list:
         #write batch files
-        job_file = f"dotdetection_pos{pos}.batch"
+        job_file = f"dotdetection_pos{pos}_channel{channel}.batch"
         with open(job_file, "w+") as f:
             f.write("#!/bin/bash\n")
             f.write("#SBATCH --ntasks=1\n") #num tasks keep at 1
