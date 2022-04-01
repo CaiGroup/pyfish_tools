@@ -20,7 +20,7 @@ file = str(directory / f"HybCycle_{JOB_ID}"/ position_name)
 
 #pos number from find threshold, just provide the location of MMStack_Posx folders
 #channel doesn't matter here
-thresh_pos = glob.glob("/groups/CaiLab/personal/Lex/raw/031322_11kgenes_experiment/notebook_pyfiles/threshold_counts/Channel_{channel}/HybCycle_{JOB_ID}/*")
+thresh_pos = glob.glob(f"/groups/CaiLab/personal/Lex/raw/031322_11kgenes_experiment/notebook_pyfiles/threshold_counts/Channel_{channel}/HybCycle_{JOB_ID}/*")
 pos_list = []
 for path in thresh_pos:
     pos = int(Path(path).name.split("_")[1].replace("Pos",""))
