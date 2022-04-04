@@ -1,5 +1,5 @@
 # seqFISH Datapipeline
-Scripts and jupyter notebooks used for the analysis of various seqFISH methodologies.
+Generalized and completely python based analysis pipeline for the analysis of various seqFISH methodologies.
 
 ## Important Dependencies
 - python >= 3.7 (3.7 preferred)
