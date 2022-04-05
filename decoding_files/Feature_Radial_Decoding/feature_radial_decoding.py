@@ -266,7 +266,8 @@ def radial_decoding(locations,num_barcodes = 4,
     This function will decode dots utilizing kNN algorithm from sklearn using the euclidean formula
     as a measure of distance. Essentially, a defined search radius will be used to identify nearby dots. 
     Dot sequence will be determined using a score-based metric incorporating distance, intensity, and size. 
-    Dot sequences that appear n number of time defined by min seed will be kept. A table will be generated for each unnamed
+    Dot sequences that appear n number of time defined by min seed will be kept. A codeword score will also
+    be assigned based on ambiguity (total number of neighbors for each ref). A table will be generated for each unnamed
     gene, at which a codebook will act as a hash table for identification. 
     
     Parameters
