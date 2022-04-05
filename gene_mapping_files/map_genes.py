@@ -10,6 +10,33 @@ import tifffile as tf
 import matplotlib.pyplot as plt
 from pathlib import Path
 from concurrent.futures import ProcessPoolExecutor, as_completed
+import h5py
+
+
+def h5_to_array(filename):
+    """
+    Read in h5 file and return 4-d array (z,c,x,y). Use this function in case mask is in h5 format.
+    
+    Parameters
+    ----------
+    filename: name of h5 file
+    
+    Returns
+    --------
+    data: 4-d array
+    """
+    
+    with h5py.File(filename, "r") as f:
+        # get key
+        a_group_key = list(f.keys())[0]
+
+        # Get the data
+        data = np.array(f[a_group_key])
+        
+        print(f"File read. Shape of array = {data.shape}.")
+        
+    return data
+
 
 def keep_dots_in_cells(mask, dot_locations):
     """a function to remove any dots outside of mask
