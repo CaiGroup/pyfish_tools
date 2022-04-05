@@ -1,5 +1,5 @@
 # seqFISH Datapipeline
-Generalized and fully python-based analysis pipeline for the analysis of various seqFISH methodologies.
+Generalized and fully python-based pipeline for the analysis of various seqFISH methodologies.
 
 ## Important Dependencies
 - python >= 3.7 (3.7 preferred)
