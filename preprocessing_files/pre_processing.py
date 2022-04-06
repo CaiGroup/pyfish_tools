@@ -143,6 +143,8 @@ def Gaussian_and_Gamma_Correction(image, gamma, sigma, kern = 5, match_hist =Tru
         image_background_eliminated= image/((image_blur)/np.mean(image_blur))
     #adjust contrast by gamma enhancement
     contrast_ench_Gamma_c = adjust_gamma(image_background_eliminated, gamma)
+    #try to even illumination slightly and multiply by constant factor
+    contrast_ench_Gamma_c = (contrast_ench_Gamma_c/np.mean(contrast_ench_Gamma_c))*100
     
     return contrast_ench_Gamma_c
 
