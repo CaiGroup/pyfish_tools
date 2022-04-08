@@ -63,7 +63,8 @@ def percent_false_positive(df, codebook, fakebook):
     
     #make average barcode counts per cell plot
     color= ["red" if i == True else "blue" for i in comb_sorted.index.str.startswith("fake")]
-    plt.scatter(x=np.arange(0,len(comb_sorted),1), y=comb_sorted, s=5, c= color)
+    for i in range(len(comb_sorted)):
+        plt.vlines(x=i, ymin=0, ymax=comb_sorted.values[i], color= color[i])
     plt.xlabel("Barcodes", fontsize=12)
     plt.ylabel("Average Counts per Cell", fontsize=12)
     plt.xticks(fontsize=12, rotation=0)
