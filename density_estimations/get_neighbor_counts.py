@@ -18,7 +18,7 @@ def neighbor_counts(locations, hybs=12, num_barcodes=4, seed=0, radius=1):
     locations = locations.csv file
     hybs = total number of hybs
     num_barcodes = total number of barcodes
-    seed = which round to look at first
+    seed = which round to look at first or all
     radius = distance by pixels
     
     """
@@ -49,7 +49,10 @@ def neighbor_counts(locations, hybs=12, num_barcodes=4, seed=0, radius=1):
     del temp
 
     #rename seed
-    initial_seed = barcoding_round[seed][["x","y"]]
+    if seed != "all":
+        initial_seed = barcoding_round[seed][["x","y"]]
+    else:
+        initial_seed = locations[["x","y"]]
 
     #delete rest of the barcoding rounds
     del barcoding_round
