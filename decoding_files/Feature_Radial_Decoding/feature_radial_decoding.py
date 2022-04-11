@@ -439,7 +439,7 @@ def radial_decoding(locations,num_barcodes = 4,
     return dot_idx,ambiguity_scores,codeword_score_list,total_distance_list
 
 def radial_decoding_parallel(locations,codebook,num_barcodes = 4, radius=1,diff=0,
-                             min_seed=4, hybs = 12, include_undecoded = False):
+                             min_seed=4, hybs = 12, include_undecoded = False, parity_round =True):
     """This function will perform radial decoding on all barcodes as reference. Dot sequences
     that appear n number of times defined by min seed will be kept.
     Parameters 
@@ -452,6 +452,7 @@ def radial_decoding_parallel(locations,codebook,num_barcodes = 4, radius=1,diff=
     min_seed: number of barcode seeds
     hybs: total number of hybs
     include_undecoded: bool to output the undecoded dots
+    parity_round: bool if you included parity round
     
     Returns
     --------
@@ -534,7 +535,10 @@ def radial_decoding_parallel(locations,codebook,num_barcodes = 4, radius=1,diff=
                 gene_name = hash_table[tuple(code_table[i])]
                 decoded_genes.append(gene_name)
             except KeyError:
-                sys.exit("Check codebook for completeness")
+                if parity_round==False:
+                    sys.exit("Check codebook for completeness")
+                else:
+                    decoded_genes.append("Undefined")
 
         #add gene names
         genes_locations = pd.DataFrame(info_list)
@@ -542,6 +546,8 @@ def radial_decoding_parallel(locations,codebook,num_barcodes = 4, radius=1,diff=
         genes_locations["genes"] = decoded_genes
         #add ambiguity score
         genes_locations["ambiguity score"] = ambiguity_scores_final
+        if include_undecoded ==  False:
+            genes_locations = genes_locations[genes_locations["genes"] != "Undefined"]
         genes_locations = genes_locations[["genes", "x", "y","z","brightness","peak intensity", "size", "ambiguity score"]]  
 
     elif diff == 1:
@@ -615,7 +621,7 @@ def return_highly_expressed_names(decoded):
     
 def feature_radial_decoding(location_path, codebook_path,
                          num_barcodes = 4, first_radius=1, second_radius=1,third_radius=1,diff=0,
-                         min_seed=4, high_exp_seed=1, hybs = 12, output_dir = "", 
+                         min_seed=4, high_exp_seed=1, hybs = 12, output_dir = "", parity_round = True,
                          include_undecoded = False, decode_high_exp_genes = True,
                          triple_decode=True):
     """
@@ -637,6 +643,7 @@ def feature_radial_decoding(location_path, codebook_path,
     high_exp_seed: number of min seeds to identify highly expressed genes
     hybs: total number of hybs
     output_dir: directory to where you want the file outputted
+    parity_round: bool if you included parity round
     include_undecoded: bool to output the undecoded dots
     decode_high_exp_genes: decode highly expressed genes first
     triple_decode: bool to perform another around of decoding
@@ -671,7 +678,7 @@ def feature_radial_decoding(location_path, codebook_path,
         #run decoding first pass
         decoded_1, indicies_used_1 = radial_decoding_parallel(locations, codebook,
                     num_barcodes=num_barcodes, radius=first_radius, diff=diff,
-                    min_seed=high_exp_seed, hybs = hybs, include_undecoded = False)
+                    min_seed=high_exp_seed, hybs = hybs, include_undecoded = False, parity_round=parity_round)
         #get highly expressed genes
         highexpgenes = return_highly_expressed_names(decoded_1)
         #initialize loop
@@ -701,7 +708,7 @@ def feature_radial_decoding(location_path, codebook_path,
             decoded_1, indicies_used_1 = radial_decoding_parallel(locations_temp, codebook,
                                                                   num_barcodes=num_barcodes, radius=first_radius,diff=diff,
                                                                   min_seed=high_exp_seed, hybs = hybs, 
-                                                                  include_undecoded = False)
+                                                                  include_undecoded = False, parity_round=parity_round)
             #get new highly expressed gene list
             highexpgenes_2 = return_highly_expressed_names(decoded_1)
             loop += 1
@@ -718,7 +725,7 @@ def feature_radial_decoding(location_path, codebook_path,
         #run decoding first pass
         decoded_1, indicies_used_1 = radial_decoding_parallel(locations, codebook,
                     num_barcodes=num_barcodes, radius=first_radius,diff=diff,
-                    min_seed=min_seed, hybs = hybs, include_undecoded = False)
+                    min_seed=min_seed, hybs = hybs, include_undecoded = False, parity_round=parity_round)
         #only get the indicies of decoded genes (excluding undefined)
         #the index on decoded will correspond to the same index in indicies used
         indicies_used_df = decoded_1.index.tolist()
@@ -735,7 +742,8 @@ def feature_radial_decoding(location_path, codebook_path,
     #run decoding second pass with same or different search radius
     decoded_2, indicies_used_2 = radial_decoding_parallel(new_locations, codebook,
                                                           num_barcodes=num_barcodes, radius=second_radius,diff=diff,
-                                                          min_seed=min_seed, hybs = hybs, include_undecoded = include_undecoded)
+                                                          min_seed=min_seed, hybs = hybs, include_undecoded = include_undecoded, 
+                                                          parity_round=parity_round)
     if triple_decode == True:
         #output results from second pass
         decoded_combined = pd.concat([decoded_1, decoded_2])
@@ -756,7 +764,8 @@ def feature_radial_decoding(location_path, codebook_path,
         try:
             decoded_3, indicies_used_3 = radial_decoding_parallel(new_locations_2, codebook,
                         num_barcodes=num_barcodes, radius=third_radius,diff=diff,
-                        min_seed=min_seed, hybs = hybs, include_undecoded = include_undecoded)
+                        min_seed=min_seed, hybs = hybs, include_undecoded = include_undecoded, 
+                        parity_round=parity_round)
             #combine decoded dfs
             decoded_combined = pd.concat([decoded_1, decoded_2, decoded_3])
         except:
