@@ -31,7 +31,6 @@ HybCycle = JOB_ID
 size_cutoff = None # sigma cutoff for size distribution
 channel = channel #which channel to analyze (1-4)
 choose_thresh_set = 0 #ignore for optimization
-hyb_number = 45 #total number of hybs
 optimize = True #are you testing thresholds
 output = True #do you want to write out results
                  

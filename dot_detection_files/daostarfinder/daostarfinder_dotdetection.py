@@ -452,7 +452,7 @@ def get_region_around(im, center, size, edge='raise'):
     return region
     
 def dot_detection(img_src, fwhm = 4.0, HybCycle=0, size_cutoff=3, 
-                  opt_thresh=0.001,channel=1,pos=0,choose_thresh_set = 0, hyb_number=64,
+                  opt_thresh=0.001,channel=1,pos=0,choose_thresh_set = 0, 
                   optimize=False, output=False):
     
     """
@@ -468,7 +468,6 @@ def dot_detection(img_src, fwhm = 4.0, HybCycle=0, size_cutoff=3,
     channel = which channel to look at (1-4)
     pos = position number (used to get FWHM)
     choose_thresh_set = int for which threshold set you want to use
-    hyb_number = total number of hybs for choose thresh set
     optimize = bool to test different threshold and min dots
     output = bool to output files
     
@@ -718,7 +717,7 @@ def dot_detection(img_src, fwhm = 4.0, HybCycle=0, size_cutoff=3,
  
 def dot_detection_parallel(img_src, HybCycle=0, size_cutoff=3, 
                            channel=1, pos_list=None, choose_thresh_set = 0, 
-                           hyb_number=64, optimize=False, output=True):
+                           optimize=False, output=True):
     """
     This function will run dot detection in parallel, provided a list of images.
     
@@ -730,7 +729,6 @@ def dot_detection_parallel(img_src, HybCycle=0, size_cutoff=3,
     channel = which channel to look at (1-4)
     pos_list = list of position numbers
     choose_thresh_set = int for which threshold set you want to use
-    hyb_number = total number of hybs for choose thresh set
     optimize = bool to test different threshold and min dots
     output = bool to output files
     
@@ -774,7 +772,7 @@ def dot_detection_parallel(img_src, HybCycle=0, size_cutoff=3,
                 pos = pos_list[0]
                 for opt_thresh in thresh_median:
                     fut = exe.submit(dot_detection, img_src, fwhm, HybCycle, size_cutoff,
-                                     opt_thresh,channel,pos,choose_thresh_set,hyb_number,
+                                     opt_thresh,channel,pos,choose_thresh_set,
                                      optimize, output)
                     futures[fut] = opt_thresh
 
@@ -795,7 +793,7 @@ def dot_detection_parallel(img_src, HybCycle=0, size_cutoff=3,
                 fwhm = None
                 #dot detect
                 fut = exe.submit(dot_detection, img, fwhm, HybCycle_mod, size_cutoff,
-                                 opt_thresh,channel,pos,choose_thresh_set,hyb_number,
+                                 opt_thresh,channel,pos,choose_thresh_set,
                                  optimize, output)
                 futures[fut] = img
 
