@@ -19,7 +19,6 @@ pos_list = [0] #include one of the positions used in threshold screen (used to c
 size_cutoff = 4 # sigma cutoff for size distribution
 channel = 1 #which channel to analyze
 choose_thresh_set = 4 #select best thresh set
-hyb_number=16 #total number of hybs
 optimize=False #are you testing thresholds
 output=True #do you want to write out results
 
