@@ -23,4 +23,4 @@ optimize=False #are you testing thresholds
 output=True #do you want to write out results
 
 dot_detection_parallel(files, HybCycle,size_cutoff,channel,pos_list,
-                       choose_thresh_set,hyb_number, optimize, output)
+                       choose_thresh_set, optimize, output)
