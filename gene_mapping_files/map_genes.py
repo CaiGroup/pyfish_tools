@@ -38,7 +38,7 @@ def h5_to_array(filename):
     return data
 
 
-def keep_dots_in_cells(mask, dot_locations, z=0):
+def keep_dots_in_cells(mask, dot_locations):
     """a function to remove any dots outside of mask
     Parameter
     ---------
@@ -52,7 +52,8 @@ def keep_dots_in_cells(mask, dot_locations, z=0):
     """
     orig_image_dir = Path(dot_locations).parent.parent
     output_folder = Path(orig_image_dir)
-    output_path = output_folder / 'genes_in_cells' /Path(dot_locations).relative_to(orig_image_dir).parent / f"gene_locations_z_{z}.csv"
+    file_name = Path(dot_locations).name
+    output_path = output_folder / 'genes_in_cells' /Path(dot_locations).relative_to(orig_image_dir).parent / file_name
     output_path.parent.mkdir(parents=True, exist_ok=True)
     
     #read in data
@@ -84,7 +85,7 @@ def keep_dots_in_cells(mask, dot_locations, z=0):
     
     print(str(output_path))
 
-def keep_dots_parallel(mask,dot_locations, z=0):
+def keep_dots_parallel(mask,dot_locations):
     """run keep_dots_in_cells across all positions
     
     Parameters:
@@ -100,7 +101,7 @@ def keep_dots_parallel(mask,dot_locations, z=0):
     with ProcessPoolExecutor(max_workers=12) as exe:
         futures = {}
         for i in range(len(mask)):
-            fut = exe.submit(keep_dots_in_cells, mask[i], dot_locations[i], z=z)
+            fut = exe.submit(keep_dots_in_cells, mask[i], dot_locations[i])
             futures[fut] = i
         
         for fut in as_completed(futures):
