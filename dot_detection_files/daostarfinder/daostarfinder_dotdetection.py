@@ -1,7 +1,7 @@
 """
 author: Katsuya Lex Colon
 group: Cai Lab
-updated: 01/06/21
+updated: 01/06/22
 """
 #data management
 import os
@@ -452,7 +452,7 @@ def get_region_around(im, center, size, edge='raise'):
     return region
     
 def dot_detection(img_src, fwhm = 4.0, HybCycle=0, size_cutoff=3, 
-                  opt_thresh=0.001,channel=1,pos=0,choose_thresh_set = 0, 
+                  opt_thresh=0.001,channel=1,pos=0,choose_thresh_set = 0, hyb_number=64,
                   optimize=False, output=False):
     
     """
@@ -468,6 +468,7 @@ def dot_detection(img_src, fwhm = 4.0, HybCycle=0, size_cutoff=3,
     channel = which channel to look at (1-4)
     pos = position number (used to get FWHM)
     choose_thresh_set = int for which threshold set you want to use
+    hyb_number = total number of hybs for choose thresh set
     optimize = bool to test different threshold and min dots
     output = bool to output files
     
@@ -493,7 +494,7 @@ def dot_detection(img_src, fwhm = 4.0, HybCycle=0, size_cutoff=3,
             z=0
             peaks = daofinder(img[channel-1], threshold=opt_thresh,fwhm=fwhm)
             peaks = peaks.to_pandas()
-            peaks = peaks[["xcentroid" ,"ycentroid", "flux", "peak"]].values
+            peaks = peaks[["xcentroid" ,"ycentroid", "flux", "peak", "sharpness", "roundness1", "roundness2"]].values
             ch = np.zeros(len(peaks))+channel
             z_slice = np.zeros(len(peaks))+z
             peaks = np.append(peaks, ch.reshape(len(ch),1), axis=1)
@@ -504,7 +505,7 @@ def dot_detection(img_src, fwhm = 4.0, HybCycle=0, size_cutoff=3,
             for z in range(img.shape[0]):
                 peaks = daofinder(img[z][channel-1], threshold=opt_thresh, fwhm=fwhm)
                 peaks = peaks.to_pandas()
-                peaks = peaks[["xcentroid" ,"ycentroid", "flux", "peak"]].values
+                peaks = peaks[["xcentroid" ,"ycentroid", "flux", "peak", "sharpness", "roundness1", "roundness2"]].values
                 ch = np.zeros(len(peaks))+channel
                 z_slice = np.zeros(len(peaks))+z
                 peaks = np.append(peaks, ch.reshape(len(ch),1), axis=1)
@@ -514,9 +515,9 @@ def dot_detection(img_src, fwhm = 4.0, HybCycle=0, size_cutoff=3,
             
         #make df and reorganize        
         dots = pd.DataFrame(dots)
-        dots.columns = ["x", "y", "flux","max intensity","ch", "z"]
+        dots.columns = ["x", "y", "flux", "max intensity", "sharpness", "symmetry", "roundness by gaussian fits", "ch", "z"]
         dots["hyb"] = HybCycle
-        dots = dots[["hyb","ch","x","y","z", "flux","max intensity"]]
+        dots = dots[["hyb","ch","x","y","z", "flux","max intensity", "sharpness", "symmetry", "roundness by gaussian fits"]]
 
         #get area
         #subtract 1 from channels to get right slice
@@ -549,7 +550,7 @@ def dot_detection(img_src, fwhm = 4.0, HybCycle=0, size_cutoff=3,
         
         #construct final df
         dots["size"] = area_list
-        dots = dots[["hyb","ch","x","y","z", "flux","max intensity", "size"]]
+        dots = dots[["hyb","ch","x","y","z", "flux","max intensity", "sharpness", "symmetry", "roundness by gaussian fits", "size"]]
         #write out plot
         output_path_adj = output_path.replace(".csv", f"_{opt_thresh}.csv")
         if size_cutoff != None:
@@ -620,7 +621,7 @@ def dot_detection(img_src, fwhm = 4.0, HybCycle=0, size_cutoff=3,
             z=0
             peaks = daofinder(img[channel-1], threshold=opt_thresh,fwhm=fwhm)
             peaks = peaks.to_pandas()
-            peaks = peaks[["xcentroid" ,"ycentroid", "flux", "peak"]].values
+            peaks = peaks[["xcentroid" ,"ycentroid", "flux", "peak", "sharpness", "roundness1", "roundness2"]].values
             ch = np.zeros(len(peaks))+channel
             z_slice = np.zeros(len(peaks))+z
             peaks = np.append(peaks, ch.reshape(len(ch),1), axis=1)
@@ -631,7 +632,7 @@ def dot_detection(img_src, fwhm = 4.0, HybCycle=0, size_cutoff=3,
             for z in range(img.shape[0]):
                 peaks = daofinder(img[z][channel-1], threshold=opt_thresh, fwhm=fwhm)
                 peaks = peaks.to_pandas()
-                peaks = peaks[["xcentroid" ,"ycentroid", "flux", "peak"]].values
+                peaks = peaks[["xcentroid" ,"ycentroid", "flux", "peak", "sharpness", "roundness1", "roundness2"]].values
                 ch = np.zeros(len(peaks))+channel
                 z_slice = np.zeros(len(peaks))+z
                 peaks = np.append(peaks, ch.reshape(len(ch),1), axis=1)
@@ -641,9 +642,9 @@ def dot_detection(img_src, fwhm = 4.0, HybCycle=0, size_cutoff=3,
             
         #make df and reorganize        
         dots = pd.DataFrame(dots)
-        dots.columns = ["x", "y", "flux","max intensity","ch", "z"]
+        dots.columns = ["x", "y", "flux", "max intensity", "sharpness", "symmetry", "roundness by gaussian fits", "ch", "z"]
         dots["hyb"] = HybCycle
-        dots = dots[["hyb","ch","x","y","z", "flux","max intensity"]]
+        dots = dots[["hyb","ch","x","y","z", "flux","max intensity", "sharpness", "symmetry", "roundness by gaussian fits"]]
 
         #get area
         #subtract 1 from channels to get right slice
@@ -676,7 +677,7 @@ def dot_detection(img_src, fwhm = 4.0, HybCycle=0, size_cutoff=3,
         
         #construct final df
         dots["size"] = area_list
-        dots = dots[["hyb","ch","x","y","z", "flux","max intensity", "size"]]
+        dots = dots[["hyb","ch","x","y","z","flux","max intensity", "sharpness", "symmetry", "roundness by gaussian fits", "size"]]
         #write out plot
         output_path_adj = output_path.replace(".csv", f"_{opt_thresh}.csv")
         if size_cutoff != None:
@@ -717,7 +718,7 @@ def dot_detection(img_src, fwhm = 4.0, HybCycle=0, size_cutoff=3,
  
 def dot_detection_parallel(img_src, HybCycle=0, size_cutoff=3, 
                            channel=1, pos_list=None, choose_thresh_set = 0, 
-                           optimize=False, output=True):
+                           hyb_number=64, optimize=False, output=True):
     """
     This function will run dot detection in parallel, provided a list of images.
     
@@ -729,6 +730,7 @@ def dot_detection_parallel(img_src, HybCycle=0, size_cutoff=3,
     channel = which channel to look at (1-4)
     pos_list = list of position numbers
     choose_thresh_set = int for which threshold set you want to use
+    hyb_number = total number of hybs for choose thresh set
     optimize = bool to test different threshold and min dots
     output = bool to output files
     
@@ -772,7 +774,7 @@ def dot_detection_parallel(img_src, HybCycle=0, size_cutoff=3,
                 pos = pos_list[0]
                 for opt_thresh in thresh_median:
                     fut = exe.submit(dot_detection, img_src, fwhm, HybCycle, size_cutoff,
-                                     opt_thresh,channel,pos,choose_thresh_set,
+                                     opt_thresh,channel,pos,choose_thresh_set,hyb_number,
                                      optimize, output)
                     futures[fut] = opt_thresh
 
@@ -793,7 +795,7 @@ def dot_detection_parallel(img_src, HybCycle=0, size_cutoff=3,
                 fwhm = None
                 #dot detect
                 fut = exe.submit(dot_detection, img, fwhm, HybCycle_mod, size_cutoff,
-                                 opt_thresh,channel,pos,choose_thresh_set,
+                                 opt_thresh,channel,pos,choose_thresh_set,hyb_number,
                                  optimize, output)
                 futures[fut] = img
 

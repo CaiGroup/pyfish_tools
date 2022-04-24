@@ -9,7 +9,7 @@ JOB_ID = os.getenv('SLURM_ARRAY_TASK_ID', 0)
 
 print(f'This is task {JOB_ID}')
 #general image directory
-directory = Path("/groups/CaiLab/personal/Lex/raw/031322_11kgenes_experiment/notebook_pyfiles/pre_processed_images/")
+directory = Path("/groups/CaiLab/personal/Lex/raw/150genes3bind_040622/notebook_pyfiles/pre_processed_images/")
 #jobs will be split by hybs
 hybcycle = f"HybCycle_{JOB_ID}"
 #gen path with hyb
@@ -30,10 +30,10 @@ for path in paths_use:
 
 #parameters
 threshold_min  = 0.01 #starting minimum threshold 
-threshold_max = 0.8 #ending maximum threshold
+threshold_max = 0.7 #ending maximum threshold
 interval = 100 #interval between min and max
 HybCycle = JOB_ID #JOB id from slurm task array
-channel = 4 #which channel (1-4)
+channel = 1 #which channel (1-4)
 reduce_cutoff = 4 #number of indexes to go back from sliding window (2 or 4 is good)
 window=5 #size of sliding window (5 if interval is 100 and 10 if interval is 200)
 
