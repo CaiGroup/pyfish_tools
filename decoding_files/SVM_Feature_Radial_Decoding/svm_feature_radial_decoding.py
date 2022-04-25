@@ -415,12 +415,8 @@ def radial_decoding(locations,num_barcodes = 4,
                 #generate score table
                 trait_score = np.zeros(len(dot_traits))
                 #rank dots and see if we are using flux or average intensity
-                try:
-                    int_score = np.argsort(dot_traits["flux"]).values[::-1]
-                    size_score = np.argsort(dot_traits["size"]).values[::-1]
-                except:
-                    int_score = np.argsort(dot_traits["average intensity"]).values[::-1]
-                    size_score = np.argsort(dot_traits["size"]).values[::-1]
+                int_score = np.argsort(dot_traits["flux"]).values[::-1]
+                size_score = np.argsort(dot_traits["size"]).values[::-1]
                 #calculate best score
                 #note that distance is already sorted
                 for _ in range(len(trait_score)):
@@ -552,10 +548,10 @@ def radial_decoding_parallel(locations,codebook,num_barcodes = 4, radius=1,diff=
     code_table = np.zeros(shape=(len(dot_info), hybs)).astype(int)
     for i in range(len(dot_info)):
         code = dot_info[i][["hyb","ch"]].values
-        try:
-            info = dot_info[i][["x","y","z","flux","max intensity","sharpness", "symmetry", "roundness by gaussian fits","size"]].mean().values
-        except:
-            info = dot_info[i][["x","y","z","average intensity","peak intensity","sharpness", "symmetry", "roundness by gaussian fits","size"]].mean().values
+        if "cell number" in dot_info[i]:
+            info = dot_info[i][["x","y","z","flux","max intensity","sharpness", "symmetry", "roundness by gaussian fits","size", "cell number"]].mean().values
+        else:
+            info = dot_info[i][["x","y","z","flux","max intensity","sharpness", "symmetry", "roundness by gaussian fits","size"]].mean().values 
         info_list.append(info)
         for j in range(len(code)):
             code_table[i][int(code[j][0])] = int(code[j][1])
@@ -581,7 +577,10 @@ def radial_decoding_parallel(locations,codebook,num_barcodes = 4, radius=1,diff=
 
         #add gene names
         genes_locations = pd.DataFrame(info_list)
-        genes_locations.columns = ["x","y","z","brightness","peak intensity","sharpness", "symmetry", "roundness by gaussian fits","size"]
+        if len(genes_locations.columns) == 10:
+            genes_locations.columns = ["x","y","z","brightness","peak intensity","sharpness", "symmetry", "roundness by gaussian fits","size","cell number"]
+        else:
+            genes_locations.columns = ["x","y","z","brightness","peak intensity","sharpness", "symmetry", "roundness by gaussian fits","size"]
         genes_locations["genes"] = decoded_genes
         #add ambiguity score
         genes_locations["ambiguity score"] = ambiguity_scores_final
@@ -589,7 +588,10 @@ def radial_decoding_parallel(locations,codebook,num_barcodes = 4, radius=1,diff=
         genes_locations["codeword score"] = codeword_scores_final
         if include_undecoded ==  False:
             genes_locations = genes_locations[genes_locations["genes"] != "Undefined"]
-        genes_locations = genes_locations[["genes", "x", "y","z","brightness","peak intensity","sharpness", "symmetry", "roundness by gaussian fits", "size", "ambiguity score", "codeword score"]]  
+        if "cell number" in genes_locations:
+            genes_locations = genes_locations[["genes", "x", "y","z","brightness","peak intensity","sharpness", "symmetry", "roundness by gaussian fits", "size", "ambiguity score", "codeword score", "cell number"]] 
+        else:
+            genes_locations = genes_locations[["genes", "x", "y","z","brightness","peak intensity","sharpness", "symmetry", "roundness by gaussian fits", "size", "ambiguity score", "codeword score"]] 
 
     elif diff == 1:
         #make other possible codebooks
@@ -624,7 +626,10 @@ def radial_decoding_parallel(locations,codebook,num_barcodes = 4, radius=1,diff=
 
         #make final df
         genes_locations = pd.DataFrame(info_list)
-        genes_locations.columns = ["x","y","z","brightness","peak intensity","sharpness", "symmetry", "roundness by gaussian fits","size"]
+        if len(genes_locations.columns) == 10:
+            genes_locations.columns = ["x","y","z","brightness","peak intensity","sharpness", "symmetry", "roundness by gaussian fits","size", "cell number"]
+        else:
+            genes_locations.columns = ["x","y","z","brightness","peak intensity","sharpness", "symmetry", "roundness by gaussian fits","size"]
         genes_locations["genes"] = decoded_genes
         #add ambiguity score
         genes_locations["ambiguity score"] = ambiguity_scores_final
@@ -632,7 +637,10 @@ def radial_decoding_parallel(locations,codebook,num_barcodes = 4, radius=1,diff=
         genes_locations["codeword score"] = codeword_scores_final
         if include_undecoded ==  False:
             genes_locations = genes_locations[genes_locations["genes"] != "Undefined"]
-        genes_locations = genes_locations[["genes", "x", "y","z","brightness","peak intensity", "sharpness", "symmetry", "roundness by gaussian fits","size", "ambiguity score", "codeword score"]]  
+        if "cell number" in genes_locations:
+            genes_locations = genes_locations[["genes", "x", "y","z","brightness","peak intensity", "sharpness", "symmetry", "roundness by gaussian fits","size", "ambiguity score", "codeword score", "cell number"]]  
+        else:
+            genes_locations = genes_locations[["genes", "x", "y","z","brightness","peak intensity", "sharpness", "symmetry", "roundness by gaussian fits","size", "ambiguity score", "codeword score"]]  
         
     #return first set of decoded dots and their corresponding indicies
     return genes_locations, dot_idx_filtered
