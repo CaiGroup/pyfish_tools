@@ -35,6 +35,7 @@ def make_genebycell(gene_loc_dir, output_dir = None, check_thresholds=True, chan
                 final_output = Path(output_dir) / Threshold / f"genebycell_{channel}.csv"
             #read in df
             pos = pd.read_csv(gene_loc_dir[i], index_col=0)
+            pos["cell number"] = pos["cell number"].values.astype(int)
             #get counts of each gene per cell
             cell_counts = []
             for j in np.unique(pos["cell number"].values):
@@ -64,6 +65,7 @@ def make_genebycell(gene_loc_dir, output_dir = None, check_thresholds=True, chan
             try:
                 #read in df
                 pos = pd.read_csv(gene_loc_dir[i], index_col=0)
+                pos["cell number"] = pos["cell number"].values.astype(int)
             except FileNotFoundError:
                 #output readme file if file not found
                 path = final_output.parent / "missing_files.txt"
