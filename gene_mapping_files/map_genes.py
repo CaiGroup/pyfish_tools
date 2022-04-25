@@ -44,7 +44,6 @@ def keep_dots_in_cells(mask, dot_locations):
     ---------
     mask = cellpose generated mask path
     dot_locations = dot_locations path
-    z = which z layer is being mapped
     Returns
     -------
     output locations.csv 
@@ -92,7 +91,6 @@ def keep_dots_parallel(mask,dot_locations):
     -----------
     mask = list of numerically organized mask path
     dot_locations = list of numerically organized genes decoded paths
-    z = which z layer is being mapped
     """
 
     import time
