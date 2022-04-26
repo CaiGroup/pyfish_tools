@@ -35,12 +35,15 @@ def make_genebycell(gene_loc_dir, output_dir = None, check_thresholds=True, chan
                 final_output = Path(output_dir) / Threshold / f"genebycell_{channel}.csv"
             #read in df
             pos = pd.read_csv(gene_loc_dir[i], index_col=0)
-            pos["cell number"] = pos["cell number"].values.astype(int)
             #get counts of each gene per cell
             cell_counts = []
             for j in np.unique(pos["cell number"].values):
                 cell = pos[pos["cell number"]==j]
-                counts = pd.DataFrame(cell.pivot_table(columns=["genes"], aggfunc='size'), columns=[f"cell{j}"])
+                #check cell number if int, if not then drop since it maye have grabbed spots from other cells
+                if (float(j)).is_integer():
+                    counts = pd.DataFrame(cell.pivot_table(columns=["genes"], aggfunc='size'), columns=[f"cell{j}"])
+                else:
+                    continue
                 cell_counts.append(counts)
             #combine 
             genebycell = pd.concat(cell_counts, axis=1)  
@@ -65,7 +68,6 @@ def make_genebycell(gene_loc_dir, output_dir = None, check_thresholds=True, chan
             try:
                 #read in df
                 pos = pd.read_csv(gene_loc_dir[i], index_col=0)
-                pos["cell number"] = pos["cell number"].values.astype(int)
             except FileNotFoundError:
                 #output readme file if file not found
                 path = final_output.parent / "missing_files.txt"
@@ -84,7 +86,11 @@ def make_genebycell(gene_loc_dir, output_dir = None, check_thresholds=True, chan
             cell_counts = []
             for j in np.unique(pos["cell number"].values):
                 cell = pos[pos["cell number"]==j]
-                counts = pd.DataFrame(cell.pivot_table(columns=["genes"], aggfunc='size'), columns=[f"cell{j}_pos{i}"])
+                #check cell number if int, if not then drop since it maye have grabbed spots from other cells
+                if (float(j)).is_integer():
+                    counts = pd.DataFrame(cell.pivot_table(columns=["genes"], aggfunc='size'), columns=[f"cell{j}_pos{i}"])
+                else:
+                    continue
                 cell_counts.append(counts)
             #combine 
             genebycell = pd.concat(cell_counts, axis=1)  
