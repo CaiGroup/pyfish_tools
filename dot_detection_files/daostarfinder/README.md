@@ -1,0 +1,3 @@
+## Threshold screen or max dot detection?
+
+There are two possible workflows here. You can either go through dot detection threshold screen then decode each threshold set to identify the best threshold that has your desired FDR and counts, or detect all dots and use the decoder to perform probability cutoff and perform FDR tuning. One can even perform a threshold screen and see which threshold set coupled with probability cutoff and FDR tuning provides the best result. At the moment, it is hard to say which approach is better. But it appears that detecting max dots, then performing probability cutoff and FDR tuning yields better or similar results to threshold screening.
