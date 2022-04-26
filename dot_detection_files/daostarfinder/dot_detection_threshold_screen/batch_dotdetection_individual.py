@@ -19,9 +19,8 @@ pos_list = [0] #include one of the positions used in threshold screen (used to c
 size_cutoff = 4 # sigma cutoff for size distribution
 channel = 1 #which channel to analyze
 choose_thresh_set = 7 #select best thresh set
-hyb_number=18 #total number of hybs
 optimize=False #are you testing thresholds
 output=True #do you want to write out results
 
 dot_detection_parallel(files, HybCycle,size_cutoff,channel,pos_list,
-                       choose_thresh_set,hyb_number, optimize, output)
+                       choose_thresh_set, optimize, output)
