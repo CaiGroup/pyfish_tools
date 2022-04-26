@@ -12,7 +12,6 @@ from scipy import ndimage
 from skimage.exposure import adjust_gamma
 from sklearn import linear_model
 from skimage import restoration
-from skimage.feature import peak_local_max
 from skimage.exposure import match_histograms
 #general analysis packages
 import numpy as np
@@ -24,6 +23,7 @@ import matplotlib.pyplot as plt
 import plotly.express as px
 #image reading
 import tifffile as tf
+from util import pil_imread
 #psf
 from astropy.convolution import Gaussian2DKernel
 from astropy.convolution import AiryDisk2DKernel
@@ -159,98 +159,6 @@ def LSR_Backgound_Correction(image):
     image_corrected =  image.flatten()/(pred/np.mean(pred))
     return image_corrected.reshape(image.shape)
 
-def remove_fiducials(image_ref, tiff, size=9,min_distance=10,threshold_abs=1000,
-                       num_peaks=1000, edge='raise'):
-    """
-    This function will create a square mask around each fiducial and use the masks to eliminate the fiducial.
-    
-    Parameters
-    ----------
-    im = image tiff
-    center = x,y centers from dot detection
-    size = size of bounding box
-    normalize = bool to normalize intensity
-    edge = "raise" will output error message if dot is at border and
-            "return" will adjust bounding box 
-            
-    Returns
-    -------
-    fiducial subtracted image
-    """
-    cand_list = []
-    if len(image_ref.shape) == 3:
-        #pick out bright dots
-        for c in range(image_ref.shape[0]):
-            cands_ref = peak_local_max(image_ref[c], min_distance=min_distance, 
-                           threshold_abs=threshold_abs, num_peaks=num_peaks)
-            cand_list.append(cands_ref)
-    else:
-        #pick out bright dots
-        for z in range(image_ref.shape[0]):
-            z_slice = []
-            for c in range(image_ref.shape[1]):
-                cands_ref = peak_local_max(image_ref[z][c], min_distance=min_distance, 
-                               threshold_abs=threshold_abs, num_peaks=num_peaks)
-                z_slice.append(cands_ref)
-            cand_list.append(z_slice)
-    
-    #copy image
-    mask_ref = image_ref.copy()
-    mask_stack = []
-    if len(image_ref.shape) == 3:
-        for c in range(len(cand_list)):
-            mask_c = mask_ref[c]
-            for dots in cand_list[c]:
-                #calculate bounds
-                lower_bounds = np.array(dots).astype(int) - size//2
-                upper_bounds = np.array(dots).astype(int) + size//2 + 1
-
-                #check to see if bounds is on edge
-                if any(lower_bounds < 0) or any(upper_bounds > image_ref.shape[-1]):
-                    if edge == 'raise':
-                        raise IndexError(f'Center {center} too close to edge to extract size {size} region')
-                    elif edge == 'return':
-                        lower_bounds = np.maximum(lower_bounds, 0)
-                        upper_bounds = np.minimum(upper_bounds, image_ref.shape[-1])
-
-                #convert region into 1
-                mask_c[lower_bounds[0]:upper_bounds[0], lower_bounds[1]:upper_bounds[1]]=True
-            mask_stack.append(mask_c)
-    else:
-        for z in range(len(cand_list)):
-            mask_z = []
-            for c in range(len(cand_list[z])):
-                mask_c = mask_ref[z][c]
-                for dots in cand_list[z][c]:
-                    #calculate bounds
-                    lower_bounds = np.array(dots).astype(int) - size//2
-                    upper_bounds = np.array(dots).astype(int) + size//2 + 1
-
-                    #check to see if bounds is on edge
-                    if any(lower_bounds < 0) or any(upper_bounds > image_ref.shape[-1]):
-                        if edge == 'raise':
-                            raise IndexError(f'Center {center} too close to edge to extract size {size} region')
-                        elif edge == 'return':
-                            lower_bounds = np.maximum(lower_bounds, 0)
-                            upper_bounds = np.minimum(upper_bounds, image_ref.shape[-1])
-
-                    #convert region into 1
-                    mask_c[lower_bounds[0]:upper_bounds[0], lower_bounds[1]:upper_bounds[1]]=True
-                mask_z.append(mask_c)
-            mask_stack.append(mask_z)
-            
-    #make bool mask
-    mask_stack = np.array(mask_stack)
-    final = (mask_stack==True)
-    #invert mask
-    final_inv = (final==False).astype(int)
-    
-    #elementwise multiplication of arrays
-    new_image = (tiff * final_inv).astype(np.uint16)
-    
-    #return mask
-    return new_image
-    
 def gen_psf(model="gaussian", sigma=2, radius=6, size=7):
     
     """
@@ -396,19 +304,17 @@ def scale_int(image, p_min=80, p_max=100):
     
     return scaled_stack
 
-def deconvolute_one(image_path, image_ref, sigma_hpgb = 1, kern_hpgb=5, kern_rl = 5, 
+def deconvolute_one(image_path, sigma_hpgb = 1, kern_hpgb=5, kern_rl = 5, 
                     kern_lpgb = 3, sigma=(1.8,1.6,1.5,1.3), radius=(4,4,4,4),
                     model="gaussian", microscope="boc",
-                    size=9,min_distance=10,threshold_abs=1000,
-                    num_peaks=1000, gamma=1, hyb_offset=0, edge='raise', swapaxes=True,
-                    noise= True, bkgrd_sub=True, remove_fiducial=False, 
+                    gamma=1, hyb_offset=0, swapaxes=True,
+                    noise= True, bkgrd_sub=True, 
                     match_hist=True, subtract=True, divide=False):
     
     """deconvolute one image only
     Parameters
     ----------
     image_path = path to single image
-    image_ref = path to reference image for removing fiducials
     sigma_hpgb = sigma for high-pass gaussian blur
     kern_rl = kernel size for Richardson-Lucy deconvolution
     kern_lpgb = kernel size for low-pass gaussian blur
@@ -417,26 +323,24 @@ def deconvolute_one(image_path, image_ref, sigma_hpgb = 1, kern_hpgb=5, kern_rl 
     radius = channel specific radius for airy disc psf (fill always)
     model = "gaussian" or "airy_disc" psf
     microscope = which scope you used (only have leica boss or box of chocolates)
-    size= bounding box size for remove fiducials
-    min_distance = number of pixels to peaks need to be away for remove fiducial function
-    threshold_abs = absolute threshold used in remove fiducial function
-    num_peaks = number of total dots for remove fiducials
     gamma = interge for gamma enhancement
     hyb_offset = number of hybcycles to subtract for file name adjustment
-    edge = argument for bounding box in remove fiducials
     swapaxes = bool to swap axes when reading in an image
     noise = re-convolve image at the end
     bkgrd_sub = bool to perform background subtraction
-    remove_fiducial = bool to keep or remove fiducials
     match_hist = bool to match histograms of blurred image
     subtract = bool to subtract blurred image from raw
     divide = bool to divide blurred image from raw
     """
     
     #make output directory
-    orig_image_dir = Path(image_path).parent.parent
-    output_folder = Path(orig_image_dir).with_name('deconvoluted_images')
-    output_path = output_folder / Path(image_path).relative_to(orig_image_dir)
+    parent = Path(image_path).parent
+    while "notebook_pyfiles" not in os.listdir(parent):
+        parent = parent.parent
+    output_dir = parent / "notebook_pyfiles" / "deconvoluted_images"
+    hybcycle =  Path(image_path).parent.name
+    output_path = output_dir / hybcycle / Path(image_path).name
+    
     if hyb_offset != 0:
         hyb_number = int(output_path.parent.name.split("_")[1])
         new_number = "HybCycle_" + str(hyb_number-offset)
@@ -448,32 +352,23 @@ def deconvolute_one(image_path, image_ref, sigma_hpgb = 1, kern_hpgb=5, kern_rl 
     
     #read in image
     if swapaxes == True:
-        image = tf.imread(image_path)
-        image = np.swapaxes(image,0,1)
+        image = pil_imread(image_path, swapaxes=True)
         if bkgrd_sub == True:
             bkgrd_tiff_src =  Path(image_path).parent.parent / "final_background"
             pos = Path(image_path).name
             stack_bkgrd_path = bkgrd_tiff_src / pos
-            stack_bkgrd = tf.imread(stack_bkgrd_path)
-            stack_bkgrd = np.swapaxes(stack_bkgrd,0,1)
+            stack_bkgrd = pil_imread(stack_bkgrd_path, swapaxes=True)
         else:
             stack_bkgrd=None
     else:
-        image = tf.imread(image_path)
+        image = pil_imread(image_path, swapaxes=False)
         if bkgrd_sub == True:
             bkgrd_tiff_src =  Path(image_path).parent.parent / "final_background"
             pos = Path(image_path).name
             stack_bkgrd_path = bkgrd_tiff_src / pos
-            stack_bkgrd = tf.imread(stack_bkgrd_path)
+            stack_bkgrd = pil_imread(stack_bkgrd_path, swapaxes=False)
         else:
             stack_bkgrd=None
-    #remove fiducials       
-    if remove_fiducial == True:
-        ref_image = tf.imread(image_ref)
-        fid_rem_image = remove_fiducials(ref_image, image, size=size,
-                                         min_distance=min_distance,threshold_abs=threshold_abs,
-                                         num_peaks=num_peaks, edge='raise')
-        image = fid_rem_image.copy()
         
     #perform background correction    
     if len(image.shape) ==4:
@@ -509,19 +404,17 @@ def deconvolute_one(image_path, image_ref, sigma_hpgb = 1, kern_hpgb=5, kern_rl 
         print('writing image')
         tf.imwrite(output_path, rl_img_hpgb)
             
-def deconvolute_many(images, image_ref, sigma_hpgb = 1, kern_hpgb = 5, kern_rl = 5, 
+def deconvolute_many(images, sigma_hpgb = 1, kern_hpgb = 5, kern_rl = 5, 
                     kern_lpgb = 3, sigma=(1.8,1.6,1.5,1.3), radius=(4,4,4,4),
                     model="gaussian", microscope="boc",
-                    size=9,min_distance=10,threshold_abs=1000,
-                    num_peaks=1000, gamma = 1, hyb_offset=0, edge='raise', swapaxes=True,
-                    noise= True, bkgrd_sub=True, remove_fiducial=False, 
+                    gamma = 1, hyb_offset=0, swapaxes=True,
+                    noise= True, bkgrd_sub=True, 
                     match_hist=True, subtract=True, divide=False):
     
     """function to deconvolute all images
      Parameters
     ----------
     images = list of image paths
-    image_ref = path to reference image for removing fiducials
     sigma_hpgb = sigma for high-pass gaussian blur
     kern_hpgb = kernel size for high-pass gaussian blur
     kern_rl = kernel size for Richardson-Lucy deconvolution
@@ -530,16 +423,10 @@ def deconvolute_many(images, image_ref, sigma_hpgb = 1, kern_hpgb = 5, kern_rl =
     radius = channel specific radius for airy disc psf (fill always)
     model = "gaussian" or "airy_disc" psf
     microscope = which scope you used (only have leica boss or box of chocolates)
-    size= bounding box size for remove fiducials
-    min_distance = number of pixels to peaks need to be away for remove fiducial function
-    threshold_abs = absolute threshold used in remove fiducial function
-    num_peaks = number of total dots for remove fiducials
     gamma = interger for gamma enhancement
-    edge = argument for bounding box in remove fiducials
     swapaxes = bool to swap axes when readin in an image
     noise = re-convolve image at the end
     bkgrd_sub = bool to perform background subtraction
-    remove_fiducial = bool to keep or remove fiducials
     match_hist = bool to match histograms of blurred image
     subtract = bool to subtract blurred image from raw
     divide = bool to divide blurred image from raw
@@ -549,29 +436,28 @@ def deconvolute_many(images, image_ref, sigma_hpgb = 1, kern_hpgb = 5, kern_rl =
     start = time.time()
     
     if type(images) != list:
-        deconvolute_one(images, image_ref, 
+        deconvolute_one(images,
                        sigma_hpgb=sigma_hpgb,kern_hpgb=kern_hpgb, kern_rl=kern_rl, 
                        kern_lpgb=kern_lpgb, sigma=sigma, radius=radius,model=model, microscope=microscope,
-                       size=size,min_distance=min_distance,threshold_abs=threshold_abs,gamma=gamma,hyb_offset=hyb_offset,
-                       num_peaks=num_peaks, edge=edge, swapaxes=swapaxes,
-                       noise=noise, bkgrd_sub=bkgrd_sub, remove_fiducial=remove_fiducial, 
+                       gamma=gamma,hyb_offset=hyb_offset,
+                       swapaxes=swapaxes,
+                       noise=noise, bkgrd_sub=bkgrd_sub, 
                        match_hist=match_hist, subtract=subtract, divide=divide)
     else:
         with ProcessPoolExecutor(max_workers=12) as exe:
             futures = {}
             for path in images:
-                fut = exe.submit(deconvolute_one, path, image_ref, sigma_hpgb=sigma_hpgb,kern_hpgb=kern_hpgb, kern_rl=kern_rl, 
+                fut = exe.submit(deconvolute_one, path,sigma_hpgb=sigma_hpgb,kern_hpgb=kern_hpgb, kern_rl=kern_rl, 
                        kern_lpgb=kern_lpgb, sigma=sigma, radius=radius,model=model, microscope=microscope,
-                       size=size,min_distance=min_distance,threshold_abs=threshold_abs,gamma=gamma,hyb_offset=hyb_offset,
-                       num_peaks=num_peaks, edge=edge, swapaxes=swapaxes,
-                       noise=noise, bkgrd_sub=bkgrd_sub, remove_fiducial=remove_fiducial, 
+                       gamma=gamma,hyb_offset=hyb_offset,
+                       swapaxes=swapaxes,noise=noise, bkgrd_sub=bkgrd_sub, 
                        match_hist=match_hist, subtract=subtract, divide=divide)
                 futures[fut] = path
 
             for fut in as_completed(futures):
                 path = futures[fut]
                 print(f'Path {path} completed after {time.time() - start} seconds')
-                
+                              
 def bkgrd_corr_one(image_path, correction_type = None, stack_bkgrd=None, swapaxes=False, 
                    z=2, size=2048, gamma = 1.4, kern_hpgb=5, sigma = 40, rb_radius=5, hyb_offset=0, p_min=80,
                    p_max = 99.999, norm_int = True, rollingball = False, 
@@ -602,9 +488,12 @@ def bkgrd_corr_one(image_path, correction_type = None, stack_bkgrd=None, swapaxe
     divide = bool to divide blurred image from raw
     """
     #output path
-    orig_image_dir = Path(image_path).parent.parent
-    output_folder = Path(orig_image_dir).with_name('pre_processed_images')
-    output_path = output_folder / Path(image_path).relative_to(orig_image_dir)
+    parent = Path(image_path).parent
+    while "notebook_pyfiles" not in os.listdir(parent):
+        parent = parent.parent
+    output_dir = parent / "notebook_pyfiles" / "pre_processed_images"
+    hybcycle =  Path(image_path).parent.name
+    output_path = output_dir / hybcycle / Path(image_path).name
     
     if hyb_offset != 0:
         hyb_number = int(output_path.parent.name.split("_")[1])
@@ -615,19 +504,18 @@ def bkgrd_corr_one(image_path, correction_type = None, stack_bkgrd=None, swapaxe
     else:
         output_path.parent.mkdir(parents=True, exist_ok=True)
     
+    #read images
     if swapaxes == True:
-        image = tf.imread(image_path)
-        image = np.swapaxes(image,0,1)
+        image = pil_imread(image_path, swapaxes=True)
         if type(stack_bkgrd) != type(None):
-            bkgrd = tf.imread(stack_bkgrd)
-            bkgrd = np.swapaxes(bkgrd,0,1)
+            bkgrd = pil_imread(stack_bkgrd, swapaxes=True)
     else:
-        image = tf.imread(image_path)
+        image = pil_imread(image_path, swapaxes=False)
         if len(image.shape) == 3:
             channels = image.shape[0]
             image = image.reshape(z,channels,size,size)
         if type(stack_bkgrd) != type(None):
-            bkgrd = tf.imread(stack_bkgrd)
+            bkgrd = pil_imread(stack_bkgrd, swapaxes=False)
             if len(bkgrd.shape)==3:
                 bkgrd = bkgrd.reshape(z,channels,size,size)
     
@@ -638,7 +526,7 @@ def bkgrd_corr_one(image_path, correction_type = None, stack_bkgrd=None, swapaxe
     else:
         corr_img = background_correct_image(image, correction_type, stack_bkgrd,
                                             z, size, gamma, kern_hpgb, sigma, match_hist, subtract, divide)
-    
+            
     #do rolling ball subtraction
     if rollingball == True:
         img_stack = []
