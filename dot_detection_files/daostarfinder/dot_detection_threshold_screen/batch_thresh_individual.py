@@ -1,4 +1,4 @@
-from daostarfinder_dotdetection import find_threshold
+from daostarfinder_dotdetection_screen import find_threshold
 from pathlib import Path
 import os
 from webfish_tools.util import find_matching_files
