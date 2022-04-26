@@ -19,8 +19,8 @@ for pos in pos_list:
             f.write("#!/bin/bash\n")
             f.write("#SBATCH --ntasks=1\n") #num tasks keep at 1
             f.write("#SBATCH --mem=50G\n") # RAM amount
-            f.write("#SBATCH --cpus-per-task=3\n") #number of cpus
-            f.write("#SBATCH --time=16:00:00\n") #how much time
+            f.write("#SBATCH --cpus-per-task=12\n") #number of cpus
+            f.write("#SBATCH --time=2:00:00\n") #how much time
             f.write("#SBATCH --array=0-11\n") #position list or threshold (depends on intentions)
             f.write("pwd; hostname; date\n") #output path, hostname, date
             f.write("echo This is task $SLURM_ARRAY_TASK_ID\n") #output task id

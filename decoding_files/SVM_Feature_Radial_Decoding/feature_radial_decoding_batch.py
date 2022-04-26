@@ -17,7 +17,7 @@ codebooks = ["codebook_string_561.csv"]
 #channel = int(sys.argv[2])
 
 #path to dots
-locations_path = glob.glob(f"/groups/CaiLab/personal/Lex/raw/150genes3bind_040622/notebook_pyfiles/dots_comb/final_thresh7_features/Channel_1/genes_in_cells/MMStack_Pos{JOB_ID}/gene_locations_z_0.csv")
+locations_path = glob.glob(f"/groups/CaiLab/personal/Lex/raw/150genes3bind_040622/notebook_pyfiles/dots_detected/Channel_1/genes_in_cells/Pos{JOB_ID}/locations_z_0.csv")
 #general codebook path
 codebook_path = f"/groups/CaiLab/personal/Lex/raw/150genes3bind_040622/barcode_key/convert_barcode_key/{codebooks[0]}"
 #number of readout sites
@@ -31,7 +31,7 @@ diff = 0
 #how many times does a pseudocolor sequence must appear
 min_seed = 3
 #how many times does pseudocolor sequence must appear for highly expressed genes
-high_exp_seed=3
+high_exp_seed=2
 #number of total hybs
 hybs = 18
 #probability cutoff for On dots (0-1). Lower the value the less stringent.
@@ -47,7 +47,7 @@ decode_high_exp_genes = True
 #do you want to perform an additional third round of decoding
 triple_decode = True
 #Where do you want to output the files
-output_dir = f"/groups/CaiLab/personal/Lex/raw/150genes3bind_040622/notebook_pyfiles/decoded/final_thresh7_11p52_33_heg_svm_test/Channel_1/Pos_{JOB_ID}"
+output_dir = f"/groups/CaiLab/personal/Lex/raw/150genes3bind_040622/notebook_pyfiles/decoded/final_11p52_23_heg_svm/Channel_1/Pos_{JOB_ID}"
 
 if len(locations_path) > 1:
     for locations in locations_path:
