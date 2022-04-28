@@ -62,7 +62,10 @@ def get_optimum_fwhm(data, threshold):
     #get counts
     counts = []
     for fwhm in fwhm_range:
-        dots = len(daofinder(data,  threshold, fwhm))
+        try:
+            dots = len(daofinder(data,  threshold, fwhm))
+        except TypeError:
+            continue
         counts.append(dots)
     #find index with largest counts
     best_index = np.argmax(counts)
