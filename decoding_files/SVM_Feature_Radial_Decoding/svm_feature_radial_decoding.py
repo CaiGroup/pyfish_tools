@@ -814,7 +814,7 @@ def feature_radial_decoding(location_path, codebook_path,
             loop += 1
         #remove last item in record dots used after exitting loop
         if loop > 1:
-            del record_dots_used[-1]
+            del record_true_dots_used[-1]
         #combine final highly expressed genes
         decoded_1 = pd.concat(record_genes).reset_index(drop=True)
         #use locations temp after exitting loop for second round
