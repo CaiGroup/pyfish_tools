@@ -735,8 +735,8 @@ def feature_radial_decoding(location_path, codebook_path,
     
     #rough decoding to identify true and false dots
     decoded_rough, indicies_used_1 = radial_decoding_parallel(locations, codebook,
-                num_barcodes=num_barcodes, radius=1,diff=diff,
-                min_seed=min_seed, hybs = hybs, include_undecoded = False, parity_round=parity_round)
+                num_barcodes=num_barcodes, radius=1,diff=0,
+                min_seed=num_barcodes, hybs = hybs, include_undecoded = False, parity_round=parity_round)
     #only get the indicies of decoded genes (excluding undefined) and separate true and fake
     decoded_rough_fakes = decoded_rough[decoded_rough["genes"].str.startswith("fake")]
     decoded_rough_trues = decoded_rough.drop(decoded_rough_fakes.index)
