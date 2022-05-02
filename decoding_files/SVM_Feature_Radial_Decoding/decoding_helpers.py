@@ -140,6 +140,9 @@ def rbf_gen_dot_probabilities(dots_used_trues,dots_used_fakes, locations):
     #make sure number of fakes is > 100
     assert len(fakes) > 100, "Not enough fake dots to train."
     
+    #if there is over 500,000 fake spots then down sample for training
+    fakes = fakes.iloc[:500000,:]
+    
     #downsample trues to match fakes
     #generally there will be less fakes then trues 
     trues = trues.iloc[:len(fakes),:]
