@@ -93,7 +93,10 @@ def make_genebycell(gene_loc_dir, output_dir = None, check_thresholds=True, chan
                     continue
                 cell_counts.append(counts)
             #combine 
-            genebycell = pd.concat(cell_counts, axis=1)  
+            try:
+                genebycell = pd.concat(cell_counts, axis=1)  
+            except ValueError:
+                continue  
             genebycell = genebycell.fillna(value=0)
             genebycell_list.append(genebycell)
         
