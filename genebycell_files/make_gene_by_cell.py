@@ -89,8 +89,8 @@ def make_genebycell(gene_loc_dir, output_dir = None, check_thresholds=True, chan
                 #check cell number if int, if not then drop since it maye have grabbed spots from other cells
                 if (float(j)).is_integer():
                     #get position name
-                    pos = Path(gene_loc_dir[i]).parent.name
-                    counts = pd.DataFrame(cell.pivot_table(columns=["genes"], aggfunc='size'), columns=[f"Cell{j}_{pos}"])
+                    pos_name = Path(gene_loc_dir[i]).parent.name
+                    counts = pd.DataFrame(cell.pivot_table(columns=["genes"], aggfunc='size'), columns=[f"Cell{j}_{pos_name}"])
                 else:
                     continue
                 cell_counts.append(counts)
