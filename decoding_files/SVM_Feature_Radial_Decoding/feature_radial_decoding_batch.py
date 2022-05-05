@@ -10,18 +10,18 @@ JOB_ID = os.getenv('SLURM_ARRAY_TASK_ID', 0)
 print(f'This is task {JOB_ID}')
 
 #name of codebooks
-codebooks = ["codebook_string_561.csv"]
+codebooks = ["codebook_string_488.csv"]
 
 #collect pos and channel info
 #pos = int(sys.argv[1])
 #channel = int(sys.argv[2])
 
 #path to dots
-locations_path = glob.glob(f"/groups/CaiLab/personal/Lex/raw/150genes3bind_040622/notebook_pyfiles/dots_detected/Channel_1/genes_in_cells/Pos{JOB_ID}/locations_z_0.csv")
+locations_path = glob.glob(f"/groups/CaiLab/personal/Lex/raw/050222_150genes4binding/notebook_pyfiles/dots_detected/Channel_1/genes_in_cells/Pos{JOB_ID}/locations_z_0.csv")
 #general codebook path
-codebook_path = f"/groups/CaiLab/personal/Lex/raw/150genes3bind_040622/barcode_key/convert_barcode_key/{codebooks[0]}"
+codebook_path = f"/groups/CaiLab/personal/Lex/raw/050222_150genes4binding/notebook_pyfiles/decoding_files/SVM_Feature_Radial_Decoding/codebook_converter/{codebooks[0]}"
 #number of readout sites
-num_barcodes = 3
+num_barcodes = 4
 #search radii
 first_radius = 1
 second_radius = 1.5
@@ -31,23 +31,23 @@ diff = 0
 #how many times does a pseudocolor sequence must appear
 min_seed = 3
 #how many times does pseudocolor sequence must appear for highly expressed genes
-high_exp_seed=2
+high_exp_seed = 3
 #number of total hybs
-hybs = 18
+hybs = 24
 #probability cutoff for On dots (0-1). Lower the value the less stringent. Setting probability_cutoff=0 and desired_fdr=None, will output normal unfiltered data.
 probability_cutoff = 0.25
 #desired FDR (0-1). Could set to None if you would like to filter yourself.
 desired_fdr = 0.05
 #do you have parity round
-parity_round = False
+parity_round = True
 #do you want locations of dots that didn't pass parity
-include_undecoded = False
+include_undefined = False
 #do you want to decode highly expressed genes first
 decode_high_exp_genes = True
 #do you want to perform an additional third round of decoding
 triple_decode = True
 #Where do you want to output the files
-output_dir = f"/groups/CaiLab/personal/Lex/raw/150genes3bind_040622/notebook_pyfiles/decoded/final_11p52_23_heg_svm/Channel_1/Pos_{JOB_ID}"
+output_dir = f"/groups/CaiLab/personal/Lex/raw/050222_150genes4binding/notebook_pyfiles/decoded/final_11p52_33_heg_svm_0p25_diff0/Channel_1/Pos_{JOB_ID}"
 
 if len(locations_path) > 1:
     for locations in locations_path:
@@ -56,7 +56,7 @@ if len(locations_path) > 1:
                              second_radius=second_radius,third_radius=third_radius,
                              diff=diff, min_seed=min_seed, high_exp_seed=high_exp_seed, hybs=hybs, 
                              probability_cutoff=probability_cutoff, desired_fdr = desired_fdr, 
-                             output_dir=output_dir, include_undecoded=include_undecoded, 
+                             output_dir=output_dir, include_undefined=include_undefined, 
                              decode_high_exp_genes=decode_high_exp_genes,
                              triple_decode=triple_decode, parity_round=parity_round)
 else:
@@ -64,7 +64,7 @@ else:
                          num_barcodes=num_barcodes, first_radius=first_radius, second_radius=second_radius,
                          third_radius=third_radius, diff=diff, min_seed=min_seed, high_exp_seed=high_exp_seed, hybs=hybs, 
                          probability_cutoff=probability_cutoff,desired_fdr = desired_fdr,
-                         output_dir=output_dir, include_undecoded=include_undecoded,
+                         output_dir=output_dir, include_undefined=include_undefined,
                          decode_high_exp_genes=decode_high_exp_genes,
                          triple_decode=triple_decode, parity_round=parity_round)
 

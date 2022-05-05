@@ -674,7 +674,7 @@ def return_highly_expressed_names(decoded):
 def feature_radial_decoding(location_path, codebook_path,
                             num_barcodes = 4, first_radius=1, second_radius=1.5,third_radius=2, diff=1,
                             min_seed=3, high_exp_seed=2, hybs = 12, probability_cutoff = 0.25,desired_fdr = None,
-                            output_dir = "", parity_round = True,include_undecoded = False,
+                            output_dir = "", parity_round = True,include_undefined = False,
                             decode_high_exp_genes = True, triple_decode=True):
     """
     This function will perform feature based radial decoding on all barcodes as reference. Dot sequences
@@ -702,7 +702,7 @@ def feature_radial_decoding(location_path, codebook_path,
     desired_fdr: value of desired fdr
     output_dir: directory to where you want the file outputted
     parity_round: bool if you included parity round
-    include_undecoded: bool to output the undecoded dots
+    include_undefined: bool to output the undecoded dots
     decode_high_exp_genes: decode highly expressed genes first
     triple_decode: bool to perform another around of decoding
     
@@ -719,6 +719,8 @@ def feature_radial_decoding(location_path, codebook_path,
         if "Unnamed" in names:
             unwanted_columns.append(names)
     locations = locations.drop(unwanted_columns, axis=1)
+    #remove extra hybs
+    locations = locations[locations["hyb"] < hybs].reset_index(drop=True)
     #read in codebook
     codebook = pd.read_csv(codebook_path)
     codebook = codebook.set_index(codebook.columns[0])
@@ -727,7 +729,7 @@ def feature_radial_decoding(location_path, codebook_path,
     z_info = location_path_name.split("_")[2].replace(".csv","")
     
     #check to see if the necessary amount of hybs are present
-    assert len(locations["hyb"].unique()) >= hybs, "Locations file is missing a hyb"
+    assert len(locations["hyb"].unique()) == hybs, "Locations file is missing a hyb"
 
     #make directories
     Path(output_dir).mkdir(parents=True, exist_ok = True)
@@ -787,8 +789,6 @@ def feature_radial_decoding(location_path, codebook_path,
         #record of highly expressed decoded genes
         record_genes = []
         record_true_dots_used = []
-        #for keeping track of loops
-        loop = 0
         while set(highexpgenes) & set(highexpgenes_2) != set():
             #only used ones that overlap
             highexpgenes_overlap = list(set(highexpgenes) & set(highexpgenes_2))
@@ -811,10 +811,6 @@ def feature_radial_decoding(location_path, codebook_path,
                                                                   include_undecoded = False, parity_round=parity_round)
             #get new highly expressed gene list
             highexpgenes_2 = return_highly_expressed_names(decoded_1)
-            loop += 1
-        #remove last item in record dots used after exitting loop
-        if loop > 1:
-            del record_true_dots_used[-1]
         #combine final highly expressed genes
         decoded_1 = pd.concat(record_genes).reset_index(drop=True)
         #use locations temp after exitting loop for second round
@@ -847,22 +843,29 @@ def feature_radial_decoding(location_path, codebook_path,
     #run decoding second pass with same or different search radius
     decoded_2, indicies_used_2 = radial_decoding_parallel(new_locations, codebook,
                                                           num_barcodes=num_barcodes, radius=second_radius,diff=diff,
-                                                          min_seed=min_seed, hybs = hybs, include_undecoded = include_undecoded, 
+                                                          min_seed=min_seed, hybs = hybs, include_undecoded = True, 
                                                           parity_round=parity_round)
     if triple_decode == True:
         #output results from second pass
         decoded_combined = pd.concat([decoded_1, decoded_2])
         decoded_combined.sort_values("genes").reset_index(drop=True).to_csv(str(output_path).replace("finalgenes","round2"))
-        #remove undefineds and get index of only decoded genes and separate true and fake
+        #isolate undefined 
+        decoded_2_undefined = decoded_2[decoded_2["genes"] == "Undefined"]
+        #remove undefined 
         decoded_2 = decoded_2[decoded_2["genes"] != "Undefined"]
+        #get fakes
         decoded_2_fakes = decoded_2[decoded_2["genes"].str.startswith("fake")]
+        #only trues
         decoded_2_trues = decoded_2.drop(decoded_2_fakes.index)
+        #get indicies for trues, fakes, and undefined
         indicies_used_df_trues = decoded_2_trues.index.tolist()
         indicies_used_df_fakes = decoded_2_fakes.index.tolist()
+        indicies_used_df_undefined = decoded_2_undefined.index.tolist()
         indicies_used_df = decoded_2.index.tolist()
         #isolate used indicies in dot indicies list
         indicies_used_2_trues = list(map(indicies_used_2.__getitem__, indicies_used_df_trues))
         indicies_used_2_fakes = list(map(indicies_used_2.__getitem__, indicies_used_df_fakes))
+        indicies_used_2_undefined = list(map(indicies_used_2.__getitem__, indicies_used_df_undefined))
         indicies_used_2 = list(map(indicies_used_2.__getitem__, indicies_used_df))
         #flatten 2nd set of indicies used list
         flattened_indicies_used_2 = [element for sublist in indicies_used_2 for element in sublist]
@@ -873,19 +876,36 @@ def feature_radial_decoding(location_path, codebook_path,
         try:
             decoded_3, indicies_used_3 = radial_decoding_parallel(new_locations_2, codebook,
                         num_barcodes=num_barcodes, radius=third_radius,diff=diff,
-                        min_seed=min_seed, hybs = hybs, include_undecoded = include_undecoded, 
+                        min_seed=min_seed, hybs = hybs, include_undecoded = True, 
                         parity_round=parity_round)
             #combine decoded dfs
             decoded_combined = pd.concat([decoded_1, decoded_2, decoded_3])
+            if include_undefined == False:
+                decoded_combined = decoded_combined[decoded_combined["genes"] != "Undefined"]
         except:
             with open("decoding_message.txt", "w+") as f:
                 f.write("Triple decoding did not yield anything.")
                 f.close()
-            decoded_combined = pd.concat([decoded_1, decoded_2])   
+            decoded_combined = pd.concat([decoded_1, decoded_2])  
+            if include_undefined == False:
+                decoded_combined = decoded_combined[decoded_combined["genes"] != "Undefined"]       
     else:
         #combine decoded dfs
         decoded_combined = pd.concat([decoded_1, decoded_2])
-    
+        if include_undefined == False:
+            decoded_combined = decoded_combined[decoded_combined["genes"] != "Undefined"]    
+        #separate true, fake and undefined
+        decoded_2_undefined = decoded_2[decoded_2["genes"] == "Undefined"]
+        decoded_2_fakes = decoded_2[decoded_2["genes"].str.startswith("fake")]
+        decoded_2_trues = decoded_2.drop(decoded_2_fakes.index).drop(decoded_2_undefined.index)
+        indicies_used_df_trues = decoded_2_trues.index.tolist()
+        indicies_used_df_fakes = decoded_2_fakes.index.tolist()
+        indicies_used_df_undefined = decoded_2_undefined.index.tolist()
+        #isolate used indicies in dot indicies list
+        indicies_used_2_trues = list(map(indicies_used_2.__getitem__, indicies_used_df_trues))
+        indicies_used_2_fakes = list(map(indicies_used_2.__getitem__, indicies_used_df_fakes))
+        indicies_used_2_undefined = list(map(indicies_used_2.__getitem__, indicies_used_df_undefined))
+
     #sort and reset index
     final_decoded = decoded_combined.sort_values("genes").reset_index(drop=True)
     final_decoded.to_csv(str(output_path.parent / f"diff_{diff}_minseed_{min_seed}_z_{z_info}_unfiltered.csv"))
@@ -913,59 +933,73 @@ def feature_radial_decoding(location_path, codebook_path,
     if triple_decode == False:
         #flatten 2nd set of indicies used list
         flattened_indicies_used_2 = [element for sublist in indicies_used_2 for element in sublist]
-        
+       
+    #flatten second set of indicies used list
     flattened_indicies_used_trues_2 = [element for sublist in indicies_used_2_trues for element in sublist]
     flattened_indicies_used_fakes_2 = [element for sublist in indicies_used_2_fakes for element in sublist]
+    flattened_indicies_used_undefined_2 = [element for sublist in indicies_used_2_undefined for element in sublist]
+    #collect dots
     locations2_trues = new_locations.iloc[flattened_indicies_used_trues_2]
     locations2_fakes = new_locations.iloc[flattened_indicies_used_fakes_2]
+    locations2_undefined = new_locations.iloc[flattened_indicies_used_undefined_2]
     
     if triple_decode == True:
         #in case there was no output from triple decode
         try:
+            #separate fakes, and trues
+            decoded_3_undefined = decoded_3[decoded_3["genes"] == "Undefined"]
             decoded_3_fakes = decoded_3[decoded_3["genes"].str.startswith("fake")]
-            decoded_3_trues = decoded_3.drop(decoded_3_fakes.index)
+            decoded_3_trues = decoded_3.drop(decoded_3_fakes.index).drop(decoded_3_undefined.index)
             indicies_used_df_trues = decoded_3_trues.index.tolist()
             indicies_used_df_fakes = decoded_3_fakes.index.tolist()
+            indicies_used_df_undefined = decoded_3_undefined.index.tolist()
             #isolate used indicies in dot indicies list
             indicies_used_3_trues = list(map(indicies_used_3.__getitem__, indicies_used_df_trues))
             indicies_used_3_fakes = list(map(indicies_used_3.__getitem__, indicies_used_df_fakes))
+            indicies_used_3_undefined = list(map(indicies_used_3.__getitem__, indicies_used_df_undefined))
             #flatten 3rd set of indicies used list
             flattened_indicies_used_trues_3 = [element for sublist in indicies_used_3_trues for element in sublist]
             flattened_indicies_used_fakes_3 = [element for sublist in indicies_used_3_fakes for element in sublist]
+            flattened_indicies_used_undefined_3 = [element for sublist in indicies_used_3_undefined for element in sublist]
             flattened_indicies_used_3 = [element for sublist in indicies_used_3 for element in sublist]
+            #collect dots
             locations3_trues = new_locations_2.iloc[flattened_indicies_used_trues_3]
             locations3_fakes = new_locations_2.iloc[flattened_indicies_used_fakes_3]
+            dots_used_undefined = new_locations_2.iloc[flattened_indicies_used_undefined_3].reset_index(drop=True)
             #combine used dots
             dots_used_trues = pd.concat([locations1_trues,locations2_trues,locations3_trues]).reset_index(drop=True)
             dots_used_fakes = pd.concat([locations1_fakes,locations2_fakes,locations3_fakes]).reset_index(drop=True)
-            #remove used dots
+            #remove used dots (which includes trues,fakes, and undefineds)
             dots_unused = new_locations_2.drop(flattened_indicies_used_3).reset_index(drop=True)
             if "cutoff_unused_dots" in locals():
                 dots_unused = pd.concat([dots_unused,cutoff_unused_dots]).reset_index(drop=True)
             #write out used dots
             dots_used_trues.to_csv(str(output_path.parent / f"dots_used_trues_z_{z_info}.csv"))
             dots_used_fakes.to_csv(str(output_path.parent / f"dots_used_fakes_z_{z_info}.csv"))
+            dots_used_undefined.to_csv(str(output_path.parent / f"dots_used_undefined_z_{z_info}.csv"))
             #write out unused dots
             dots_unused.to_csv(str(output_path.parent / f"dots_unused_z_{z_info}.csv"))
         except:
             dots_used_trues = pd.concat([locations1_trues,locations2_trues]).reset_index(drop=True)
             dots_used_fakes = pd.concat([locations1_fakes,locations2_fakes]).reset_index(drop=True)
-            #write out used dots
+            #write out used dots (which includes trues,fakes, and undefineds)
             dots_used_trues.to_csv(str(output_path.parent / f"dots_used_trues_z_{z_info}.csv"))
-            dots_used_fakes.to_csv(str(output_path.parent / f"dots_used_fakes_z_{z_info}.csv"))   
+            dots_used_fakes.to_csv(str(output_path.parent / f"dots_used_fakes_z_{z_info}.csv")) 
+            locations2_undefined.to_csv(str(output_path.parent / f"dots_used_undefined_z_{z_info}.csv"))
             #write out unused dots
             if "cutoff_unused_dots" in locals():
                 dots_unused = pd.concat([new_locations_2,cutoff_unused_dots]).reset_index(drop=True)
             new_locations_2.to_csv(str(output_path.parent / f"dots_unused_z_{z_info}.csv"))
     else:
         #remove already decoded dots
-        dots_unused= new_locations.drop(flattened_indicies_used_2).reset_index(drop=True)
+        dots_unused = new_locations.drop(flattened_indicies_used_2).reset_index(drop=True)
         #combined dots used
         dots_used_trues = pd.concat([locations1_trues,locations2_trues]).reset_index(drop=True)
         dots_used_fakes = pd.concat([locations1_fakes,locations2_fakes]).reset_index(drop=True)
-        #write out used dots
+        #write out used dots (which includes trues,fakes, and undefineds)
         dots_used_trues.to_csv(str(output_path.parent / f"dots_used_trues_z_{z_info}.csv"))
         dots_used_fakes.to_csv(str(output_path.parent / f"dots_used_fakes_z_{z_info}.csv"))
+        locations2_undefined.to_csv(str(output_path.parent / f"dots_used_undefined_z_{z_info}.csv"))
         #write out unused dots
         if "cutoff_unused_dots" in locals():
             dots_unused = pd.concat([dots_unused,cutoff_unused_dots]).reset_index(drop=True)
