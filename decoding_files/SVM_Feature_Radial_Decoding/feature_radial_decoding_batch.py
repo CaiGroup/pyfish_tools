@@ -35,7 +35,7 @@ high_exp_seed = 3
 #number of total hybs
 hybs = 24
 #probability cutoff for On dots (0-1). Lower the value the less stringent. Setting probability_cutoff=0 and desired_fdr=None, will output normal unfiltered data.
-probability_cutoff = 0.25
+probability_cutoff = 0.20
 #desired FDR (0-1). Could set to None if you would like to filter yourself.
 desired_fdr = 0.05
 #do you have parity round
