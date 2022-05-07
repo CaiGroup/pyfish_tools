@@ -1,7 +1,7 @@
 """
 author: Katsuya Lex Colon
 group: Cai Lab
-updated: 04/20/22
+updated: 05/06/22
 """
 
 #general analysis packages
@@ -721,6 +721,8 @@ def feature_radial_decoding(location_path, codebook_path,
     locations = locations.drop(unwanted_columns, axis=1)
     #remove extra hybs
     locations = locations[locations["hyb"] < hybs].reset_index(drop=True)
+    #get total dot count for later
+    total_dots = len(locations)
     #read in codebook
     codebook = pd.read_csv(codebook_path)
     codebook = codebook.set_index(codebook.columns[0])
@@ -1006,7 +1008,8 @@ def feature_radial_decoding(location_path, codebook_path,
         dots_unused.to_csv(str(output_path.parent / f"dots_unused_z_{z_info}.csv"))
         
     #Output percent decoded
-    percent_decoded = str(round((((len(dots_used_trues)+len(dots_used_fakes))/len(locations)) * 100),2))
+    
+    percent_decoded = str(round((((len(dots_used_trues)+len(dots_used_fakes))/total_dots) * 100),2))
     percent_output = output_path.parent / f"percent_decoded_z_{z_info}.txt"
     with open(str(percent_output),"w+") as f:
         f.write(f'Percent of dots decoded = {percent_decoded}')
