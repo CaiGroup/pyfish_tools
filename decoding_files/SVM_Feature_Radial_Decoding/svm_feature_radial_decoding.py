@@ -850,6 +850,7 @@ def feature_radial_decoding(location_path, codebook_path,
     if triple_decode == True:
         #output results from second pass
         decoded_combined = pd.concat([decoded_1, decoded_2])
+        decoded_combined = decoded_combined[decoded_combined["genes"] != "Undefined"]
         decoded_combined.sort_values("genes").reset_index(drop=True).to_csv(str(output_path).replace("finalgenes","round2"))
         #isolate undefined 
         decoded_2_undefined = decoded_2[decoded_2["genes"] == "Undefined"]
