@@ -26,19 +26,18 @@ def percent_false_positive(df, codebook, fakebook):
     real = df.drop(fakebrcds.index, axis=0)
     #calculate percent false positive in each cell
     fp_list = []
+    M_on = len(codebook)
+    M_off = len(fakebook)
     for i in cells:
+        #get percent fakes per cell
         N_off = fakebrcds[i].sum()
         N_on = real[i].sum()
         percent_fp_raw = (N_off/(N_off+N_on))
-        fp_list.append([i, N_off+N_on,N_off,N_on,percent_fp_raw])
-    #false positive rate
-    M_on = len(codebook)
-    M_off = len(fakebook)
-    N_off = np.sum(fakebrcds.values)
-    N_on = np.sum(real.values)
-    false_count_freq = N_off/M_off
-    false_positive_counts = M_on*false_count_freq
-    norm_false_positive_rate = false_positive_counts/N_on
+        #false positive rate
+        false_count_freq = N_off/M_off
+        false_positive_counts = M_on*false_count_freq
+        norm_false_positive_rate = false_positive_counts/N_on
+        fp_list.append([i, N_off+N_on,N_off,N_on,percent_fp_raw, norm_false_positive_rate])
         
     #average barcodes per cell
     fake_avg = fakebrcds.mean(axis=1)
@@ -48,7 +47,7 @@ def percent_false_positive(df, codebook, fakebook):
         
     #make new df
     new_df = pd.DataFrame(fp_list)
-    new_df.columns = ["cell name", "total_counts","total_fake","total_real", "FP raw"]
+    new_df.columns = ["cell name", "total_counts","total_fake","total_real", "FP raw", "FDR"]
     
     #make on and off target plot
     plt.fill_between(np.arange(0,len(new_df),1), new_df["total_counts"].sort_values(ascending=False), label = "On Target")

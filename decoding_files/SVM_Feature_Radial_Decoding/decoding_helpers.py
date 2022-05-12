@@ -1,7 +1,7 @@
 """
 author: Katsuya Lex Colon
 group: Cai Lab
-date: 04/19/22
+date: 05/12/22
 """
 #general packages
 import pandas as pd
@@ -234,16 +234,36 @@ def false_positive_rate(gene_locations, truebook, fakebook):
     #make real barcodes df
     real = gene_locations.drop(fakebrcds.index, axis=0)
     
-    #false positive rate
-    M_on = len(truebook)
-    M_off = len(fakebook)
-    N_on = len(real)
-    N_off = len(fakebrcds)
-    false_count_freq = N_off/M_off
-    false_positive_counts = M_on*false_count_freq
-    norm_false_positive_rate = false_positive_counts/N_on   
+    fdr_list = []
+    #calculate fdr per cell if availible
+    if "cell number" in gene_locations.columns:
+        #false positive rate
+        M_on = len(truebook)
+        M_off = len(fakebook)
+        cell_ids = gene_locations["cell number"].unique()
+        for cell in cell_ids:
+            #get percent fakes per cell
+            N_off = fakebrcds[fakebrcds["cell number"]==cell].sum()
+            N_on = real[real["cell number"]==cell].sum()
+            if N_on >=1 :
+                false_count_freq = N_off/M_off
+                false_positive_counts = M_on*false_count_freq
+                norm_false_positive_rate = false_positive_counts/N_on
+                fdr_list.append(norm_false_positive_rate)
+            else:
+                continue
+        fdr = np.mean(fdr_list)
+    else:
+        #false positive rate
+        M_on = len(truebook)
+        M_off = len(fakebook)
+        N_on = len(real)
+        N_off = len(fakebrcds)
+        false_count_freq = N_off/M_off
+        false_positive_counts = M_on*false_count_freq
+        fdr = false_positive_counts/N_on   
     
-    return norm_false_positive_rate
+    return fdr
 
 def set_fdr(gene_locations, codebook, fdr_cutoff=0.05):
     """
@@ -267,8 +287,12 @@ def set_fdr(gene_locations, codebook, fdr_cutoff=0.05):
     collect_fdr = []
     for i in np.linspace(0, len(sorted_genes),1000).astype(int):
         iso_loc = sorted_genes.iloc[0:i+1]
+        #do not include fakes generated from two separate masks
+        if "cell number" in iso_loc.columns:
+            iso_loc = iso_loc[iso_loc["cell number"].astype(int) == iso_loc["cell number"]].reset_index(drop=True)
+        #calculate fdr
         fdr_val = false_positive_rate(iso_loc, truebook, fakebook)
-        collect_fdr.append([i,fdr_val])  
+        collect_fdr.append([i+1,fdr_val])  
      
     #convert to array
     collect_fdr = np.array(collect_fdr)
