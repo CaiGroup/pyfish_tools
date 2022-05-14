@@ -1,13 +1,13 @@
 """
 author: Katsuya Lex Colon
-updated: 12/03/21
+updated: 05/13/22
 group: Cai Lab
 """
 
 import numpy as np
 from tqdm import tqdm
 
-def nuclear_cyto_matching(cyto, nuc, threshold=0.20):
+def nuclear_cyto_matching(cyto, nuc, threshold=0.10):
     """Match cyto masks and nuclear masks. Keep cyto masks that have nucleus
     Parameters
     ----------
@@ -19,7 +19,7 @@ def nuclear_cyto_matching(cyto, nuc, threshold=0.20):
         #make copy of mask to not overwrite original
         cyto_new = np.copy(cyto)
         #converst masks to only one of the cells
-        for i in np.arange(1, len(np.unique(cyto)),1):
+        for i in np.compress(np.unique(cyto)>0,np.unique(cyto)):
             arr1_int = (cyto==i).astype(int)
             arr2_int = (nuc>0).astype(int)
 
@@ -50,7 +50,7 @@ def nuclear_cyto_matching(cyto, nuc, threshold=0.20):
             #make copy of mask to not overwrite original
             cyto_new = np.copy(cyto[i])
             #converst masks to only one of the cells
-            for j in np.arange(1, len(np.unique(cyto[i])),1):
+            for j in np.compress(np.unique(cyto[i])>0, np.unique(cyto[i])):
                 arr1_int = (cyto[i]==j).astype(int)
                 arr2_int = (nuc[i]>0).astype(int)
 
