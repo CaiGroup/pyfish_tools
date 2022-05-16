@@ -1,7 +1,7 @@
 """
 author: Katsuya Lex Colon
 group: Cai Lab
-updated: 01/07/22
+updated: 05/16/22
 """
 
 import pandas as pd
@@ -68,18 +68,21 @@ def make_genebycell(gene_loc_dir, output_dir = None, check_thresholds=True, chan
             try:
                 #read in df
                 pos = pd.read_csv(gene_loc_dir[i], index_col=0)
+                #check if df is empty
+                if len(pos)==0:
+                    raise FileNotFoundError()
             except FileNotFoundError:
                 #output readme file if file not found
                 path = final_output.parent / "missing_files.txt"
                 #check if text file exists
                 if os.path.isfile(str(path)):
                     with open(str(path),"a") as f:
-                        f.write(f"{str(Path(gene_loc_dir[i]).parent.name)} gene locations missing. Could be that either no genes were decoded in this position or no cells are present (check image or masks)." + "\n")
+                        f.write(f"{str(Path(gene_loc_dir[i]).parent.name)} gene locations missing. Could be that either no genes were decoded in this position, FDR cutoff was too stringent, or no cells are present (check image or masks)." + "\n")
                         f.close()
                     continue
                 else:
                     with open(str(path),"w+") as f:
-                        f.write(f"{str(Path(gene_loc_dir[i]).parent.name)} gene locations missing. Could be that either no genes were decoded in this position or no cells are present (check image or masks)." + "\n")
+                        f.write(f"{str(Path(gene_loc_dir[i]).parent.name)} gene locations missing. Could be that either no genes were decoded in this position, FDR cutoff was too stringent, or no cells are present (check image or masks)." + "\n")
                         f.close()
                     continue
             #get counts of each gene per cell
