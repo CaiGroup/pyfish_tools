@@ -48,7 +48,7 @@ def lin_gen_dot_probabilities(dots_used_trues,dots_used_fakes, locations):
     fakes["labels"] = -1
     
     #make sure number of fakes is > 100
-    assert len(fakes) > 100, "Not enough fake dots to train."
+    assert len(fakes) >= 100, "Not enough fake dots to train."
     
     #downsample trues to match fakes
     #generally there will be less fakes then trues 
@@ -138,7 +138,7 @@ def rbf_gen_dot_probabilities(dots_used_trues,dots_used_fakes, locations):
     fakes["labels"] = -1
     
     #make sure number of fakes is > 100
-    assert len(fakes) > 100, "Not enough fake dots to train."
+    assert len(fakes) >= 100, "Not enough fake dots to train."
     
     #if there is over 500,000 fake spots then down sample for training
     fakes = fakes.iloc[:500000,:]
@@ -243,9 +243,9 @@ def false_positive_rate(gene_locations, truebook, fakebook):
         cell_ids = gene_locations["cell number"].unique()
         for cell in cell_ids:
             #get percent fakes per cell
-            N_off = fakebrcds[fakebrcds["cell number"]==cell].sum()
-            N_on = real[real["cell number"]==cell].sum()
-            if N_on >=1 :
+            N_off = len(fakebrcds[fakebrcds["cell number"]==cell])
+            N_on = len(real[real["cell number"]==cell])
+            if N_on >= 1 :
                 false_count_freq = N_off/M_off
                 false_positive_counts = M_on*false_count_freq
                 norm_false_positive_rate = false_positive_counts/N_on
@@ -285,31 +285,42 @@ def set_fdr(gene_locations, codebook, fdr_cutoff=0.05):
     
     #calculate fdr while sampling barcodes
     collect_fdr = []
-    for i in np.linspace(0, len(sorted_genes),1000).astype(int):
-        iso_loc = sorted_genes.iloc[0:i+1]
+    for i in np.linspace(100, len(sorted_genes),100).astype(int):
+        iso_loc = sorted_genes.iloc[0:i]
         #do not include fakes generated from two separate masks
         if "cell number" in iso_loc.columns:
             iso_loc = iso_loc[iso_loc["cell number"].astype(int) == iso_loc["cell number"]].reset_index(drop=True)
         #calculate fdr
         fdr_val = false_positive_rate(iso_loc, truebook, fakebook)
-        collect_fdr.append([i+1,fdr_val])  
+        collect_fdr.append([i,fdr_val])  
      
     #convert to array
     collect_fdr = np.array(collect_fdr)
     
     #get fdr below cutoff with the highest number of decoded barcodes
     filtered_by_fdr = collect_fdr[np.where(collect_fdr[:,1]<=fdr_cutoff)[0]]
-    max_dots = filtered_by_fdr[np.argmax(filtered_by_fdr[:,0])]
-    desired_df = sorted_genes.iloc[0:int(max_dots[0])]
-        
-    #generate plot
-    plt.plot(collect_fdr[:,0],collect_fdr[:,1])
-    plt.xlabel("Decoded Barcodes")
-    plt.ylabel("FDR")
-    if fdr_cutoff != None:
-        plt.axhline(fdr_cutoff, c="red", ls = "--", label="FDR cutoff")
-    plt.scatter(max_dots[0],max_dots[1], color = "k", label="Best")
-    plt.legend()
-    sns.despine()
+    #in case nothing is below cutoff then return empty df
+    if filtered_by_fdr.size == 0:
+        desired_df = pd.DataFrame()
+        #generate plot
+        plt.plot(collect_fdr[:,0],collect_fdr[:,1])
+        plt.xlabel("Decoded Barcodes")
+        plt.ylabel("FDR")
+        if fdr_cutoff != None:
+            plt.axhline(fdr_cutoff, c="red", ls = "--", label="FDR cutoff")
+        plt.legend()
+        sns.despine()
+    else:
+        max_dots = filtered_by_fdr[np.argmax(filtered_by_fdr[:,0])]
+        desired_df = sorted_genes.iloc[0:int(max_dots[0])]
+        #generate plot
+        plt.plot(collect_fdr[:,0],collect_fdr[:,1])
+        plt.xlabel("Decoded Barcodes")
+        plt.ylabel("FDR")
+        if fdr_cutoff != None:
+            plt.axhline(fdr_cutoff, c="red", ls = "--", label="FDR cutoff")
+        plt.scatter(max_dots[0],max_dots[1], color = "k", label="Best")
+        plt.legend()
+        sns.despine()
     
     return desired_df,plt
