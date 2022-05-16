@@ -70,4 +70,4 @@ def percent_false_positive(df, codebook, fakebook):
     sns.despine()
     plt.show()
 
-    return new_df, fake_avg, norm_false_positive_rate
+    return new_df, fake_avg
