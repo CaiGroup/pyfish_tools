@@ -1,13 +1,14 @@
 """
 author: Katsuya Lex Colon
 group: Cai Lab
-updated: 01/06/22
+updated: 05/19/22
 """
 #data management
 import os
 from pathlib import Path
 import glob
 import re
+from util import pil_imread
 from webfish_tools.util import find_matching_files
 #image analysis
 import tifffile as tf
@@ -68,11 +69,15 @@ def get_optimum_fwhm(data, threshold):
             continue
         counts.append(dots)
     #find index with largest counts
-    best_index = np.argmax(counts)
-    #this is the best fwhm
-    best_fwhm = fwhm_range[best_index]
-    
-    return best_fwhm
+    if len(counts) == 0:
+        #just return a number
+        return 4
+    else:
+        best_index = np.argmax(counts)
+        #this is the best fwhm
+        best_fwhm = fwhm_range[best_index]
+
+        return best_fwhm
            
 def get_region_around(im, center, size, edge='raise'):
     """
@@ -109,7 +114,7 @@ def get_region_around(im, center, size, edge='raise'):
     return region
     
 def dot_detection(img_src, HybCycle=0, size_cutoff=3, 
-                  threshold=0.02,channel=1):
+                  threshold=0.02,channel=1, swapaxes=False):
     
     """
     Perform dot detection on image using daostarfinder.
@@ -121,6 +126,7 @@ def dot_detection(img_src, HybCycle=0, size_cutoff=3,
     size_cutoff = number of standard deviation away from mean size area
     threshold = absolute pixel intensity the spot must be greater than
     channel = which channel to look at (1-4)
+    swapaxes = bool to flip channel and z axis
     
     Returns
     ----------
@@ -128,7 +134,10 @@ def dot_detection(img_src, HybCycle=0, size_cutoff=3,
     """      
     
     #read image
-    img = tf.imread(img_src)
+    if swapaxes == True:
+        img = pil_imread(img_src, swapaxes=True)
+    else:
+        img = pil_imread(img_src, swapaxes=False)
 
     #using daostarfinder detection
     if len(img.shape)==3:
@@ -136,7 +145,11 @@ def dot_detection(img_src, HybCycle=0, size_cutoff=3,
         fwhm = get_optimum_fwhm(img[channel-1], threshold=threshold)
         #dot detect
         peaks = daofinder(img[channel-1], threshold=threshold,fwhm=fwhm)
-        peaks = peaks.to_pandas()
+        #if None was returned then return empty df
+        try:
+            peaks = peaks.to_pandas()
+        except AttributeError:
+            return pd.DataFrame()
         peaks = peaks[["xcentroid" ,"ycentroid", "flux", "peak", "sharpness", "roundness1", "roundness2"]].values
         ch = np.zeros(len(peaks))+channel
         z_slice = np.zeros(len(peaks))
@@ -150,7 +163,11 @@ def dot_detection(img_src, HybCycle=0, size_cutoff=3,
             fwhm = get_optimum_fwhm(img[z][channel-1], threshold=threshold)
             #dot detect
             peaks = daofinder(img[z][channel-1], threshold=threshold, fwhm=fwhm)
-            peaks = peaks.to_pandas()
+            #if None was returned for a particular z then continue
+            try:
+                peaks = peaks.to_pandas()
+            except AttributeError:
+                continue
             peaks = peaks[["xcentroid" ,"ycentroid", "flux", "peak", "sharpness", "roundness1", "roundness2"]].values
             ch = np.zeros(len(peaks))+channel
             z_slice = np.zeros(len(peaks))+z
@@ -158,6 +175,9 @@ def dot_detection(img_src, HybCycle=0, size_cutoff=3,
             peaks = np.append(peaks, z_slice.reshape(len(z_slice),1), axis=1)
             dots.append(peaks)
         dots = np.concatenate(dots)
+        #check if combined df is empty
+        if len(dots) == 0:
+            return pd.DataFrame()
 
     #make df and reorganize        
     dots = pd.DataFrame(dots)
@@ -229,7 +249,7 @@ def dot_detection(img_src, HybCycle=0, size_cutoff=3,
     return dots
  
 def dot_detection_parallel(img_src, size_cutoff=3, threshold=0.02,
-                           channel=1):
+                           channel=1, swapaxes=False):
     """
     This function will run dot detection in parallel, provided a list of images.
     
@@ -237,8 +257,9 @@ def dot_detection_parallel(img_src, size_cutoff=3, threshold=0.02,
     ----------
     img_src= path to images where the pos is the same but has all hybcycles
     size_cutoff = number of standard deviation away from mean size area
+    threshold = absolute pixel intensity the spot must be greater than
     channel = which channel to look at (1-4)
-    optimize = bool to test different threshold and min dots
+    swapaxes = bool to flip channel and z axis
     
     Returns
     -------
@@ -248,8 +269,10 @@ def dot_detection_parallel(img_src, size_cutoff=3, threshold=0.02,
     start = time.time() 
     
     #set output paths
-    img_parent = Path(img_src[0]).parent.parent.parent
-    output_folder = Path(img_parent) / "dots_detected"/ f"Channel_{channel}" 
+    parent = Path(img_src[0]).parent
+    while "notebook_pyfiles" not in os.listdir(parent):
+        parent = parent.parent
+    output_folder = parent / "notebook_pyfiles"/ "dots_detected"/ f"Channel_{channel}" 
     output_folder.mkdir(parents=True, exist_ok=True)
     
     #how many files
@@ -263,7 +286,7 @@ def dot_detection_parallel(img_src, size_cutoff=3, threshold=0.02,
             HybCycle_mod = int(img_parent_cycle.split("_")[1])
             #dot detect
             fut = exe.submit(dot_detection, img_src=img, HybCycle=HybCycle_mod, size_cutoff=size_cutoff,
-                             threshold=threshold,channel=channel)
+                             threshold=threshold,channel=channel,swapaxes=swapaxes)
             futures.append(fut)
             
     #collect result from futures objects
