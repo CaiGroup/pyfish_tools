@@ -174,10 +174,11 @@ def dot_detection(img_src, HybCycle=0, size_cutoff=3,
             peaks = np.append(peaks, ch.reshape(len(ch),1), axis=1)
             peaks = np.append(peaks, z_slice.reshape(len(z_slice),1), axis=1)
             dots.append(peaks)
-        dots = np.concatenate(dots)
         #check if combined df is empty
         if len(dots) == 0:
             return pd.DataFrame()
+        else:
+            dots = np.concatenate(dots)
 
     #make df and reorganize        
     dots = pd.DataFrame(dots)
