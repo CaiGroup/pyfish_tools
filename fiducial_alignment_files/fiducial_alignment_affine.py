@@ -340,20 +340,18 @@ def alignment_error(ref_points_affine, moving_points_affine,
             
     return percent_improvement_list
     
-def fiducial_alignment_single(tiff_src, ref_src,region_size=7, min_distance=10, 
-                              threshold_abs=500, num_peaks=1000, max_dist=2,ransac_threshold=0.5,
-                              include_dapi=True, use_ref_coord=False, swapaxes=False, write = True):
+def fiducial_alignment_single(tiff_src, ref_src,threshold_abs=500, max_dist=2, ransac_threshold=0.5,
+                              bead_channel_single=None, include_dapi=True, 
+                              use_ref_coord=False, swapaxes=False, write = True):
     """
     Parameters
     ----------
     tiff_src = raw tiff source
     ref_src = the reference image to align the image
-    region_size = the bounding box size (best to use odd number)
-    min_distance = number of min pixels two peaks should be apart
     threshold_abs = absolute threshold for intensity
-    num_peaks = number of dots detected
     max_dist = max distance for neighbor search
     ransac_threshold = adjust the max allowed error in pixels
+    bead_channel_single = specifify which channel has beads if there is only one channel with beads
     include_dapi = bool to include dapi for alignment
     use_ref_coord = bool to use reference coordinates to locate dots in moving image
     swapaxes = bool to switch channel and z axes
@@ -363,6 +361,14 @@ def fiducial_alignment_single(tiff_src, ref_src,region_size=7, min_distance=10,
     -------
     Affine transformed image and alignment error
     """
+    #default parameters for peak local max detection
+    #region_size = the bounding box size (best to use odd number)
+    #min_distance = number of min pixels two peaks should be apart
+    #num_peaks = number of total brightest peaks to pick
+    min_distance=5 
+    region_size=9
+    num_peaks=300 
+    
     #create output path
     orig_image_dir = Path(tiff_src).parent.parent
     output_folder = Path(orig_image_dir) / "fiducial_aligned"
@@ -388,6 +394,9 @@ def fiducial_alignment_single(tiff_src, ref_src,region_size=7, min_distance=10,
         else: 
             number_of_channels = tiff.shape[0]-1
         for c in range(number_of_channels):
+            if bead_channel_single != None:
+                #overwrite c variable in loop
+                c = bead_channel_single
             #get reference and experimental alignment dots
             ref_dots = get_alignment_dots(ref[c], ref_coord=None, region_size=region_size, min_distance=min_distance, 
                            threshold_abs=threshold_abs, num_peaks=num_peaks, use_ref_coord=False)
@@ -406,6 +415,9 @@ def fiducial_alignment_single(tiff_src, ref_src,region_size=7, min_distance=10,
         else:
             number_of_channels = tiff.shape[1]-1
         for c in range(number_of_channels):
+            if bead_channel_single != None:
+                #overwrite c variable in loop
+                c = bead_channel_single
             #max project image
             ref_max = np.max(ref[:,c,:,:], axis=0)
             tiff_max = np.max(tiff[:,c,:,:], axis=0)
@@ -486,18 +498,25 @@ def fiducial_alignment_single(tiff_src, ref_src,region_size=7, min_distance=10,
         txt_name = Path(tiff_src).name.replace(".ome.tif","_error.txt")
         output_text =  output_folder / hybcycle / txt_name
         with open(str(output_text),"w+") as f:
-            for element in error:
-                f.write(str(element[0]) + " " + str(element[1]) + " " + str(element[2]) + "\n")
+            if bead_channel_single == None:
+                for element in error:
+                    f.write(str(element[0]) + " " + str(element[1]) + " " + str(element[2]) + "\n")
+            else:
+                f.write(str(error[bead_channel_single][0]) + " " + str(error[bead_channel_single][1]) + " " + 
+                        str(error[bead_channel_single][2]) + "\n")
         f.close()
     else:    
         error = pd.DataFrame(error)
         error.columns = ["Channels","Percent Improvement","FWHM"]
+        if bead_channel_single != None:
+            error = error[error["Channels"]==bead_channel_single].reset_index(drop=True)
         
         return transformed_image, error
 
-def fiducial_align_parallel(tiff_list, ref_src, region_size=7, min_distance=10, 
-                            threshold_abs=500, num_peaks=1000, max_dist=2,ransac_threshold=0.5,
-                            include_dapi=True, use_ref_coord = False, swapaxes=False, cores = 24):
+def fiducial_align_parallel(tiff_list, ref_src, threshold_abs=500, max_dist=2,ransac_threshold=0.5,
+                            bead_channel_single=None,include_dapi=True, 
+                            use_ref_coord = False, swapaxes=False, cores = 24):
+    
     """
     This function will run the fiducial alignment in parallel analyzing multiple images at once.
     
@@ -505,12 +524,10 @@ def fiducial_align_parallel(tiff_list, ref_src, region_size=7, min_distance=10,
     ----------
     tiff_list = list of tiff sources
     ref_src = path for reference image
-    region_size = bounding box (use odd number)
-    min_distance = minimum pixel distance between peaks for dot picking
     threshold_abs = absolute threshold value for peak detection
-    num_peaks= number of desired dots
     max_dist = max distance for neighbor search
     ransac_threshold = adjust the max allowed error in pixels
+    bead_channel_single = specifify which channel has beads if there is only one channel with beads
     include_dapi = bool to include dapi channel
     use_ref_coord = bool to use reference coordinates to locate dots in moving image
     swapaxes = bool to switch z and c axes
@@ -525,19 +542,17 @@ def fiducial_align_parallel(tiff_list, ref_src, region_size=7, min_distance=10,
     
     #check if it is only 1 image
     if type(tiff_list) != list:
-        fiducial_alignment_single(tiff_list, ref_src,region_size=region_size, min_distance=min_distance,
-                                  threshold_abs=threshold_abs, num_peaks=num_peaks, max_dist=max_dist, 
-                                  ransac_threshold=ransac_threshold,
+        fiducial_alignment_single(tiff_list, ref_src,threshold_abs=threshold_abs, max_dist=max_dist, 
+                                  ransac_threshold=ransac_threshold,bead_channel_single=bead_channel_single,
                                   include_dapi=include_dapi, use_ref_coord= use_ref_coord, swapaxes=swapaxes, write = True)
         print(f'Path {tiff_list} completed after {(time.time() - start)/60} minutes')
     else:
         with ProcessPoolExecutor(max_workers=cores) as exe:
             futures = {}
             for path in tiff_list:
-                fut = exe.submit(fiducial_alignment_single, path, ref_src, region_size=region_size, 
-                                 min_distance=min_distance, threshold_abs=threshold_abs, num_peaks=num_peaks,
-                                 ransac_threshold=ransac_threshold,
-                                 max_dist=max_dist,include_dapi=include_dapi, use_ref_coord= use_ref_coord,
+                fut = exe.submit(fiducial_alignment_single, path, ref_src, threshold_abs=threshold_abs, max_dist=max_dist,
+                                 ransac_threshold=ransac_threshold,bead_channel_single=bead_channel_single,
+                                 include_dapi=include_dapi, use_ref_coord= use_ref_coord,
                                  swapaxes=swapaxes, write = True)
                 futures[fut] = path
             for fut in as_completed(futures):
