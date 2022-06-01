@@ -366,7 +366,7 @@ def fiducial_alignment_single(tiff_src, ref_src,threshold_abs=500, max_dist=2, r
     #min_distance = number of min pixels two peaks should be apart
     #num_peaks = number of total brightest peaks to pick
     min_distance=5 
-    region_size=9
+    region_size=7
     num_peaks=300 
     
     #create output path
