@@ -1,7 +1,7 @@
 """
 authors: Katsuya Lex Colon and Lincoln Ombelets
 group: Cai Lab
-updated: 03/02/22
+updated: 06/02/22
 """
 #basic analysis package
 import numpy as np
@@ -20,6 +20,7 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 #organization packages
 from pathlib import Path
 import glob
+import os
 #fitting
 from scipy.stats import norm
 #ignore warnings
@@ -489,10 +490,12 @@ def apply_tform(img_src, tform_list, use_488=False, swapaxes=False, write = True
         -------
         corrected image
         """
-        
+        #output path
+        parent = Path(img_src).parent
+        while "notebook_pyfiles" not in os.listdir(parent):
+            parent = parent.parent
         #create output path
-        orig_image_dir = Path(img_src).parent.parent.parent
-        output_folder = Path(orig_image_dir) / "aberration_corrected"
+        output_folder = parent / "notebook_pyfiles" / "aberration_corrected"
         hybcycle = Path(img_src).parent.name
         output_path = output_folder / hybcycle / Path(img_src).name
         output_path.parent.mkdir(parents=True, exist_ok=True)
