@@ -1,7 +1,7 @@
 """
 author: Katsuya Lex Colon
 group: Cai Lab
-updated: 06/09/22
+updated: 05/06/22
 """
 
 #general analysis packages
@@ -9,7 +9,6 @@ import numpy as np
 import pandas as pd
 from sklearn.neighbors import NearestNeighbors
 from collections import Counter
-from itertools import product
 import time
 #parallel processing
 from concurrent.futures import ProcessPoolExecutor, as_completed
@@ -269,96 +268,10 @@ def pick_best_codeword(filtered_set, codeword_scores,total_distances):
     del distance_hash
     
     return final_codewords
-
-def find_best_spot_combination(temp, tempscore, locations, neighbor_list, distance_list,
-                               hybs=24, num_barcodes=4):
-    """
-    Generates all possible codewords from highest scoring to lowest scoring and 
-    pick highest scoring codeword that passes parity.
-    
-    Parameters
-    ----------
-    temp: temporary list containing possible spot indicies
-    tempscore: temporary list containing scores for each spot
-    locations: the spot locations file
-    neighbor_list: list of dot indicies that are neighbors
-    distance_list: euclidean distance of each spot to seed
-    hybs: total number of hybs
-    num_barcodes: total number of barcoding rounds
-    """
-    
-    #generate all possible codeword combination
-    possible_codes = list(product(*temp, repeat=1))
-    
-    #make spot score dictionary
-    temp_flat = [element for sublist in temp for element in sublist]
-    tempscore_flat = [element for sublist in tempscore for element in sublist]
-    score_dict = dict(zip(temp_flat, tempscore_flat))
-    
-    #generate total distance for all possible codes
-    possible_code_distances = []
-    for code in possible_codes:
-        total_distance_values=0
-        for k,dot_idx in enumerate(code):
-            if k != 0:
-                dist_idx = neighbor_list[k].index(dot_idx)
-                total_distance_values += distance_list[k-1][dist_idx]
-        possible_code_distances.append(total_distance_values)
-    
-    #calculate overall score for each possible codeword
-    scores = []
-    for codes in possible_codes:
-        scores.append(np.sum(list(map(score_dict.get, codes))))
-    
-    #find scores that are the same from highest to lowest
-    unique_scores = sorted(list(set(scores)))[::-1]
-    index_match = []
-    for score in unique_scores:
-        indices = [i for i, x in enumerate(scores) if x == score]
-        index_match.append(indices)
-    
-    #sort the matching score indicies by shortest overall distance
-    new_sorted_indicies = []
-    for index in index_match:
-        dist = [possible_code_distances[i] for i in index]
-        dist_sort = np.argsort(dist)
-        reorg_index = [index[i] for i in dist_sort]
-        new_sorted_indicies += reorg_index
-        
-    #sort possible codes by score and overall distance
-    sorted_scores = [scores[index] for index in new_sorted_indicies]
-    sorted_codes = [possible_codes[index] for index in new_sorted_indicies]
-    sorted_dist = [possible_code_distances[index] for index in new_sorted_indicies]
-    
-    #check each codeword on whether it passes parity 
-    for i,codes in enumerate(sorted_codes):
-        potential = (locations.iloc[list(codes)].sort_values("hyb")["hyb"].values) + 1
-        pseudocolors = int(hybs/num_barcodes)
-        #convert into pseudocolor sequence
-        get_barcode = []
-        for k,ps in enumerate(potential):
-            get_barcode.append(ps - (k*pseudocolors))
-        #if a barcode is missing a pseudocolor then we can't do parity check
-        if len(get_barcode)==(num_barcodes-1):
-            continue
-        #if the codeword passes parity then end loop
-        elif (sum(get_barcode[:len(get_barcode)-1]) % pseudocolors) == get_barcode[-1]:
-            best = codes
-            best_score = sorted_scores[i]
-            best_dist = sorted_dist[i]
-            break
-            
-    #if none passed parity then just return first code since it is the best scoring
-    if "best" not in locals():
-        best = sorted_codes[0]
-        best_score = sorted_scores[0]
-        best_dist = sorted_dist[0]
-
-    return list(best), best_score, best_dist
     
 def radial_decoding(locations,num_barcodes = 4, 
                     radius=np.sqrt(2),diff=0,
-                    seed=0, hybs = 12, parity=True):
+                    seed=0, hybs = 12):
     """
     This function will decode dots utilizing kNN algorithm from sklearn using the euclidean formula
     as a measure of distance. Essentially, a defined search radius will be used to identify nearby dots. 
@@ -466,161 +379,82 @@ def radial_decoding(locations,num_barcodes = 4,
     #remove old lists
     del neighbor_list
     del distance_list
-    
-    if parity == True:
-        dot_idx = []
-        ambiguity_scores = []
-        codeword_score_list = []
-        total_distance_list = []
-        #calculate overall scores
+
+    #Get best dot sequence based on dot traits
+    #weighted scores will be calculated based on distance, flux, and size
+    #probability adjusted or unadjusted overall codeword score will also be computed 
+    dot_idx = []
+    ambiguity_scores = []
+    codeword_score_list = []
+    total_distance_list = []
+    for i in range(len(neighbor_list2)):
+        temp = []
         ambiguity = 0
         codeword_score = 0
         total_distance_values = 0
-        for i in range(len(neighbor_list2)):
-            temp = []
-            tempscore = []
-            for j in range(len(neighbor_list2[i])):
-                if len(neighbor_list2[i][j]) == 1:
-                    #add single spot with no neigbors
-                    temp.append([neighbor_list2[i][j][0]])
-                    #add max score possible for single spot with no neighbbors
-                    tempscore.append([2])
+        for j in range(len(neighbor_list2[i])):
+            if len(neighbor_list2[i][j]) == 1:
+                temp.append(neighbor_list2[i][j][0])
+                #add 1 for ambiguity but will become zero after adjustment in final step
+                ambiguity += 1
+                #max score a dot can get
+                codeword_score += 2.0
+                if j == 0:
+                    continue
                 else:
-                    #generate scoring system
-                    ###previous was 2,1,0.5 (dist-57%,int-29%,size-14%); current (dist-50%,int-37.5%,size-12.5%)
-                    dist_values = np.linspace(0,1,len(neighbor_list2[i][j])+1)[::-1]
-                    int_values = np.linspace(0,0.75,len(neighbor_list2[i][j])+1)[::-1]
-                    size_values = np.linspace(0,0.25,len(neighbor_list2[i][j])+1)[::-1]
-                    #get dot traits
-                    #note that pandas iloc preserve order matching slice order
-                    dot_traits = locations.iloc[neighbor_list2[i][j]]
-                    #generate score table
-                    trait_score = np.zeros(len(dot_traits))
-                    #rank dots 
-                    int_score = np.argsort(dot_traits["flux"]).values[::-1]
-                    size_score = np.argsort(dot_traits["size"]).values[::-1]
-                    #calculate best score
-                    #note that distance is already sorted
-                    for _ in range(len(trait_score)):
-                        trait_score[int_score[_]] += int_values[_]
-                        trait_score[_] += dist_values[_]
-                        trait_score[size_score[_]] += size_values[_]
-                    #score for each spot
-                    temp.append(neighbor_list2[i][j])
-                    tempscore.append(trait_score)
-                    ambiguity += len(neighbor_list2[i][j])
-                    
-            #check if the selected spots pass parity and return best spot sequence
-            best, best_score, best_dist = find_best_spot_combination(temp, tempscore, locations, 
-                                                                     neighbor_list2[i], 
-                                                                     distance_list2[i],
-                                                                     hybs=hybs, num_barcodes=num_barcodes)
-           
-            #add codeword score and total distance
-            codeword_score += best_score
-            total_distance_values += best_dist
-            
-            #adjust final ambiguity score by total number of dots in set
-            ambiguity_score_final = ambiguity-len(neighbor_list2[i])
-            #adjust final codeword score by ambiguity+1 (add 1 to prevent division by 0)
-            codeword_score = codeword_score/(ambiguity_score_final+1)
-            #get adjust codeword score based on probability if probability score is present
-            try:
-                #get log probability score as the sum of log probabilities
-                log_prob_score = np.log(locations.iloc[best]["probability on"]).sum()
-                #adjust log probability score by total codeword score
-                log_prob_score= log_prob_score/codeword_score
-                #exponentiate log probability score to get overall probability score
-                codeword_score = np.exp(log_prob_score.astype(np.float))
-            except:
-                #normalize codeword score by max dot score * number of barcode sites
-                codeword_score = codeword_score/(2*num_barcodes)
-            #append all of the data to final list
-            dot_idx.append(best)
-            ambiguity_scores.append([tuple(best),ambiguity_score_final])
-            codeword_score_list.append([tuple(best),codeword_score])
-            total_distance_list.append([tuple(best),total_distance_values])
+                    total_distance_values += distance_list2[i][j-1][0]
+            else:
+                #generate scoring system
+                ###previous was 2,1,0.5 (dist-57%,int-29%,size-14%); current (dist-50%,int-37.5%,size-12.5%)
+                dist_values = np.linspace(0,1,len(neighbor_list2[i][j])+1)[::-1]
+                int_values = np.linspace(0,0.75,len(neighbor_list2[i][j])+1)[::-1]
+                size_values = np.linspace(0,0.25,len(neighbor_list2[i][j])+1)[::-1]
+                #get dot traits
+                #note that pandas iloc preserve order matching slice order
+                dot_traits = locations.iloc[neighbor_list2[i][j]]
+                #generate score table
+                trait_score = np.zeros(len(dot_traits))
+                #rank dots and see if we are using flux or average intensity
+                int_score = np.argsort(dot_traits["flux"]).values[::-1]
+                size_score = np.argsort(dot_traits["size"]).values[::-1]
+                #calculate best score
+                #note that distance is already sorted
+                for _ in range(len(trait_score)):
+                    trait_score[int_score[_]] += int_values[_]
+                    trait_score[_] += dist_values[_]
+                    trait_score[size_score[_]] += size_values[_]
+                #get highest scoring index, then get all scores
+                best_dot_idx = np.argmax(trait_score)
+                temp.append(neighbor_list2[i][j][best_dot_idx])
+                ambiguity += len(neighbor_list2[i][j])
+                codeword_score += trait_score[best_dot_idx]
+                total_distance_values += distance_list2[i][j-1][best_dot_idx]
 
-        #no longer need this  
-        del neighbor_list2
-        del distance_list2
-        del temp
-    else:
-        #Get best dot sequence based on dot traits
-        #weighted scores will be calculated based on distance, flux, and size
-        #probability adjusted or unadjusted overall codeword score will also be computed 
-        dot_idx = []
-        ambiguity_scores = []
-        codeword_score_list = []
-        total_distance_list = []
-        for i in range(len(neighbor_list2)):
-            temp = []
-            ambiguity = 0
-            codeword_score = 0
-            total_distance_values = 0
-            for j in range(len(neighbor_list2[i])):
-                if len(neighbor_list2[i][j]) == 1:
-                    temp.append(neighbor_list2[i][j][0])
-                    #add 1 for ambiguity but will become zero after adjustment in final step
-                    ambiguity += 1
-                    #max score a dot can get
-                    codeword_score += 2.0
-                    if j == 0:
-                        continue
-                    else:
-                        total_distance_values += distance_list2[i][j-1][0]
-                else:
-                    #generate scoring system
-                    ###previous was 2,1,0.5 (dist-57%,int-29%,size-14%); current (dist-50%,int-37.5%,size-12.5%)
-                    dist_values = np.linspace(0,1,len(neighbor_list2[i][j])+1)[::-1]
-                    int_values = np.linspace(0,0.75,len(neighbor_list2[i][j])+1)[::-1]
-                    size_values = np.linspace(0,0.25,len(neighbor_list2[i][j])+1)[::-1]
-                    #get dot traits
-                    #note that pandas iloc preserve order matching slice order
-                    dot_traits = locations.iloc[neighbor_list2[i][j]]
-                    #generate score table
-                    trait_score = np.zeros(len(dot_traits))
-                    #rank dots and see if we are using flux or average intensity
-                    int_score = np.argsort(dot_traits["flux"]).values[::-1]
-                    size_score = np.argsort(dot_traits["size"]).values[::-1]
-                    #calculate best score
-                    #note that distance is already sorted
-                    for _ in range(len(trait_score)):
-                        trait_score[int_score[_]] += int_values[_]
-                        trait_score[_] += dist_values[_]
-                        trait_score[size_score[_]] += size_values[_]
-                    #get highest scoring index, then get all scores
-                    best_dot_idx = np.argmax(trait_score)
-                    temp.append(neighbor_list2[i][j][best_dot_idx])
-                    ambiguity += len(neighbor_list2[i][j])
-                    codeword_score += trait_score[best_dot_idx]
-                    total_distance_values += distance_list2[i][j-1][best_dot_idx]
-
-            #adjust final ambiguity score by total number of dots in set
-            ambiguity_score_final = ambiguity-len(neighbor_list2[i])
-            #adjust final codeword score by ambiguity+1 (add 1 to prevent division by 0)
-            codeword_score = codeword_score/(ambiguity_score_final+1)
-            #get adjust codeword score based on probability if probability score is present
-            try:
-                #get log probability score as the sum of log probabilities
-                log_prob_score = np.log(locations.iloc[temp]["probability on"]).sum()
-                #adjust log probability score by total codeword score
-                log_prob_score= log_prob_score/codeword_score
-                #exponentiate log probability score to get overall probability score
-                codeword_score = np.exp(log_prob_score.astype(np.float))
-            except:
-                #normalize codeword score by max dot score * number of barcode sites
-                codeword_score = codeword_score/(2*num_barcodes)
-            #append all of the data to final list
-            dot_idx.append(temp)
-            ambiguity_scores.append([tuple(temp),ambiguity_score_final])
-            codeword_score_list.append([tuple(temp),codeword_score])
-            total_distance_list.append([tuple(temp),total_distance_values])
-
-        #no longer need this  
-        del neighbor_list2
-        del distance_list2
-        del temp
+        #adjust final ambiguity score by total number of dots in set
+        ambiguity_score_final = ambiguity-len(neighbor_list2[i])
+        #adjust final codeword score by ambiguity+1 (add 1 to prevent division by 0)
+        codeword_score = codeword_score/(ambiguity_score_final+1)
+        #get adjust codeword score based on probability if probability score is present
+        try:
+            #get log probability score as the sum of log probabilities
+            log_prob_score = np.log(locations.iloc[temp]["probability on"]).sum()
+            #adjust log probability score by total codeword score
+            log_prob_score= log_prob_score/codeword_score
+            #exponentiate log probability score to get overall probability score
+            codeword_score = np.exp(log_prob_score.astype(np.float))
+        except:
+            #normalize codeword score by max dot score * number of barcode sites
+            codeword_score = codeword_score/(2*num_barcodes)
+        #append all of the data to final list
+        dot_idx.append(temp)
+        ambiguity_scores.append([tuple(temp),ambiguity_score_final])
+        codeword_score_list.append([tuple(temp),codeword_score])
+        total_distance_list.append([tuple(temp),total_distance_values])
+        
+    #no longer need this  
+    del neighbor_list2
+    del distance_list2
+    del temp
 
     #return indicies of nearby dots from seed, ambiguity scores, codeword scores and total distance per codeword
     return dot_idx,ambiguity_scores,codeword_score_list,total_distance_list
@@ -657,7 +491,7 @@ def radial_decoding_parallel(locations,codebook,num_barcodes = 4, radius=1,diff=
             seed = i
             fut = exe.submit(radial_decoding, locations,
                              num_barcodes, radius,diff,
-                             seed, hybs, parity_round)
+                             seed, hybs)
             futures.append(fut)
             
     #collect result from futures objects
