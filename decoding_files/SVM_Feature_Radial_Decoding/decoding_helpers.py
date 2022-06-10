@@ -285,7 +285,7 @@ def set_fdr(gene_locations, codebook, fdr_cutoff=0.05):
     
     #calculate fdr while sampling barcodes
     collect_fdr = []
-    for i in np.linspace(100, len(sorted_genes),100).astype(int):
+    for i in np.linspace(100, len(sorted_genes),1000).astype(int):
         iso_loc = sorted_genes.iloc[0:i]
         #do not include fakes generated from two separate masks
         if "cell number" in iso_loc.columns:
