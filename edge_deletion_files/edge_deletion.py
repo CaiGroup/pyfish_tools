@@ -60,7 +60,7 @@ def edge_deletion(img_src, output_dir = None, have_seg_img = True):
         for val in artifacts:
             new_masks_2[new_masks_2==val]=0
         #delete edges again if shift caused a mask to be on the edge
-        new_masks_2 = clear_border(new_masks_2)
+        new_masks = clear_border(new_masks_2)
     
     #make output directory
     output_dir = Path(output_dir)
