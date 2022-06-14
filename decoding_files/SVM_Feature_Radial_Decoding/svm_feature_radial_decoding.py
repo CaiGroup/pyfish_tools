@@ -1,7 +1,7 @@
 """
 author: Katsuya Lex Colon
 group: Cai Lab
-updated: 06/09/22
+updated: 06/13/22
 """
 
 #general analysis packages
@@ -358,7 +358,7 @@ def find_best_spot_combination(temp, tempscore, locations, neighbor_list, distan
     
 def radial_decoding(locations,num_barcodes = 4, 
                     radius=np.sqrt(2),diff=0,
-                    seed=0, hybs = 12, parity=True):
+                    seed=0, hybs = 12, assign_und=False):
     """
     This function will decode dots utilizing kNN algorithm from sklearn using the euclidean formula
     as a measure of distance. Essentially, a defined search radius will be used to identify nearby dots. 
@@ -375,6 +375,7 @@ def radial_decoding(locations,num_barcodes = 4,
     diff: allowed barcode drops
     seed: which barcode set to use as reference
     hybs: total number of hybs
+    assign_und: bool to try and assign undefineds
     
     Returns
     --------
@@ -467,7 +468,7 @@ def radial_decoding(locations,num_barcodes = 4,
     del neighbor_list
     del distance_list
     
-    if parity == True:
+    if assign_und == True:
         dot_idx = []
         ambiguity_scores = []
         codeword_score_list = []
@@ -628,7 +629,8 @@ def radial_decoding(locations,num_barcodes = 4,
     return dot_idx,ambiguity_scores,codeword_score_list,total_distance_list
 
 def radial_decoding_parallel(locations,codebook,num_barcodes = 4, radius=1,diff=0,
-                             min_seed=4, hybs = 12, include_undecoded = False, parity_round =True):
+                             min_seed=4, hybs = 12, include_undecoded = False, 
+                             assign_und = False, parity_round=True):
     """This function will perform radial decoding on all barcodes as reference. Dot sequences
     that appear n number of times defined by min seed will be kept.
     Parameters 
@@ -641,7 +643,8 @@ def radial_decoding_parallel(locations,codebook,num_barcodes = 4, radius=1,diff=
     min_seed: number of barcode seeds
     hybs: total number of hybs
     include_undecoded: bool to output the undecoded dots
-    parity_round: bool if you included parity round
+    assign_und: bool to try and assign undefineds
+    parity_round: bool on whether a parity round is included
     
     Returns
     --------
@@ -659,7 +662,7 @@ def radial_decoding_parallel(locations,codebook,num_barcodes = 4, radius=1,diff=
             seed = i
             fut = exe.submit(radial_decoding, locations,
                              num_barcodes, radius,diff,
-                             seed, hybs, parity_round)
+                             seed, hybs, assign_und)
             futures.append(fut)
             
     #collect result from futures objects
@@ -841,7 +844,7 @@ def return_highly_expressed_names(decoded):
 
 def feature_radial_decoding(location_path, codebook_path,
                             num_barcodes = 4, first_radius=1, second_radius=1.5,third_radius=2, diff=1,
-                            min_seed=3, high_exp_seed=2, hybs = 12, probability_cutoff = 0.25,desired_fdr = None,
+                            min_seed=3, high_exp_seed=2, hybs = 12, probability_cutoff = 0.15,desired_fdr = None,
                             output_dir = "", parity_round = True,include_undefined = False,
                             decode_high_exp_genes = True, triple_decode=True):
     """
@@ -907,8 +910,10 @@ def feature_radial_decoding(location_path, codebook_path,
     
     #rough decoding to identify true and false dots
     decoded_rough, indicies_used_1 = radial_decoding_parallel(locations, codebook,
-                num_barcodes=num_barcodes, radius=1,diff=diff,
-                min_seed=num_barcodes-diff, hybs = hybs, include_undecoded = False, parity_round=parity_round)
+                                                              num_barcodes=num_barcodes, radius=1,diff=diff,
+                                                              min_seed=num_barcodes-diff, hybs = hybs, 
+                                                              include_undecoded = False, 
+                                                              assign_und = False, parity_round=parity_round)
     #only get the indicies of decoded genes (excluding undefined) and separate true and fake
     decoded_rough_fakes = decoded_rough[decoded_rough["genes"].str.startswith("fake")]
     decoded_rough_trues = decoded_rough.drop(decoded_rough_fakes.index)
@@ -949,8 +954,9 @@ def feature_radial_decoding(location_path, codebook_path,
     if decode_high_exp_genes == True:
         #run decoding first pass
         decoded_1, indicies_used_1 = radial_decoding_parallel(locations, codebook,
-                    num_barcodes=num_barcodes, radius=first_radius, diff=diff,
-                    min_seed=high_exp_seed, hybs = hybs, include_undecoded = False, parity_round=parity_round)
+                                                              num_barcodes=num_barcodes, radius=first_radius, diff=diff,
+                                                              min_seed=high_exp_seed, hybs = hybs, include_undecoded = False,
+                                                              assign_und = True, parity_round=parity_round)
         #get highly expressed genes
         highexpgenes = return_highly_expressed_names(decoded_1)
         #initialize loop
@@ -978,7 +984,8 @@ def feature_radial_decoding(location_path, codebook_path,
             decoded_1, indicies_used_1 = radial_decoding_parallel(locations_temp, codebook,
                                                                   num_barcodes=num_barcodes, radius=first_radius,diff=diff,
                                                                   min_seed=high_exp_seed, hybs = hybs, 
-                                                                  include_undecoded = False, parity_round=parity_round)
+                                                                  include_undecoded = False, assign_und = True,
+                                                                  parity_round=parity_round)
             #get new highly expressed gene list
             highexpgenes_2 = return_highly_expressed_names(decoded_1)
         #combine final highly expressed genes
@@ -990,8 +997,9 @@ def feature_radial_decoding(location_path, codebook_path,
     else:
         #run decoding first pass
         decoded_1, indicies_used_1 = radial_decoding_parallel(locations, codebook,
-                    num_barcodes=num_barcodes, radius=first_radius,diff=diff,
-                    min_seed=min_seed, hybs = hybs, include_undecoded = False, parity_round=parity_round)
+                                                              num_barcodes=num_barcodes, radius=first_radius,diff=diff,
+                                                              min_seed=min_seed, hybs = hybs, include_undecoded = False,
+                                                              assign_und = True, parity_round=parity_round)
         #only get the indicies of decoded genes (excluding undefined) and separate true and fake
         decoded_1_fakes = decoded_1[decoded_1["genes"].str.startswith("fake")]
         decoded_1_trues = decoded_1.drop(decoded_1_fakes.index)
@@ -1014,6 +1022,7 @@ def feature_radial_decoding(location_path, codebook_path,
     decoded_2, indicies_used_2 = radial_decoding_parallel(new_locations, codebook,
                                                           num_barcodes=num_barcodes, radius=second_radius,diff=diff,
                                                           min_seed=min_seed, hybs = hybs, include_undecoded = True, 
+                                                          assign_und = False,
                                                           parity_round=parity_round)
     if triple_decode == True:
         #output results from second pass
@@ -1047,7 +1056,7 @@ def feature_radial_decoding(location_path, codebook_path,
         try:
             decoded_3, indicies_used_3 = radial_decoding_parallel(new_locations_2, codebook,
                         num_barcodes=num_barcodes, radius=third_radius,diff=diff,
-                        min_seed=min_seed, hybs = hybs, include_undecoded = True, 
+                        min_seed=min_seed, hybs = hybs, include_undecoded = True, assign_und = False,
                         parity_round=parity_round)
             #combine decoded dfs
             decoded_combined = pd.concat([decoded_1, decoded_2, decoded_3])
