@@ -33,10 +33,11 @@ bkgrd_sub = False #bool to perform background subtraction
 match_hist=False #bool to enhance gaussian blurred image for high pass filter
 subtract=False #bool to perform high pass filter
 divide=True #bool to even out illumination 
+tophat_raw=False#bool to perform tophat on raw image before any other preprocessing steps
 
 deconvolute_many(images=images, 
                  sigma_hpgb=sigma_hpgb, kern_hpgb=kern_hpgb, kern_rl=kern_rl, 
                  kern_lpgb = kern_lpgb, sigma=sigma, radius=radius, model=model, microscope=microscope,
                  gamma=gamma, hyb_offset=hyb_offset, swapaxes=swapaxes,
                  noise= noise, bkgrd_sub=bkgrd_sub,
-                 match_hist=match_hist, subtract=subtract, divide=divide)
+                 match_hist=match_hist, subtract=subtract, divide=divide, tophat_raw=tophat_raw)

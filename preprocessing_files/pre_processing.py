@@ -1,6 +1,6 @@
 """
-authors: Katsuya Lex Colon and Shaan Sekhon
-updated: 12/10/21
+authors: Katsuya Lex Colon, Shaan Sekhon, and Anthony Linares
+updated: 06/13/22
 group: Cai Lab
 """
 #image processing
@@ -33,7 +33,8 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 warnings.filterwarnings("ignore")
 
 def background_correct_image(stack, correction_algo, stack_bkgrd=None, z=2, size=2048, 
-                             gamma = 1.4, kern=5, sigma=40, match_hist =True, subtract=True, divide=False):
+                             gamma = 1.4, kern=5, sigma=40, match_hist =True, 
+                             subtract=True, divide=False, tophat_raw=False):
     '''
    This function will background correct raw images. There are several correction algorithms that can be used (SigmaClipping_and_Gamma_C,Gaussian_and_Gamma_Correction, and LSR_Backgound_Correction).
    Additionally, one can choose to use final or initial background image for subtraction if stack_bkgrd (background image array) is provided. 
@@ -50,6 +51,7 @@ def background_correct_image(stack, correction_algo, stack_bkgrd=None, z=2, size
    match_hist = bool to match histograms of blurred image
    subtract = bool to subtract blurred image from raw
    divide = bool to divide blurred image from raw
+   tophat_raw = bool to perform tophat on raw image
     
     '''
     #check z's
@@ -59,6 +61,11 @@ def background_correct_image(stack, correction_algo, stack_bkgrd=None, z=2, size
         if type(stack_bkgrd) != type(None):
             stack_bkgrd = stack_bkgrd.reshape(z,channels,size,size)
     
+    #run tophat on raw image if desired
+    if tophat_raw == True:
+        stack = tophat_image(stack)
+    
+    #perform background subtraction on image using actual initial or final background image
     if type(stack_bkgrd) != type(None):
         #only subtract non dapi channels
         len_ch = stack.shape[1]
@@ -96,6 +103,30 @@ def background_correct_image(stack, correction_algo, stack_bkgrd=None, z=2, size
                 corrected_z_slice.append(corrected_channel)
         corrected_stack.append(corrected_z_slice)
     return np.array(corrected_stack)
+
+def tophat_image(stack):
+    """
+    Tophat raw image to help removes large blobs (like lipofusin). 
+    """
+    #kernel size for tophat (5 is good for lipofusin)
+    tophat_kernel_size = 5
+    tophat_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (int(tophat_kernel_size), int(tophat_kernel_size)))
+    
+    #create empty array
+    tophat_stack = np.zeros(stack.shape)
+    #get dapi channel
+    dapi_ch = stack.shape[1]-1
+    
+    #go through z and channels
+    for z in range(stack.shape[0]):
+        for ch in range(stack.shape[1]-1):
+            tophat_stack[z][ch] = cv2.morphologyEx(stack[z][ch], cv2.MORPH_TOPHAT, tophat_kernel)
+        tophat_stack[z][dapi_ch] = stack[z][dapi_ch]
+        
+    #reconvert to uint16
+    stack = tophat_stack.astype('uint16')   
+    
+    return stack
 
 def SigmaClipping_and_Gamma_C(image, gamma):
     """Background Correction via Background Elimination 
@@ -309,7 +340,7 @@ def deconvolute_one(image_path, sigma_hpgb = 1, kern_hpgb=5, kern_rl = 5,
                     model="gaussian", microscope="boc",
                     gamma=1, hyb_offset=0, swapaxes=True,
                     noise= True, bkgrd_sub=True, 
-                    match_hist=True, subtract=True, divide=False):
+                    match_hist=True, subtract=True, divide=False, tophat_raw=False):
     
     """deconvolute one image only
     Parameters
@@ -331,6 +362,7 @@ def deconvolute_one(image_path, sigma_hpgb = 1, kern_hpgb=5, kern_rl = 5,
     match_hist = bool to match histograms of blurred image
     subtract = bool to subtract blurred image from raw
     divide = bool to divide blurred image from raw
+    tophat_raw = bool to perform tophat on raw image
     """
     
     #make output directory
@@ -377,14 +409,14 @@ def deconvolute_one(image_path, sigma_hpgb = 1, kern_hpgb=5, kern_rl = 5,
         print('background correction...')
         hpgb_image = background_correct_image(image,Gaussian_and_Gamma_Correction, 
                                               stack_bkgrd, z, size, gamma, kern_hpgb, sigma_hpgb,
-                                              match_hist, subtract, divide) 
+                                              match_hist, subtract, divide, tophat_raw) 
     else:
         z=1
         size = image.shape[2]
         print('background correction...')
         hpgb_image = background_correct_image(image,Gaussian_and_Gamma_Correction, 
                                               stack_bkgrd, z, size,gamma,kern_hpgb, sigma_hpgb,
-                                              match_hist, subtract, divide) 
+                                              match_hist, subtract, divide, tophat_raw) 
     #perform deconvolution
     print('deconvolution...')
     if len(image.shape) ==3:
@@ -409,7 +441,7 @@ def deconvolute_many(images, sigma_hpgb = 1, kern_hpgb = 5, kern_rl = 5,
                     model="gaussian", microscope="boc",
                     gamma = 1, hyb_offset=0, swapaxes=True,
                     noise= True, bkgrd_sub=True, 
-                    match_hist=True, subtract=True, divide=False):
+                    match_hist=True, subtract=True, divide=False, tophat_raw=False):
     
     """function to deconvolute all images
      Parameters
@@ -430,6 +462,7 @@ def deconvolute_many(images, sigma_hpgb = 1, kern_hpgb = 5, kern_rl = 5,
     match_hist = bool to match histograms of blurred image
     subtract = bool to subtract blurred image from raw
     divide = bool to divide blurred image from raw
+    tophat_raw = bool to perform tophat on raw image
     """
     
     import time
@@ -442,7 +475,7 @@ def deconvolute_many(images, sigma_hpgb = 1, kern_hpgb = 5, kern_rl = 5,
                        gamma=gamma,hyb_offset=hyb_offset,
                        swapaxes=swapaxes,
                        noise=noise, bkgrd_sub=bkgrd_sub, 
-                       match_hist=match_hist, subtract=subtract, divide=divide)
+                       match_hist=match_hist, subtract=subtract, divide=divide, tophat_raw=tophat_raw)
     else:
         with ProcessPoolExecutor(max_workers=12) as exe:
             futures = {}
@@ -451,7 +484,7 @@ def deconvolute_many(images, sigma_hpgb = 1, kern_hpgb = 5, kern_rl = 5,
                        kern_lpgb=kern_lpgb, sigma=sigma, radius=radius,model=model, microscope=microscope,
                        gamma=gamma,hyb_offset=hyb_offset,
                        swapaxes=swapaxes,noise=noise, bkgrd_sub=bkgrd_sub, 
-                       match_hist=match_hist, subtract=subtract, divide=divide)
+                       match_hist=match_hist, subtract=subtract, divide=divide, tophat_raw=tophat_raw)
                 futures[fut] = path
 
             for fut in as_completed(futures):
@@ -461,7 +494,7 @@ def deconvolute_many(images, sigma_hpgb = 1, kern_hpgb = 5, kern_rl = 5,
 def bkgrd_corr_one(image_path, correction_type = None, stack_bkgrd=None, swapaxes=False, 
                    z=2, size=2048, gamma = 1.4, kern_hpgb=5, sigma = 40, rb_radius=5, hyb_offset=0, p_min=80,
                    p_max = 99.999, norm_int = True, rollingball = False, 
-                   lowpass=True, match_hist=True, subtract=True, divide=False):
+                   lowpass=True, match_hist=True, subtract=True, divide=False, tophat_raw=False):
     """
     background correct one image only
     
@@ -486,6 +519,7 @@ def bkgrd_corr_one(image_path, correction_type = None, stack_bkgrd=None, swapaxe
     match_hist = bool to match histograms of blurred image
     subtract = bool to subtract blurred image from raw
     divide = bool to divide blurred image from raw
+    tophat_raw = bool to perform tophat on raw image
     """
     #output path
     parent = Path(image_path).parent
@@ -522,10 +556,12 @@ def bkgrd_corr_one(image_path, correction_type = None, stack_bkgrd=None, swapaxe
     #background correct
     if type(stack_bkgrd) != type(None):
         corr_img = background_correct_image(image, correction_type, bkgrd, 
-                                            z, size, gamma, kern_hpgb, sigma, match_hist, subtract, divide)
+                                            z, size, gamma, kern_hpgb, sigma, match_hist, 
+                                            subtract, divide, tophat_raw)
     else:
         corr_img = background_correct_image(image, correction_type, stack_bkgrd,
-                                            z, size, gamma, kern_hpgb, sigma, match_hist, subtract, divide)
+                                            z, size, gamma, kern_hpgb, sigma, 
+                                            match_hist, subtract, divide, tophat_raw)
             
     #do rolling ball subtraction
     if rollingball == True:
@@ -556,7 +592,7 @@ def bkgrd_corr_one(image_path, correction_type = None, stack_bkgrd=None, swapaxe
 def correct_many(images, correction_type = None, stack_bkgrd=None, swapaxes=False,
                  z=2, size=2048, gamma = 1.4,kern_hpgb=5, sigma=40, rb_radius=5, hyb_offset=0,p_min=80,
                  p_max = 99.999, norm_int = True,
-                 rollingball=False, lowpass = True, match_hist=True, subtract=True, divide=False):
+                 rollingball=False, lowpass = True, match_hist=True, subtract=True, divide=False, tophat_raw=False):
     """
     function to correct all image
     
@@ -581,6 +617,7 @@ def correct_many(images, correction_type = None, stack_bkgrd=None, swapaxes=Fals
     match_hist = bool to match histograms of blurred image
     subtract = bool to subtract blurred image from raw
     divide = bool to divide blurred image from raw
+    tophat_raw = bool to perform tophat on raw image
     """
     import time
     start = time.time()
@@ -589,7 +626,7 @@ def correct_many(images, correction_type = None, stack_bkgrd=None, swapaxes=Fals
         bkgrd_corr_one(images, correction_type,stack_bkgrd, swapaxes, z, size,  
                        gamma, kern_hpgb,sigma, rb_radius, hyb_offset, p_min,
                        p_max, norm_int, rollingball, 
-                       lowpass,  match_hist, subtract, divide)
+                       lowpass,  match_hist, subtract, divide, tophat_raw)
         
         
     else:
@@ -599,7 +636,7 @@ def correct_many(images, correction_type = None, stack_bkgrd=None, swapaxes=Fals
                 fut = exe.submit(bkgrd_corr_one, path, correction_type, stack_bkgrd,
                                  swapaxes, z, size,  gamma,kern_hpgb, sigma, rb_radius,hyb_offset,
                                  p_min, p_max, norm_int,
-                                 rollingball, lowpass,  match_hist, subtract, divide)
+                                 rollingball, lowpass,  match_hist, subtract, divide, tophat_raw)
                 futures[fut] = path
 
             for fut in as_completed(futures):

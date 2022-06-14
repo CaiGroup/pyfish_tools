@@ -41,10 +41,11 @@ lowpass = True #bool to perform 2d lowpass gaussian blurring
 match_hist=False #bool to boost background blurred image for high pass gaussian
 subtract=True #bool to perform high pass gaussian filter
 divide=False #bool to even out illumination
+tophat_raw=False#bool to perform tophat on raw image before any other preprocessing steps
 
 correct_many(files, correction_type = correction_type, stack_bkgrd=stack_bkgrd, swapaxes=swapaxes, 
              z=z, size=size, gamma=gamma, kern_hpgb=kern_hpgb,
              sigma=sigma, rb_radius=rb_radius, p_min=p_min, p_max=p_max, norm_int=norm_int, 
              hyb_offset=hyb_offset, rollingball=rollingball, lowpass=lowpass, match_hist=match_hist, 
-             subtract=subtract, divide=divide)
+             subtract=subtract, divide=divide, tophat_raw=tophat_raw)
 
