@@ -87,8 +87,8 @@ def background_correct_image(stack, correction_algo, stack_bkgrd=None, z=2, size
             #apply correction
             if correction_algo != LSR_Backgound_Correction:
                 if i == (z_slice.shape[0]-1):
-                    correction_algo = LSR_Backgound_Correction
-                    corrected_channel = correction_algo(channel)
+                    correction_algo_dapi = LSR_Backgound_Correction
+                    corrected_channel = correction_algo_dapi(channel)
                 else:
                     if correction_algo == Gaussian_and_Gamma_Correction:
                         corrected_channel = correction_algo(channel, gamma, sigma, kern,
