@@ -1,6 +1,6 @@
 """
 authors: Katsuya Lex Colon, Shaan Sekhon, and Anthony Linares
-updated: 06/13/22
+updated: 06/20/22
 group: Cai Lab
 """
 #image processing
@@ -32,7 +32,7 @@ import warnings
 from concurrent.futures import ProcessPoolExecutor, as_completed
 warnings.filterwarnings("ignore")
 
-def background_correct_image(stack, correction_algo, stack_bkgrd=None, z=2, size=2048, 
+def background_correct_image(stack, correction_algo, stack_bkgrd=None, 
                              gamma = 1.4, kern=5, sigma=40, match_hist =True, 
                              subtract=True, divide=False, tophat_raw=False):
     '''
@@ -43,8 +43,6 @@ def background_correct_image(stack, correction_algo, stack_bkgrd=None, z=2, size
    stack = raw image
    correction_algo = SigmaClipping_and_Gamma_C,Gaussian_and_Gamma_Correction, and LSR_Backgound_Correction
    stack_bkgrd = initial or final background image array
-   z = number of z slices
-   size = image size
    gamma = gamma enhancment values
    kern = kernel size
    sigma = sigma value for gaussian blurring
@@ -57,9 +55,10 @@ def background_correct_image(stack, correction_algo, stack_bkgrd=None, z=2, size
     #check z's
     if len(stack.shape) == 3:
         channels = stack.shape[0]
-        stack = stack.reshape(z,channels,size,size)
+        size = stack.shape[1]
+        stack = stack.reshape(1,channels,size,size)
         if type(stack_bkgrd) != type(None):
-            stack_bkgrd = stack_bkgrd.reshape(z,channels,size,size)
+            stack_bkgrd = stack_bkgrd.reshape(1,channels,size,size)
     
     #run tophat on raw image if desired
     if tophat_raw == True:
@@ -69,10 +68,11 @@ def background_correct_image(stack, correction_algo, stack_bkgrd=None, z=2, size
     if type(stack_bkgrd) != type(None):
         #only subtract non dapi channels
         len_ch = stack.shape[1]
+        size = stack.shape[2]
         stack_sub = util.img_as_int(stack[:,:len_ch-1,:,:])-util.img_as_int(stack_bkgrd[:,:len_ch-1,:,:])
         stack_sub[stack_sub<0]=0
         #add back dapi
-        dapi = stack[:,len_ch-1,:,:].reshape(z,1,size,size)
+        dapi = stack[:,len_ch-1,:,:].reshape(stack.shape[0],1,size,size)
         stack= np.concatenate((stack_sub,dapi),1)
     else:
         stack=stack
@@ -102,6 +102,7 @@ def background_correct_image(stack, correction_algo, stack_bkgrd=None, z=2, size
                 corrected_channel = np.asarray([np.uint16(i) for i in corrected_channel.flatten()]).reshape(corrected_channel.shape)
                 corrected_z_slice.append(corrected_channel)
         corrected_stack.append(corrected_z_slice)
+        
     return np.array(corrected_stack)
 
 def tophat_image(stack):
@@ -129,8 +130,10 @@ def tophat_image(stack):
     return stack
 
 def SigmaClipping_and_Gamma_C(image, gamma):
+    
     """Background Correction via Background Elimination 
     (estimated by sigma-clipped background), followed by Gamma Correction"""
+    
     sigma_clip = SigmaClip(sigma=3.)
     bkg_estimator = MedianBackground()
     bkg = Background2D(image, (30,30), filter_size=(3, 3),
@@ -142,7 +145,9 @@ def SigmaClipping_and_Gamma_C(image, gamma):
     return sigma_clipped_contrast_ench_Gamma_c
 
 def Gaussian_and_Gamma_Correction(image, gamma, sigma, kern = 5, match_hist =True, subtract=True, divide=False):
+    
     """ Background Correction via Background Elimination (estimated by Gaussian), followed by Gamma Correction"""
+    
     if (divide == False) and (subtract == True):
         #2d gaussian blur image
         image_blur = cv2.GaussianBlur(image,(kern,kern),sigma)
@@ -178,7 +183,9 @@ def Gaussian_and_Gamma_Correction(image, gamma, sigma, kern = 5, match_hist =Tru
     return contrast_ench_Gamma_c
 
 def LSR_Backgound_Correction(image):
+    
     """Edge-Dimming Correction via Least-Squares Regression"""
+    
     xx, yy = np.meshgrid(np.arange(0, image.shape[0]),np.arange(0, image.shape[1]))
     x_vals,y_vals = xx.flatten(),yy.flatten()
     center_x,center_y = int(image.shape[0]/2),int(image.shape[1]/2)
@@ -404,18 +411,14 @@ def deconvolute_one(image_path, sigma_hpgb = 1, kern_hpgb=5, kern_rl = 5,
         
     #perform background correction    
     if len(image.shape) ==4:
-        z=image.shape[0]
-        size = image.shape[2]
         print('background correction...')
         hpgb_image = background_correct_image(image,Gaussian_and_Gamma_Correction, 
-                                              stack_bkgrd, z, size, gamma, kern_hpgb, sigma_hpgb,
+                                              stack_bkgrd, gamma, kern_hpgb, sigma_hpgb,
                                               match_hist, subtract, divide, tophat_raw) 
     else:
-        z=1
-        size = image.shape[2]
         print('background correction...')
         hpgb_image = background_correct_image(image,Gaussian_and_Gamma_Correction, 
-                                              stack_bkgrd, z, size,gamma,kern_hpgb, sigma_hpgb,
+                                              stack_bkgrd, gamma,kern_hpgb, sigma_hpgb,
                                               match_hist, subtract, divide, tophat_raw) 
     #perform deconvolution
     print('deconvolution...')
@@ -491,8 +494,8 @@ def deconvolute_many(images, sigma_hpgb = 1, kern_hpgb = 5, kern_rl = 5,
                 path = futures[fut]
                 print(f'Path {path} completed after {time.time() - start} seconds')
                               
-def bkgrd_corr_one(image_path, correction_type = None, stack_bkgrd=None, swapaxes=False, 
-                   z=2, size=2048, gamma = 1.4, kern_hpgb=5, sigma = 40, rb_radius=5, hyb_offset=0, p_min=80,
+def bkgrd_corr_one(image_path, correction_type = None, stack_bkgrd=None, swapaxes=False
+                   , gamma = 1.4, kern_hpgb=5, sigma = 40, rb_radius=5, hyb_offset=0, p_min=80,
                    p_max = 99.999, norm_int = True, rollingball = False, 
                    lowpass=True, match_hist=True, subtract=True, divide=False, tophat_raw=False):
     """
@@ -504,8 +507,6 @@ def bkgrd_corr_one(image_path, correction_type = None, stack_bkgrd=None, swapaxe
     correction_type = which correction algo to use
     stack_bkgrd = 4 or 3d array of background image
     swapaxes=bool to swapaxes
-    z=number of z
-    size=x and y shape
     gamma = int for gamma enhancement
     kern_hpgb = kernel size for hpgb 
     sigma = number of sigmas for hpgb
@@ -547,20 +548,22 @@ def bkgrd_corr_one(image_path, correction_type = None, stack_bkgrd=None, swapaxe
         image = pil_imread(image_path, swapaxes=False)
         if len(image.shape) == 3:
             channels = image.shape[0]
-            image = image.reshape(z,channels,size,size)
+            size=image.shape[1]
+            image = image.reshape(1,channels,size,size)
         if type(stack_bkgrd) != type(None):
             bkgrd = pil_imread(stack_bkgrd, swapaxes=False)
             if len(bkgrd.shape)==3:
-                bkgrd = bkgrd.reshape(z,channels,size,size)
+                size=bkgrd.shape[1]
+                bkgrd = bkgrd.reshape(1,channels,size,size)
     
     #background correct
     if type(stack_bkgrd) != type(None):
         corr_img = background_correct_image(image, correction_type, bkgrd, 
-                                            z, size, gamma, kern_hpgb, sigma, match_hist, 
+                                            gamma, kern_hpgb, sigma, match_hist, 
                                             subtract, divide, tophat_raw)
     else:
         corr_img = background_correct_image(image, correction_type, stack_bkgrd,
-                                            z, size, gamma, kern_hpgb, sigma, 
+                                            gamma, kern_hpgb, sigma, 
                                             match_hist, subtract, divide, tophat_raw)
             
     #do rolling ball subtraction
@@ -590,7 +593,7 @@ def bkgrd_corr_one(image_path, correction_type = None, stack_bkgrd=None, swapaxe
         tf.imwrite(str(output_path), corr_img)
 
 def correct_many(images, correction_type = None, stack_bkgrd=None, swapaxes=False,
-                 z=2, size=2048, gamma = 1.4,kern_hpgb=5, sigma=40, rb_radius=5, hyb_offset=0,p_min=80,
+                 gamma = 1.4,kern_hpgb=5, sigma=40, rb_radius=5, hyb_offset=0,p_min=80,
                  p_max = 99.999, norm_int = True,
                  rollingball=False, lowpass = True, match_hist=True, subtract=True, divide=False, tophat_raw=False):
     """
@@ -602,8 +605,6 @@ def correct_many(images, correction_type = None, stack_bkgrd=None, swapaxes=Fals
     correction_type = which correction algo to use
     stack_bkgrd = 4 or 3d array of background image
     swapaxes=bool to swapaxes
-    z=number of z
-    size=x and y shape
     gamma = int for gamma enhancement
     kern_hpgb = kernel size for hpgb 
     sigma = number of sigmas for hpgb
@@ -623,7 +624,7 @@ def correct_many(images, correction_type = None, stack_bkgrd=None, swapaxes=Fals
     start = time.time()
     
     if type(images) != list:
-        bkgrd_corr_one(images, correction_type,stack_bkgrd, swapaxes, z, size,  
+        bkgrd_corr_one(images, correction_type,stack_bkgrd, swapaxes,  
                        gamma, kern_hpgb,sigma, rb_radius, hyb_offset, p_min,
                        p_max, norm_int, rollingball, 
                        lowpass,  match_hist, subtract, divide, tophat_raw)
@@ -634,7 +635,7 @@ def correct_many(images, correction_type = None, stack_bkgrd=None, swapaxes=Fals
             futures = {}
             for path in images:
                 fut = exe.submit(bkgrd_corr_one, path, correction_type, stack_bkgrd,
-                                 swapaxes, z, size,  gamma,kern_hpgb, sigma, rb_radius,hyb_offset,
+                                 swapaxes, gamma,kern_hpgb, sigma, rb_radius,hyb_offset,
                                  p_min, p_max, norm_int,
                                  rollingball, lowpass,  match_hist, subtract, divide, tophat_raw)
                 futures[fut] = path
