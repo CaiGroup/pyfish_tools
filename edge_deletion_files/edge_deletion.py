@@ -50,7 +50,7 @@ def edge_deletion(img_src, output_dir = None, have_seg_img = True):
         #read in shift
         shift = np.loadtxt(str(shift_path/pos_name))
         #apply shift to mask
-        new_masks_2 = ndimage.shift(new_masks,shift)
+        new_masks_2 = ndimage.shift(new_masks,shift.astype(int), order=3)
         #remove shift artifacts
         artifacts = set(np.unique(new_masks_2)) - set(np.unique(new_masks))
         for val in artifacts:
