@@ -1,3 +1,9 @@
+"""
+author: Katsuya Lex Colon
+group: Cai Lab
+date:05/01/2022
+"""
+
 #import gen packages
 import pandas as pd
 import numpy as np
