@@ -148,7 +148,7 @@ def correlation(mtx,mtx_ref, label_x=None, label_y=None, title=None,
         anno_r = (min(np.log2(comb_2["Counts ref"]).values),max_y-ytick_interval)
         plt.annotate(f"Pearson's r= {round(r,2)}", anno_pear, fontsize=12)
         plt.annotate(f"Efficiency = {round(m,2)}", anno_r, fontsize=12)
-        plt.title("All Channels", fontweight="bold")
+        plt.title(title, fontweight="bold")
         sns.despine()
         plt.show()
     
