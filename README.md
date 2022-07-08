@@ -4,17 +4,17 @@ Generalized and fully python-based pipeline for the analysis of various seqFISH 
 ## Important Dependencies
 - python >= 3.7 (3.7 preferred)
 
-## Setup conda enviroment by running the following command:
+## Setup conda enviroment
 ```
 conda env create -f python3.7.yml
 ```
 
-## webfish_tools soft link
+## Webfish_tools soft link
 Go to your python enviroment 
 ```
 cd ~/miniconda3/envs/python3.7/lib/python3.7/site-packages
 ```
-Create a soft link with the following
+Create a soft link 
 ```
 ln -s /groups/CaiLab/personal/python_env/lib/python3.9/site-packages/webfish_tools ./
 ```
@@ -23,6 +23,8 @@ ln -s /groups/CaiLab/personal/python_env/lib/python3.9/site-packages/webfish_too
 ```
 cp -r /path/to/seqFISH_datapipeline /path/to/raw/images/notebook_pyfiles
 ```
+If you want something added to this github repo, let Katsuya Lex Colon know.
+
 ### Main Developers and Contributions (Go to them for any questions)
 - Katsuya Lex Colon
 	- Overall pipeline structure (batch files and job submission)
