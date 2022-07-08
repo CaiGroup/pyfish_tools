@@ -14,7 +14,7 @@ Go to your python enviroment
 ```
 cd ~/miniconda3/envs/python3.7/lib/python3.7/site-packages
 ```
-create a soft link with the following
+Create a soft link with the following
 ```
 ln -s /groups/CaiLab/personal/python_env/lib/python3.9/site-packages/webfish_tools ./
 ```
