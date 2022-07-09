@@ -382,7 +382,6 @@ dependencies:
     - jupyterlab-widgets==1.0.2
     - keras-nightly==2.5.0.dev2021032900
     - lxml==4.6.4
-    - matlabengineforpython==R2018a
     - metakernel==0.28.2
     - mpmath==1.2.1
     - nbclient==0.5.9
@@ -390,8 +389,6 @@ dependencies:
     - nest-asyncio==1.5.4
     - notebook==6.4.6
     - numpy==1.21.5
-    - oct2py==5.3.0
-    - octave-kernel==0.33.1
     - pip==22.1
     - postcode==0.1
     - prometheus-client==0.12.0
