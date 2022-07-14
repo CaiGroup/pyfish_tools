@@ -1,7 +1,7 @@
 """
 author: Katsuya Lex Colon
 group: Cai Lab
-updated: 06/20/22
+updated: 07/14/22
 """
 
 import pandas as pd
@@ -36,7 +36,7 @@ def calc_density(locations, mask, pos=0, counts_threshold = 100, pixel=0.11):
     df.columns = ["cell number","area"]
     
     #get gene density per cell
-    gene_density = pd.DataFrame()
+    gene_density = []
     for cell in locations["cell number"].unique():
         #check cell number if int, if not then drop since it maye have grabbed spots from other cells
         if (float(cell)).is_integer():
@@ -46,9 +46,12 @@ def calc_density(locations, mask, pos=0, counts_threshold = 100, pixel=0.11):
             gene_counts = gene_counts / df[df["cell number"] == cell].area.iloc[0]
             gene_counts = gene_counts/(pixel**2)
             final_counts = pd.DataFrame(gene_counts)
-            gene_density[f"cell{cell}_pos{pos}"] = gene_counts
+            final_counts.columns = [f"cell{cell}_pos{pos}"] 
+            gene_density.append(final_counts)
         else:
             continue
+            
+    gene_density = pd.concat(gene_density, axis=1)  
         
     return gene_density
 
