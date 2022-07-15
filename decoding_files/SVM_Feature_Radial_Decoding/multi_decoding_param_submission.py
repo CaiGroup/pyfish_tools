@@ -1,5 +1,7 @@
-import numpy as np
+
 import os
+os.environ['OPENBLAS_NUM_THREADS'] = '1'
+import numpy as np
 
 ###Here is a general template for multi parameter job submission for decoding
 
