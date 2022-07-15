@@ -1,5 +1,6 @@
-import numpy as np
 import os
+os.environ['OPENBLAS_NUM_THREADS'] = '1'
+import numpy as np
 
 #number of channels
 channel_list = [1,2,3,4]
