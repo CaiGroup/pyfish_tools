@@ -85,8 +85,8 @@ def get_optimum_fwhm(data, threshold,fwhm_range=(3,7)):
     Finds the best fwhm
     Parameters
     ----------
-    data = 2D array
-    threshold = initial threshold for testing
+    data: 2D array
+    threshold: initial threshold for testing
     """
     #generate fwhm to test
     fwhm_range = np.linspace(fwhm_range[0],fwhm_range[1],4)
@@ -110,9 +110,9 @@ def daofinder(data,  threshold, fwhm = 4.0):
     This function will return the output of daostarfinder
     Parameters
     ----------
-    data = 2D array
-    threshold = absolute intensity threshold
-    fwhm = full width half maximum
+    data: 2D array
+    threshold: absolute intensity threshold
+    fwhm: full width half maximum
     """
     #use daostarfinder to pick dots
     daofind = DAOStarFinder(fwhm=fwhm, threshold=threshold, brightest=None, exclude_border=True)
@@ -145,7 +145,7 @@ def get_alignment_dots(image, threshold=100, fwhm_range=(5,10)):
     
     #detect fiducials
     dots = daofinder(image, threshold=threshold, fwhm=fwhm)
-    xy = dots[["xcentroid","ycentroid"]].to_list()
+    xy = dots[["xcentroid","ycentroid"]].values.tolist()
     
     return xy
     
@@ -157,9 +157,9 @@ def nearest_neighbors(ref_points, fit_points, max_dist=None):
     
     Parameters
     ----------
-    ref_points = list containing x,y coord acting as reference 
-    fit_points = list containing x,y coord for the dots we want to align to ref
-    max_dist = number of allowed pixels two dots can be from each other
+    ref_points: list containing x,y coord acting as reference 
+    fit_points: list containing x,y coord for the dots we want to align to ref
+    max_dist:  number of allowed pixels two dots can be from each other
     
     Returns
     -------
@@ -198,10 +198,10 @@ def nearest_neighbors_transform(ref_points, fit_points, max_dist=None, ransac_th
     
     Parameters
     ----------
-    ref_points = list of x,y coord of ref
-    fit_points = list of x,y coord of raw
-    ransac_threshold = allowed error in ransac between ref and reprojected points to be considered inliers
-    max_dist = maximum allowed distance apart two points can be in neighbor search
+    ref_points: list of x,y coord of ref
+    fit_points: list of x,y coord of raw
+    ransac_threshold: allowed error in ransac between ref and reprojected points to be considered inliers
+    max_dist: maximum allowed distance apart two points can be in neighbor search
     
     Returns
     -------
@@ -236,11 +236,11 @@ def alignment_error(ref_points_affine, moving_points_affine,
 
     Parameters
     ----------
-    ref_points_affine = reference points used in transform
-    moving_points_affine = points that are moving to reference
-    ori_dist_list = original distance calculated prior to transform
-    tform_list = list of affine transform matrix
-    max_dist = number of allowed pixels two dots can be from each other
+    ref_points_affine: reference points used in transform
+    moving_points_affine: points that are moving to reference
+    ori_dist_list: original distance calculated prior to transform
+    tform_list: list of affine transform matrix
+    max_dist: number of allowed pixels two dots can be from each other
 
     Returns
     -------
@@ -290,11 +290,11 @@ def chromatic_corr_offsets(tiff_src,threshold_abs=500, max_dist=2,
     
     Parameters
     ----------
-    tiff_src = raw tiff source
-    threshold_abs = absolute threshold for intensity
-    max_dist = max distance for neighbor search
-    ransac_threshold = allowed error in ransac between ref and reprojected points to be considered inliers
-    swapaxes = bool to switch channel and z axes
+    tiff_src: raw tiff source
+    threshold_abs: absolute threshold for intensity
+    max_dist: max distance for neighbor search
+    ransac_threshold: allowed error in ransac between ref and reprojected points to be considered inliers
+    swapaxes: bool to switch channel and z axes
     
     Returns
     -------
@@ -322,7 +322,7 @@ def chromatic_corr_offsets(tiff_src,threshold_abs=500, max_dist=2,
             #max project image
             tiff_max = np.max(tiff[:,c,:,:], axis=0)
             #get alignment dots per channel
-            exp_dots = get_alignment_dots(tiff_max,threshold_abs=threshold_abs)
+            exp_dots = get_alignment_dots(tiff_max,threshold=threshold_abs)
             exp_dots_list.append(exp_dots)
             
     #get affine transform matrix (RANSAC) for each channel referenced to first channel or channel 488
@@ -485,9 +485,9 @@ def apply_chromatic_corr(tiff_srcs, tform_list, cores = 24, swapaxes=True, write
     
     Parameters 
     ----------
-    tiff_srcs = list of image paths
-    tform_list = list of affine transformation matrix
-    cores = number of cores to use
+    tiff_srcs: list of image paths
+    tform_list: list of affine transformation matrix
+    cores: number of cores to use
     
     Returns
     -------
