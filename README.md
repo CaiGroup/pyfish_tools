@@ -41,6 +41,7 @@ If you want something added to this github repo, let Katsuya Lex Colon know.
 	- Decoding scripts
 	- Post analysis scripts
 	- Codebook converter script
+	- Requested scripts
 	- Mask generation scripts (collaboration with Arun Chakravorty)
 	- Pre-processing scripts (collaboration with Shaan Sekhon, Michal Polonsky, and Anthony Linares)
 - Arun Chakravorty
