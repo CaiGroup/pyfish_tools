@@ -1,3 +1,9 @@
+"""
+author: Katsuya Lex Colon
+group: Cai Lab
+date: 07/25/22
+"""
+
 #basic analysis package
 import numpy as np
 import pandas as pd
@@ -178,12 +184,12 @@ def remove_all_fiducials(locations_src, fid_src, threshold=500, radius=1, swapax
     else:
         locations_parent = Path(locations_src).parent
         pos = locations_parent.name
-        while "dots_comb" not in os.listdir(locations_parent):
+        while "notebook_pyfiles" not in os.listdir(locations_parent):
             locations_parent = locations_parent.parent
         
         for ch in final["ch"].unique().astype(int):
             for z in final["z"].unique().astype(int):
-                output_dir = locations_parent /"dots_comb"/"fiducials_removed"/f"Channel_{ch}"/pos
+                output_dir = locations_parent /"notebook_pyfiles"/"fiducials_removed"/f"Channel_{ch}"/pos
                 output_dir.mkdir(parents=True, exist_ok=True)
                 output_path = output_dir / f"locations_z_{z}.csv"
                 final_slice = final[(final["z"]==z) & (final["ch"]==ch)]
