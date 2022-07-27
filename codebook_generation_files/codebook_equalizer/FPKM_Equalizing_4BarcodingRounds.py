@@ -435,7 +435,7 @@ def GenerateCodebook(pc, FPKMS):
     EmptyCodebook = CreateEmptyCodebook(FullCodebook)
     print('Created empty codebook')
     
-    HighExpression = AssignHighExpressionCodewords(FPKMS, 9)
+    HighExpression = AssignHighExpressionCodewords(FPKMS, pc)
     print('Assigned Highest Expressing Genes')
     
     Channel1Codebook = CreateFullCodebook(HighExpression, EmptyCodebook, FPKMS, pc)
