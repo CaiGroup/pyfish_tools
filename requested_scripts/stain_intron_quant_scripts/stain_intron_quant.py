@@ -172,6 +172,11 @@ for img in tqdm(path_to_images):
     img1 = pil_imread(img, swapaxes = swapaxes)
     max_img1 = np.max(img1, axis=0)
     images.append(max_img1)
+
+#make output dir and info text
+Path("./results").mkdir(parents=True,exist_ok=True)
+with open("./results/file_log.txt", "w+") as f:
+	f.close()
     
 print("Quantifying stains...")
 
