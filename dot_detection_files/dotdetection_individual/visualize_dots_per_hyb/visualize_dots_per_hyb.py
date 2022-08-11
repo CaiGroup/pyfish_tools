@@ -50,14 +50,18 @@ def plot_2d_locs_on_2d_image(df_locs_2d_1, img_2d, zmax=1000):
     
     fig.show()
     
-def plot_3d_locs_on_2d_image(df_tiff_1, channel, raw_src = None, zmax=10):
+def plot_3d_locs_on_2d_image(df_tiff_1, channel, raw_src = None, zmax=10, z_slice_range = (0,4)):
     
     #read image
     tiff = tf.imread(raw_src)
     if len(tiff.shape) == 3:
         tiff = tiff.reshape(1,tiff.shape[0],tiff.shape[1],tiff.shape[2])
-    print("shape =", tiff.shape)
-    
+    correct_shape = input(f"This image has {tiff.shape[1]} channels, is this correct (y/n)?")
+    if correct_shape != "y":
+        tiff = np.swapaxes(tiff, 0,1)
+    #get specific z slice
+    tiff = tiff[z_slice_range[0]:z_slice_range[1],:,:,:]
+    print(f"Your new shape is: {tiff.shape}")
     #plot
     for z in range(len(tiff[:,channel])):
         df_locs_2d_1 = df_tiff_1[(df_tiff_1.z > z-1) & (df_tiff_1.z < z+1)]
