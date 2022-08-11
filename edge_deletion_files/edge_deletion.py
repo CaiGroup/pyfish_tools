@@ -17,7 +17,7 @@ from pathlib import Path
 #parallel processing
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-def edge_deletion(img_src, output_dir = None, have_seg_img = True):
+def edge_deletion(img_src, output_dir = None, have_seg_img = True, border_width = 2):
     """
     This function will delete 2 pixels between masks that touch, and 
     remove masks that are on the borders
@@ -27,7 +27,7 @@ def edge_deletion(img_src, output_dir = None, have_seg_img = True):
     img_src = location of labeled image
     output_dir = string of output directory
     have_seg_img = bool for whether you have segmentation image
-    
+    border_width = how many pixels to delete
     """
     #read image
     labeled_img = tf.imread(img_src)
@@ -57,11 +57,13 @@ def edge_deletion(img_src, output_dir = None, have_seg_img = True):
             new_masks_2[new_masks_2==val]=0
         #delete edges again if shift caused a mask to be on the edge
         new_masks = clear_border(new_masks_2)
-        
-    #find borders of masks while identifying masks that touch
-    outline = find_boundaries(new_masks, mode='outer')
-    #invert boolean mask and delete masks that touch
-    final_masks = np.invert(outline) * new_masks
+    
+    num_deletion_rounds = border_width//2
+    for i in range(0, num_deletion_rounds): 
+        #find borders of masks while identifying masks that touch
+        outline = find_boundaries(new_masks, mode='thick')
+        #invert boolean mask and delete masks that touch
+        new_masks = np.invert(outline) * new_masks
     
     #make output directory
     output_dir = Path(output_dir)
@@ -74,9 +76,9 @@ def edge_deletion(img_src, output_dir = None, have_seg_img = True):
     output_path = output_dir / img_name
     
     #write mask
-    tf.imwrite(str(output_path), final_masks)
+    tf.imwrite(str(output_path), new_masks)
     
-def edge_deletion_parallel(img_src_list, output_dir=None,  have_seg_img = True):
+def edge_deletion_parallel(img_src_list, output_dir=None,  have_seg_img = True, border_width = 2):
     """
     Will perform edge deletion in parallel provided a list of image paths
     Parameters
@@ -84,13 +86,14 @@ def edge_deletion_parallel(img_src_list, output_dir=None,  have_seg_img = True):
     img_src_list = locations of labeled images
     output_dir = string of output directory
     have_seg_img = bool for whether you have segmentation image
+    border_width = how many pixels to delete
     """
     start = time.time()
     
     with ThreadPoolExecutor(max_workers=32) as exe:
         futures = {}
         for img in img_src_list:
-            fut = exe.submit(edge_deletion, img, output_dir = output_dir,  have_seg_img = have_seg_img)
+            fut = exe.submit(edge_deletion, img, output_dir = output_dir,  have_seg_img = have_seg_img, border_width = border_width)
             futures[fut] = img
 
         for fut in as_completed(futures):
