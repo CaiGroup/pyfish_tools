@@ -32,7 +32,8 @@ def split_image(img_src, tile_portion=0.1):
     img_slice = []
     for x in x_cut:
         for y in y_cut:
-            print(f"slice = {x}:{x+x_slice}, {y}:{y+y_slice}")
-            img_slice.append(img[:,:,x:x+x_slice,y:y+y_slice])
+            img_tile = img[:,:,x:x+x_slice,y:y+y_slice]
+            if img_tile[0,0,:,:].shape == (x_slice,y_slice):
+                img_slice.append(img_tile)
     
     return img_slice
