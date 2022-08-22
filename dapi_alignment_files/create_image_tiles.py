@@ -12,7 +12,7 @@ def split_image(img_src, tile_portion=0.1):
     assert tile_portion < 1, print("Tile portion must be less than 1.")
     
     #tiles
-    tiles = 1/tile_portion
+    tiles = 1//tile_portion
     
     #read image
     img = pil_imread(img_src, swapaxes=True)
