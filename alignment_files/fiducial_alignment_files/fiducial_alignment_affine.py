@@ -11,7 +11,6 @@ import time
 from skimage.feature import peak_local_max
 from photutils.centroids import centroid_2dg
 from scipy import ndimage
-from util import pil_imread
 import tifffile as tf
 import cv2
 import sklearn.neighbors as nbrs
@@ -28,6 +27,11 @@ warnings.filterwarnings("ignore")
 #plotting packages
 import matplotlib.pyplot as plt
 import seaborn as sns
+#enable relative import
+import sys 
+sys.path.append("..")
+#custom py files
+from helpers.util import pil_imread
 
 def get_region_around(im, center, size, edge='raise'):
     """

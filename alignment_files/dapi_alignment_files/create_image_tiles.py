@@ -1,4 +1,8 @@
-from util import pil_imread
+#enable relative import
+import sys 
+sys.path.append("..")
+#custom py files
+from helpers.util import pil_imread
 
 def split_image(img_src, tile_portion=0.1):
     """

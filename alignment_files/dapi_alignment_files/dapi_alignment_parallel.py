@@ -10,7 +10,11 @@ import tifffile as tf
 import numpy as np
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
-from util import pil_imread
+#enable relative import
+import sys 
+sys.path.append("..")
+#custom py files
+from helpers.util import pil_imread
 
 
 def dapi_alignment_single(ref,moving):
