@@ -31,6 +31,7 @@ If you want something added to this github repo, let Katsuya Lex Colon know.
 	- Dapi alignment scripts
 	- Chromatic aberration correction scripts (collaboration with Lincoln Ombelets)
 	- Fiducial alignment scripts
+	- Z alignment scripts
 	- Fiducial removal scripts
 	- Dot detection scripts
 	- Density estimation scripts
