@@ -494,8 +494,8 @@ def deconvolute_many(images, sigma_hpgb = 1, kern_hpgb = 5, kern_rl = 5,
                 path = futures[fut]
                 print(f'Path {path} completed after {time.time() - start} seconds')
                               
-def bkgrd_corr_one(image_path, correction_type = None, stack_bkgrd=None, swapaxes=False
-                   , gamma = 1.4, kern_hpgb=5, sigma = 40, rb_radius=5, hyb_offset=0, p_min=80,
+def bkgrd_corr_one(image_path, correction_type = None, stack_bkgrd=None, num_channels=4,
+                   gamma = 1.4, kern_hpgb=5, sigma = 40, rb_radius=5, hyb_offset=0, p_min=80,
                    p_max = 99.999, norm_int = True, rollingball = False, 
                    lowpass=True, match_hist=True, subtract=True, divide=False, tophat_raw=False):
     """
@@ -506,7 +506,7 @@ def bkgrd_corr_one(image_path, correction_type = None, stack_bkgrd=None, swapaxe
     image_path= path to image
     correction_type = which correction algo to use
     stack_bkgrd = 4 or 3d array of background image
-    swapaxes=bool to swapaxes
+    num_channels = number of expected channels for axes checking
     gamma = int for gamma enhancement
     kern_hpgb = kernel size for hpgb 
     sigma = number of sigmas for hpgb
@@ -540,21 +540,11 @@ def bkgrd_corr_one(image_path, correction_type = None, stack_bkgrd=None, swapaxe
         output_path.parent.mkdir(parents=True, exist_ok=True)
     
     #read images
-    if swapaxes == True:
-        image = pil_imread(image_path, swapaxes=True)
-        if type(stack_bkgrd) != type(None):
-            bkgrd = pil_imread(stack_bkgrd, swapaxes=True)
-    else:
-        image = pil_imread(image_path, swapaxes=False)
-        if len(image.shape) == 3:
-            channels = image.shape[0]
-            size=image.shape[1]
-            image = image.reshape(1,channels,size,size)
-        if type(stack_bkgrd) != type(None):
-            bkgrd = pil_imread(stack_bkgrd, swapaxes=False)
-            if len(bkgrd.shape)==3:
-                size=bkgrd.shape[1]
-                bkgrd = bkgrd.reshape(1,channels,size,size)
+    image = pil_imread(image_path)
+    if image.shape[1] != num_channels:
+        image = np.swapaxes(image, 0, 1)
+    if type(stack_bkgrd) != type(None):
+        bkgrd = pil_imread(stack_bkgrd, swapaxes=True)
     
     #background correct
     if type(stack_bkgrd) != type(None):
@@ -592,7 +582,7 @@ def bkgrd_corr_one(image_path, correction_type = None, stack_bkgrd=None, swapaxe
         print('writing image')
         tf.imwrite(str(output_path), corr_img)
 
-def correct_many(images, correction_type = None, stack_bkgrd=None, swapaxes=False,
+def correct_many(images, correction_type = None, stack_bkgrd=None, num_channels=4,
                  gamma = 1.4,kern_hpgb=5, sigma=40, rb_radius=5, hyb_offset=0,p_min=80,
                  p_max = 99.999, norm_int = True,
                  rollingball=False, lowpass = True, match_hist=True, subtract=True, divide=False, tophat_raw=False):
@@ -604,7 +594,7 @@ def correct_many(images, correction_type = None, stack_bkgrd=None, swapaxes=Fals
     image_path= path to image
     correction_type = which correction algo to use
     stack_bkgrd = 4 or 3d array of background image
-    swapaxes=bool to swapaxes
+    num_channels = number of expected channels for axes checking
     gamma = int for gamma enhancement
     kern_hpgb = kernel size for hpgb 
     sigma = number of sigmas for hpgb
@@ -624,7 +614,7 @@ def correct_many(images, correction_type = None, stack_bkgrd=None, swapaxes=Fals
     start = time.time()
     
     if type(images) != list:
-        bkgrd_corr_one(images, correction_type,stack_bkgrd, swapaxes,  
+        bkgrd_corr_one(images, correction_type,stack_bkgrd, num_channels,  
                        gamma, kern_hpgb,sigma, rb_radius, hyb_offset, p_min,
                        p_max, norm_int, rollingball, 
                        lowpass,  match_hist, subtract, divide, tophat_raw)
@@ -635,7 +625,7 @@ def correct_many(images, correction_type = None, stack_bkgrd=None, swapaxes=Fals
             futures = {}
             for path in images:
                 fut = exe.submit(bkgrd_corr_one, path, correction_type, stack_bkgrd,
-                                 swapaxes, gamma,kern_hpgb, sigma, rb_radius,hyb_offset,
+                                 num_channels, gamma,kern_hpgb, sigma, rb_radius,hyb_offset,
                                  p_min, p_max, norm_int,
                                  rollingball, lowpass,  match_hist, subtract, divide, tophat_raw)
                 futures[fut] = path

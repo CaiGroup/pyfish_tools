@@ -402,7 +402,7 @@ def chromatic_corr_offsets(tiff_src,threshold_abs=500, max_dist=2,
         
     return transformed_image, error, tform_list
 
-def apply_tform(img_src, tform_list, swapaxes=False, write = True):
+def apply_tform(img_src, tform_list, num_channels = 4, write = True):
     
         """
         This function will apply the transformation matrix obtained from chromatic_corr_offsets() to an image.
@@ -411,6 +411,7 @@ def apply_tform(img_src, tform_list, swapaxes=False, write = True):
         ----------
         img_src: path to image
         tform_list: list of transformation matricies
+        num_channels: number of channels expected in image
         write: bool to write image
         
         Returns
@@ -428,7 +429,9 @@ def apply_tform(img_src, tform_list, swapaxes=False, write = True):
         output_path.parent.mkdir(parents=True, exist_ok=True)
         
         #read image
-        tiff = pil_imread(img_src, swapaxes=swapaxes)
+        tiff = pil_imread(img_src)
+        if tiff.shape[1] != num_channels:
+            tiff = np.swapaxes(tiff, 0, 1)
 
         #apply tform to each channel and across z 
         corr_stack = []
@@ -479,7 +482,7 @@ def apply_tform(img_src, tform_list, swapaxes=False, write = True):
         else:
             return transformed_image
             
-def apply_chromatic_corr(tiff_srcs, tform_list, cores = 24, swapaxes=True, write = True):
+def apply_chromatic_corr(tiff_srcs, tform_list, cores = 24, num_channels = 4, write = True):
     """
     This function will apply chromatic aberration correction of supplied list of images.
     
@@ -488,6 +491,8 @@ def apply_chromatic_corr(tiff_srcs, tform_list, cores = 24, swapaxes=True, write
     tiff_srcs: list of image paths
     tform_list: list of affine transformation matrix
     cores: number of cores to use
+    num_channels: number of channels expected in image
+    write: bool to write image
     
     Returns
     -------
@@ -499,13 +504,13 @@ def apply_chromatic_corr(tiff_srcs, tform_list, cores = 24, swapaxes=True, write
     
     #check if it is only 1 image
     if type(tiff_srcs) != list:
-        apply_tform(tiff_srcs, tform_list, swapaxes=swapaxes, write = write)
+        apply_tform(tiff_srcs, tform_list, num_channels=num_channels, write = write)
         print(f'Path {tiff_srcs} completed after {(time.time() - start)/60} minutes')
     else:
         with ProcessPoolExecutor(max_workers=cores) as exe:
             futures = {}
             for path in tiff_srcs:
-                fut = exe.submit(apply_tform, path, tform_list, swapaxes=swapaxes, write=write)
+                fut = exe.submit(apply_tform, path, tform_list, num_channels=num_channels, write=write)
                 futures[fut] = path
             for fut in as_completed(futures):
                 path = futures[fut]

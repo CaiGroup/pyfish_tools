@@ -3,7 +3,7 @@ os.environ['OPENBLAS_NUM_THREADS'] = '1'
 import numpy as np
 
 #number of channels
-channel_list = [1,2,3,4]
+channel_list = [1,2,3]
 
 #submit multiple channels 
 for channel in channel_list:
@@ -15,7 +15,7 @@ for channel in channel_list:
         f.write("#SBATCH --mem=50G\n") # RAM amount
         f.write("#SBATCH --cpus-per-task=12\n") #number of cpus
         f.write("#SBATCH --time=02:00:00\n") #how much time
-        f.write("#SBATCH --array=0-74\n") #pos range
+        f.write("#SBATCH --array=0-65\n") #pos range
         f.write("pwd; hostname; date\n") #output path, hostname, date
         f.write("echo This is task $SLURM_ARRAY_TASK_ID\n") #output task id
         f.write("source ~/miniconda3/bin/activate\n") #activate source

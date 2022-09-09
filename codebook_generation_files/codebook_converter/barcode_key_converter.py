@@ -1,59 +1,113 @@
 """
 author: Katsuya Colon
 group: Cai Lab
-updated: 01/01/22
+updated: 09/08/22
 """
-
 
 import numpy as np
 import pandas as pd
 
-def barcode_key_converter_within(codebook, ch=1):
-    """This function is used to convert barcode key for within channel encodings
-    
-    Parameters
-    -----------
-    codebook = the codebook as csv
-    num_hybs = number of hybs
-    num_barcodes = number of barcodes
-    ch = which channel this barcode key corresponds to
-    
-    Returns
-    -------
-    df = dataframe showing when the genes should appear
+class barcode_key_converter:
     """
-    #get number of readout sites
-    num_barcodes = len(codebook.columns)
+    General python class function to convert barcode key.
+    """
     
-    #get number of total hybs
-    num_hybs = np.max(codebook.iloc[:,0])*num_barcodes
-    
-    #generate table containing string of zeros
-    table = np.zeros(shape=(len(codebook), num_hybs)).astype(int)
-    
-    #calculate offset for table
-    offset = int(num_hybs/num_barcodes)
-    
-    #get column names
-    col_names = codebook.columns
-    
-    #fill table
-    for i in range(len(codebook)):
-        ps_list = []
-        for j in range(num_barcodes):
-            ps_list.append(int(codebook.iloc[i][col_names[j]]))
-        k=0
-        for ps in ps_list:
-            table[i,(ps-1)+(offset*k)] = ch
-            k+=1
-            
-    codebook_converted = pd.DataFrame(table)
-    codebook_converted.index = codebook.index
+    def __init__(self, codebook, num_encoded_channels=3):
+        self.codebook = codebook
+        self.num_encoded_channels = num_encoded_channels
+        
+    def within(self):
+        """
+        This function is used to convert barcode key for within channel encodings.
+        """
+        #get channel info
+        ch = input("which channel slice does this codebook belong to? (1,2,3,4): ")
+        
+        #get number of readout sites
+        num_barcodes = len(self.codebook.columns)
 
-    return codebook_converted
+        #get number of total hybs
+        num_hybs = np.max(self.codebook.iloc[:,0])*num_barcodes
+
+        #generate table containing string of zeros
+        table = np.zeros(shape=(len(self.codebook), num_hybs)).astype(int)
+
+        #calculate offset for table
+        offset = int(num_hybs/num_barcodes)
+
+        #get column names
+        col_names = self.codebook.columns
+
+        #fill table
+        for i in range(len(codebook)):
+            ps_list = []
+            for j in range(num_barcodes):
+                ps_list.append(int(self.codebook.iloc[i][col_names[j]]))
+            k=0
+            for ps in ps_list:
+                table[i,(ps-1)+(offset*k)] = ch
+                k+=1
+
+        codebook_converted = pd.DataFrame(table)
+        codebook_converted.index = codebook.index
+
+        return codebook_converted
+
+    def across(self):
+        """
+        A barcode key converter for across channel encodings.
+        """
+        #get info regarding scheme
+        num_pcs = np.max(self.codebook.values[:,0])
+        pseudocolors = np.arange(1,num_pcs+1,1)
+        num_sites = len(self.codebook.columns)
+        num_hybs = int(num_pcs/self.num_encoded_channels) * num_sites
+
+        #table for new codebook
+        table = np.zeros(shape=(len(self.codebook), num_hybs)).astype(int)
+
+        #generate channel table
+        channel_scheme = np.zeros(shape=((int(num_hybs/num_sites)),self.num_encoded_channels))
+        k=0
+        for i in range(len(channel_scheme)):
+            for j in range(len(channel_scheme[0])):
+                channel_scheme[i,j] = pseudocolors[k]
+                k += 1
+        pos_scheme = channel_scheme.astype(int)
+        channel_scheme = channel_scheme.T.astype(int)
+
+        #convert channel table to dictionary
+        channel_dict = {}
+        for i in range(len(channel_scheme)):
+            for channel in channel_scheme[i]:
+                channel_dict.update({channel:i+1})
+
+        #make dictionary for position on table
+        pos_dict = {}
+        for i in range(len(pos_scheme)):
+            for pos in pos_scheme[i]:
+                pos_dict.update({pos:i})
+
+        #fill table
+        offset = int(num_hybs/num_sites)
+        col_names = self.codebook.columns
+        for i in range(len(self.codebook)):
+            ps_list = []
+            for j in range(num_sites):
+                ps_list.append(int(self.codebook.iloc[i][col_names[j]]))
+            table[i,pos_dict[ps_list[0]]] = channel_dict[ps_list[0]]
+            table[i,pos_dict[ps_list[1]]+offset] = channel_dict[ps_list[1]]
+            table[i,pos_dict[ps_list[2]]+(offset*2)] = channel_dict[ps_list[2]]
+            table[i,pos_dict[ps_list[3]]+(offset*3)] = channel_dict[ps_list[3]]
+
+        codebook_converted = pd.DataFrame(table)
+        codebook_converted.index = self.codebook.index
+
+        return codebook_converted
 
 def dash_barcodekey_converter(codebook, hybcycle_code_1, hybcycle_code_2):
-    """A barcode key converter for dash codebook
+    """
+    A barcode key converter for dash codebook
     
     Parameters
     ----------
@@ -115,61 +169,3 @@ def dash_barcodekey_converter(codebook, hybcycle_code_1, hybcycle_code_2):
     df = df.set_index("Genes")
     
     return df
-
-def barcode_key_converter_across(codebook, num_hybs = 12, num_barcodes = 4, num_channels=4):
-    """A barcode key converter for across channel cencodings
-    Parameters
-    ----------
-    codebook = the across channel codebook
-    num_hybs = number of total hybs
-    num_barcodes = total number of barcodes
-    num_channels = number of total channels
-    
-    Return
-    -------
-    df = dataframe showing when the genes should appear
-    """
-    
-    #table for new codebook
-    table = np.zeros(shape=(len(codebook), num_hybs)).astype(int)
-    
-    #generate channel table
-    num_pcs = (num_hybs/num_barcodes)*num_channels
-    pseudocolors = np.arange(1,num_pcs+1,1)
-    channel_scheme = np.zeros(shape=((int(num_hybs/num_barcodes)),num_channels))
-    k=0
-    for i in range(len(channel_scheme)):
-        for j in range(len(channel_scheme[0])):
-            channel_scheme[i,j] = pseudocolors[k]
-            k += 1
-    pos_scheme = channel_scheme.astype(int)
-    channel_scheme = channel_scheme.T.astype(int)
-    
-    #convert channel table to dictionary
-    channel_dict = {}
-    for i in range(len(channel_scheme)):
-        for channel in channel_scheme[i]:
-            channel_dict.update({channel:i+1})
-            
-    #make dictionary for position on table
-    pos_dict = {}
-    for i in range(len(pos_scheme)):
-        for pos in pos_scheme[i]:
-            pos_dict.update({pos:i})
-    
-    #fill table
-    offset = int(num_hybs/num_barcodes)
-    for i in range(len(codebook)):
-        ps1 = codebook.iloc[i]["Hyb1"]
-        ps2 = codebook.iloc[i]["Hyb2"]
-        ps3 = codebook.iloc[i]["Hyb3"]
-        ps4 = codebook.iloc[i]["Hyb4"]
-        table[i,pos_dict[ps1]] = channel_dict[ps1]
-        table[i,pos_dict[ps2]+offset] = channel_dict[ps2]
-        table[i,pos_dict[ps3]+(offset*2)] = channel_dict[ps3]
-        table[i,pos_dict[ps4]+(offset*3)] = channel_dict[ps4]
-
-    codebook_converted = pd.DataFrame(table)
-    codebook_converted.index = codebook["Genes"]
-
-    return codebook_converted
