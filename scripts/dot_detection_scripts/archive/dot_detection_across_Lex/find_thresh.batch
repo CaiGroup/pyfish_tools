@@ -1,0 +1,16 @@
+#!/bin/bash
+
+#SBATCH --ntasks=1
+#SBATCH --mem=50G
+#SBATCH --cpus-per-task=20
+#SBATCH --time=03:00:00
+#SBATCH --array=0-11
+
+pwd; hostname; date
+echo This is task $SLURM_ARRAY_TASK_ID
+
+source ~/miniconda3/bin/activate
+
+python batch_thresh.py
+
+date

@@ -1,0 +1,18 @@
+#!/bin/bash
+
+#SBATCH --ntasks=1
+#SBATCH --mem=25G
+#SBATCH --cpus-per-task=8
+#SBATCH --time=5:00:00
+#SBATCH --array=0-40
+
+pwd; hostname
+
+echo This is task $SLURM_ARRAY_TASK_ID
+
+source ~/miniconda3/bin/activate
+
+conda activate python3.7
+
+python feature_radial_decoding_batch.py
+

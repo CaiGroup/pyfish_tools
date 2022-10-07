@@ -1,0 +1,17 @@
+/central/groups/CaiLab/personal/Lex/raw/150genes3bind_040622/notebook_pyfiles/decoding_files/SVM_Feature_Radial_Decoding
+hpc-89-14.cm.cluster
+This is task 0
+This is task 0
+Number of features in dataset = 6
+Mean of features = [ 3.15313251e+00  2.82047848e-01  1.39840240e+01  4.53813848e-01
+ -3.47632206e-02 -9.04931471e-03]
+Variance of features = [4.38040423e+00 3.08885793e-02 4.57388356e+00 2.94881410e-04
+ 8.36604453e-02 4.72314309e-02]
+Performing hyperparameter optimization totalling 720 fits...
+The best parameters are {'C': 35111.917342151275, 'gamma': 0.0035111917342151274} with a score of 0.70
+Model building took 0.65 min and is now being applied to test set.
+Label classification accuracy: 0.71
+Generating probabilities for each dot...
+Probabilities assigned, Total time = 1.17 min
+Will now begin decoding...
+This task took 5.54 min
