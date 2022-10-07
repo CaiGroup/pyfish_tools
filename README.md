@@ -19,10 +19,12 @@ Create a soft link
 ln -s /groups/CaiLab/personal/python_env/lib/python3.9/site-packages/webfish_tools ./
 ```
 
-### Copy the pipeline folder in your raw images directory. 
+### Copy the pipeline folder into your raw images directory. 
 ```
 cp -r /path/to/seqFISH_datapipeline /path/to/raw/images/
 ```
+Outputs would be generated into ./seqFISH_datapipeline/output directory
+
 If you want something added to this github repo, let Katsuya Lex Colon know.
 
 ### Main Developers and Contributions (Go to them for any questions)
