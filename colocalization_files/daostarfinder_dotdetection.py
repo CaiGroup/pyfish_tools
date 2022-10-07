@@ -114,7 +114,7 @@ def get_region_around(im, center, size, edge='raise'):
     return region
     
 def dot_detection(img_src, HybCycle=0, size_cutoff=3, 
-                  threshold=0.02,channel=1, swapaxes=False):
+                  threshold=0.02,channel=1, num_channels=4):
     
     """
     Perform dot detection on image using daostarfinder.
@@ -125,7 +125,7 @@ def dot_detection(img_src, HybCycle=0, size_cutoff=3,
     HybCycle = which hybcycle the image belongs to
     size_cutoff = number of standard deviation away from mean size area
     threshold = absolute pixel intensity the spot must be greater than
-    channel = which channel to look at (1-4)
+    num_channels = number of channels expected
     swapaxes = bool to flip channel and z axis
     
     Returns
@@ -134,9 +134,8 @@ def dot_detection(img_src, HybCycle=0, size_cutoff=3,
     """      
     
     #read image
-    if swapaxes == True:
-        img = pil_imread(img_src, swapaxes=True)
-    else:
+    img = pil_imread(img_src, swapaxes=True)
+    if img.shape[1] != num_channels:
         img = pil_imread(img_src, swapaxes=False)
 
     #using daostarfinder detection
@@ -250,7 +249,7 @@ def dot_detection(img_src, HybCycle=0, size_cutoff=3,
     return dots
  
 def dot_detection_parallel(img_src, size_cutoff=3, threshold=0.02,
-                           channel=1, swapaxes=False):
+                           channel=1,  num_channels=4):
     """
     This function will run dot detection in parallel, provided a list of images.
     
@@ -260,7 +259,7 @@ def dot_detection_parallel(img_src, size_cutoff=3, threshold=0.02,
     size_cutoff = number of standard deviation away from mean size area
     threshold = absolute pixel intensity the spot must be greater than
     channel = which channel to look at (1-4)
-    swapaxes = bool to flip channel and z axis
+    num_channels = number of channels expected
     
     Returns
     -------
@@ -287,7 +286,7 @@ def dot_detection_parallel(img_src, size_cutoff=3, threshold=0.02,
             HybCycle_mod = int(img_parent_cycle.split("_")[1])
             #dot detect
             fut = exe.submit(dot_detection, img_src=img, HybCycle=HybCycle_mod, size_cutoff=size_cutoff,
-                             threshold=threshold,channel=channel,swapaxes=swapaxes)
+                             threshold=threshold,channel=channel,swapaxes=swapaxes, num_channels=num_channels)
             futures.append(fut)
             
     #collect result from futures objects

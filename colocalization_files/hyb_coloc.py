@@ -54,7 +54,7 @@ def colocalizing_dots(df1, df2, radius=1):
     return eff
 
 def last_hyb_coloc(img_src_1, img_src_2, channel=1, z = 0, pos=0, threshold= 0.02, hyb_list = [0,48],
-                   radii_list = [0.75,1,2], swapaxes=False):
+                   radii_list = [0.75,1,2], num_channels=4):
     """
     This function will return colocalization eff between hybs. 
     
@@ -74,9 +74,9 @@ def last_hyb_coloc(img_src_1, img_src_2, channel=1, z = 0, pos=0, threshold= 0.0
     
     #detect spots
     dots_1 = dot_detection(img_src_1, HybCycle=hyb_list[0], size_cutoff=None, 
-                           threshold=threshold, channel=channel, swapaxes=swapaxes)
+                           threshold=threshold, channel=channel, num_channels=num_channels)
     dots_2 = dot_detection(img_src_2, HybCycle=hyb_list[1], size_cutoff=None, 
-                           threshold=threshold, channel=channel, swapaxes=swapaxes)
+                           threshold=threshold, channel=channel, num_channels=num_channels)
     #isolate z
     dots_1 = dots_1[dots_1["z"]==z].reset_index(drop=True)
     dots_2 = dots_2[dots_2["z"]==z].reset_index(drop=True)
@@ -95,7 +95,7 @@ def last_hyb_coloc(img_src_1, img_src_2, channel=1, z = 0, pos=0, threshold= 0.0
 
 def coloc_parallel(img_dir = None, channel=1, z = 0, threshold= 0.02, 
                    radii_list = [0.75,1,2], num_pos=25,
-                   hyb_list = [0,48], swapaxes=False):
+                   hyb_list = [0,48], num_channels=4):
     
     """
     Run colocalization in parallel for each pos.
@@ -136,7 +136,7 @@ def coloc_parallel(img_dir = None, channel=1, z = 0, threshold= 0.02,
             #dot detect
             fut = exe.submit(last_hyb_coloc, img_src_1=img_src_1, img_src_2=img_src_2, 
                              channel=channel, z=z, pos=pos, threshold=threshold, hyb_list=hyb_list,
-                             radii_list=radii_list, swapaxes=swapaxes)
+                             radii_list=radii_list, num_channels=num_channels)
             futures.append(fut)
             
     #collect result from futures objects
