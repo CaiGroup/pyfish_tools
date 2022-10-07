@@ -27,7 +27,7 @@ first_radius = 1
 second_radius = 1.5
 third_radius = 2
 #how many allowed drops in calls 
-diff = 0
+diff = 1
 #how many times does a pseudocolor sequence must appear
 min_seed = 3
 #how many times does pseudocolor sequence must appear for highly expressed genes
