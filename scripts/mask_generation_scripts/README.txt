@@ -1,1 +1,0 @@
-If you are using a segmentation marker, please use the raw unaligned images for mask generation. Afterwards, run the edge deletion code. During edge deletion, the offsets generated from dapi alignment on your segmentation image will be used to shift the mask. 
