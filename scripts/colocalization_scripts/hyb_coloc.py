@@ -114,7 +114,7 @@ def coloc_parallel(img_dir = None, channel=1, z = 0, threshold= 0.02,
     parent = Path(img_dir)
     while "seqFISH_datapipeline" not in os.listdir(parent):
         parent = parent.parent
-    output_path = parent / "seqFISH_datapipeline"/ "hyb_colocalization"/ f"hyb_coloc_channel_{channel}.csv"
+    output_path = parent / "seqFISH_datapipeline"/ "output" /"hyb_colocalization"/ f"hyb_coloc_channel_{channel}.csv"
     output_path.parent.mkdir(parents=True, exist_ok=True)
     
     #coloc for multiple pos in parallel

@@ -422,7 +422,7 @@ def apply_tform(img_src, tform_list, num_channels = 4, write = True):
         while "seqFISH_datapipeline" not in os.listdir(parent):
             parent = parent.parent
         #create output path
-        output_folder = parent / "seqFISH_datapipeline" / "aberration_corrected"
+        output_folder = parent / "seqFISH_datapipeline" / "output" /"aberration_corrected"
         hybcycle = Path(img_src).parent.name
         output_path = output_folder / hybcycle / Path(img_src).name
         output_path.parent.mkdir(parents=True, exist_ok=True)

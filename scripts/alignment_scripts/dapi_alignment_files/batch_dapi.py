@@ -1,7 +1,11 @@
 from dapi_alignment_parallel import dapi_alignment_parallel
 from pathlib import Path
 import os
-from webfish_tools.util import find_matching_files
+#enable relative import
+import sys 
+sys.path.append("..")
+#custom py files
+from helpers.util import find_matching_files
 
 JOB_ID = os.getenv('SLURM_ARRAY_TASK_ID', 0)
 

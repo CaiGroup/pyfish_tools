@@ -1,7 +1,7 @@
 from chromatic_aberration_correction import chromatic_corr_offsets, apply_chromatic_corr
 from pathlib import Path
 import os
-from webfish_tools.util import find_matching_files
+from util import find_matching_files
 
 JOB_ID = os.getenv('SLURM_ARRAY_TASK_ID', 0)
 

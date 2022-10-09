@@ -373,7 +373,7 @@ def deconvolute_one(image_path, sigma_hpgb = 1, kern_hpgb=5, kern_rl = 5,
     parent = Path(image_path).parent
     while "seqFISH_datapipeline" not in os.listdir(parent):
         parent = parent.parent
-    output_dir = parent / "seqFISH_datapipeline" / "deconvoluted_images"
+    output_dir = parent / "seqFISH_datapipeline" /"output"/ "deconvoluted_images"
     hybcycle =  Path(image_path).parent.name
     output_path = output_dir / hybcycle / Path(image_path).name
     
@@ -519,7 +519,7 @@ def bkgrd_corr_one(image_path, correction_type = None, stack_bkgrd=None, num_cha
     parent = Path(image_path).parent
     while "seqFISH_datapipeline" not in os.listdir(parent):
         parent = parent.parent
-    output_dir = parent / "seqFISH_datapipeline" / "pre_processed_images"
+    output_dir = parent / "seqFISH_datapipeline" /"output"/ "pre_processed_images"
     hybcycle =  Path(image_path).parent.name
     output_path = output_dir / hybcycle / Path(image_path).name
     

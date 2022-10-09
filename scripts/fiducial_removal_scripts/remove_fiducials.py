@@ -185,7 +185,7 @@ def remove_all_fiducials(locations_src, fid_src, threshold=500, radius=1, num_ch
         
         for ch in final["ch"].unique().astype(int):
             for z in final["z"].unique().astype(int):
-                output_dir = locations_parent /"seqFISH_datapipeline"/"dots_detected"/ "fiducials_removed" /f"Channel_{ch}" /pos
+                output_dir = locations_parent /"seqFISH_datapipeline"/ "output" /"dots_detected"/ "fiducials_removed" /f"Channel_{ch}" /pos
                 output_dir.mkdir(parents=True, exist_ok=True)
                 output_path = output_dir / f"locations_z_{z}.csv"
                 final_slice = final[(final["z"]==z) & (final["ch"]==ch)]

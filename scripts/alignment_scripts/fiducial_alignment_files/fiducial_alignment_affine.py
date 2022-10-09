@@ -10,7 +10,6 @@ import time
 #image analysis packages
 from skimage.feature import peak_local_max
 from photutils.centroids import centroid_2dg
-from scipy import ndimage
 import tifffile as tf
 import cv2
 import sklearn.neighbors as nbrs
@@ -20,7 +19,6 @@ from scipy.stats import norm
 from concurrent.futures import ProcessPoolExecutor, as_completed
 #organization packages
 from pathlib import Path
-import glob
 #ignore warnings
 import warnings
 warnings.filterwarnings("ignore")

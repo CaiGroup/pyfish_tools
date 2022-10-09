@@ -1,7 +1,5 @@
 from svm_feature_radial_decoding import feature_radial_decoding
 import os
-import pandas as pd
-import numpy as np
 import glob
 import sys
 

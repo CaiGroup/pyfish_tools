@@ -35,7 +35,7 @@ def z_matching(image_dir, pos_number = 0):
     while "seqFISH_datapipeline" not in os.listdir(parent):
         parent = parent.parent
     
-    output_dir = parent / "seqFISH_datapipeline" / "z_matched_images"
+    output_dir = parent / "seqFISH_datapipeline" / "output"/ "z_matched_images"
     
     #adjust string path if missing "/"
     if image_dir[-1] != "/":

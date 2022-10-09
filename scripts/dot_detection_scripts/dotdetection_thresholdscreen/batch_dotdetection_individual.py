@@ -1,7 +1,7 @@
 from daostarfinder_dotdetection_screen import dot_detection_parallel
 from pathlib import Path
 import os
-from webfish_tools.util import find_matching_files
+from util import find_matching_files
 
 JOB_ID = os.getenv('SLURM_ARRAY_TASK_ID', 0)
 
