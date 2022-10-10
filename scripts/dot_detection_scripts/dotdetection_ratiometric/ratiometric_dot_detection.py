@@ -10,6 +10,7 @@ from util import pil_imread
 #image analysis
 from skimage.filters import threshold_local
 from photutils.detection import DAOStarFinder
+import cv2
 #general analysis
 import numpy as np
 import pandas as pd
@@ -21,6 +22,36 @@ from concurrent.futures import ProcessPoolExecutor
 #for ignoring warnings
 import warnings
 warnings.filterwarnings("ignore")
+
+def check_axis(img):
+    """
+    Determine if the img axis needs to be flipped if both channel and z axis is the same
+    Parameters
+    ----------
+    img = numpy 4d array
+    """
+    #performing normalized correlation analysis on expected dapi channel
+    ax1_list = []
+    for z in np.arange(0, img.shape[0]-1, 1):
+        ref_compressed = img[z][-1].astype(np.float32)
+        src_compressed = img[z+1][-1].astype(np.float32)
+        corr = cv2.matchTemplate(ref_compressed, src_compressed, cv2.TM_CCOEFF_NORMED)
+        ax1_list.append(corr)
+        
+    ax2_list = []
+    for z in np.arange(0, img.shape[1]-1, 1):
+        ref_compressed = img[-1][z].astype(np.float32)
+        src_compressed = img[-1][z+1].astype(np.float32)
+        corr = cv2.matchTemplate(ref_compressed, src_compressed, cv2.TM_CCOEFF_NORMED)
+        ax2_list.append(corr)
+     
+    #axis with highest correlation should be the correct shape    
+    correct_axis = np.argmax([np.mean(ax1_list), np.mean(ax2_list)])
+    
+    if correct_axis == 1:
+        img = np.swapaxes(img, 0, 1)
+    
+    return img
 
 def colocalizing_dots(df, radius=2, ch_seed=1):
     """
@@ -300,6 +331,8 @@ def ratiometric_dot_detection(img_src, HybCycle=0, size_cutoff=None,
     img = pil_imread(img_src, swapaxes=True)
     if img.shape[1] != num_channels:
         img = pil_imread(img_src, swapaxes=False)
+        if img.shape[0] == img.shape[1]:
+            img = check_axis(img)
         
     #exclude dapi channel
     img = img[:,:img.shape[1]-1,:,:]

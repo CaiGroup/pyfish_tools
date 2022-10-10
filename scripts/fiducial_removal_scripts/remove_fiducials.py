@@ -11,6 +11,7 @@ import pandas as pd
 from photutils.detection import DAOStarFinder
 from sklearn.neighbors import NearestNeighbors
 from util import pil_imread
+import cv2
 #parallel processing
 from concurrent.futures import ProcessPoolExecutor
 #organization packages
@@ -19,6 +20,36 @@ import os
 #for ignoring warnings
 import warnings
 warnings.filterwarnings("ignore")
+
+def check_axis(img):
+    """
+    Determine if the img axis needs to be flipped if both channel and z axis is the same
+    Parameters
+    ----------
+    img = numpy 4d array
+    """
+    #performing normalized correlation analysis on expected dapi channel
+    ax1_list = []
+    for z in np.arange(0, img.shape[0]-1, 1):
+        ref_compressed = img[z][-1].astype(np.float32)
+        src_compressed = img[z+1][-1].astype(np.float32)
+        corr = cv2.matchTemplate(ref_compressed, src_compressed, cv2.TM_CCOEFF_NORMED)
+        ax1_list.append(corr)
+        
+    ax2_list = []
+    for z in np.arange(0, img.shape[1]-1, 1):
+        ref_compressed = img[-1][z].astype(np.float32)
+        src_compressed = img[-1][z+1].astype(np.float32)
+        corr = cv2.matchTemplate(ref_compressed, src_compressed, cv2.TM_CCOEFF_NORMED)
+        ax2_list.append(corr)
+     
+    #axis with highest correlation should be the correct shape    
+    correct_axis = np.argmax([np.mean(ax1_list), np.mean(ax2_list)])
+    
+    if correct_axis == 1:
+        img = np.swapaxes(img, 0, 1)
+    
+    return img
 
 def get_optimum_fwhm(data, threshold):
     """
@@ -147,6 +178,8 @@ def remove_all_fiducials(locations_src, fid_src, threshold=500, radius=1, num_ch
     fiducials = pil_imread(fid_src, swapaxes=True)
     if fiducials.shape[1] != num_channels:
         fiducials = pil_imread(fid_src, swapaxes=False)
+        if fiducials.shape[0] == fiducials.shape[1]:
+            fiducials = check_axis(fiducials)
     
     #read in locations file
     locations = pd.read_csv(locations_src)

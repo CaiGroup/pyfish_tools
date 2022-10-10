@@ -60,7 +60,7 @@ def dapi_alignment_single(ref,moving):
     corr_stack = np.array(layer)
     del layer
     #write images
-    tf.imwrite(str(output_path),np.swapaxes(corr_stack,0,1))
+    tf.imwrite(str(output_path), corr_stack)
     #write shift
     pos = output_path.name.split("_")[1].replace(".ome.tif","_shift.txt")
     shift_output = output_path.parent/pos

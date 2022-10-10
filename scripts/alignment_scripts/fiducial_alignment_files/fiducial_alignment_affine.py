@@ -31,6 +31,36 @@ sys.path.append("..")
 #custom py files
 from helpers.util import pil_imread
 
+def check_axis(img):
+    """
+    Determine if the img axis needs to be flipped if both channel and z axis is the same
+    Parameters
+    ----------
+    img = numpy 4d array
+    """
+    #performing normalized correlation analysis on expected dapi channel
+    ax1_list = []
+    for z in np.arange(0, img.shape[0]-1, 1):
+        ref_compressed = img[z][-1].astype(np.float32)
+        src_compressed = img[z+1][-1].astype(np.float32)
+        corr = cv2.matchTemplate(ref_compressed, src_compressed, cv2.TM_CCOEFF_NORMED)
+        ax1_list.append(corr)
+        
+    ax2_list = []
+    for z in np.arange(0, img.shape[1]-1, 1):
+        ref_compressed = img[-1][z].astype(np.float32)
+        src_compressed = img[-1][z+1].astype(np.float32)
+        corr = cv2.matchTemplate(ref_compressed, src_compressed, cv2.TM_CCOEFF_NORMED)
+        ax2_list.append(corr)
+     
+    #axis with highest correlation should be the correct shape    
+    correct_axis = np.argmax([np.mean(ax1_list), np.mean(ax2_list)])
+    
+    if correct_axis == 1:
+        img = np.swapaxes(img, 0, 1)
+    
+    return img
+
 def get_region_around(im, center, size, edge='raise'):
     """
     This function will essentially get a bounding box around detected dots
@@ -384,6 +414,8 @@ def fiducial_alignment_single(tiff_src, ref_src,threshold_abs=500, max_dist=2, r
     ref = pil_imread(ref_src, swapaxes=True)
     if tiff.shape[1] != num_channels:
         tiff = pil_imread(tiff_src, swapaxes=False)
+        if tiff.shape[0] == tiff.shape[1]:
+            tiff = check_axis(tiff)
 
     #Get dots per channel 
     ref_dots_list = []
