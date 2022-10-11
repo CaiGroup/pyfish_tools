@@ -159,7 +159,7 @@ def dot_detection(img_src, HybCycle=0, size_cutoff=3,
     
     #read image
     img = pil_imread(img_src, swapaxes=True)
-    if img.shape[1] == num_channels:
+    if img.shape[1] != num_channels:
         img = pil_imread(img_src, swapaxes=False)
         if img.shape[0] == img.shape[1]:
             img = check_axis(img)
@@ -281,7 +281,7 @@ def dot_detection_parallel(img_src, size_cutoff=3, threshold=0.02,
     parent = Path(img_src[0]).parent
     while "seqFISH_datapipeline" not in os.listdir(parent):
         parent = parent.parent
-    output_folder = parent / "seqFISH_datapipeline"/ "dots_detected"/ f"Channel_{channel}" 
+    output_folder = parent / "seqFISH_datapipeline"/ "output" /"dots_detected"/ f"Channel_{channel}" 
     output_folder.mkdir(parents=True, exist_ok=True)
     
     #how many files

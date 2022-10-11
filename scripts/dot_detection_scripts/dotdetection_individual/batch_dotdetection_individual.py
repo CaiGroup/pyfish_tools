@@ -11,7 +11,7 @@ channel = int(sys.argv[1])
 
 print(f'This is task {JOB_ID}')
 #path to processed images
-directory = Path("/groups/CaiLab/personal/Lex/raw/090222_150genes_acrosschannel_3t3/notebook_pyfiles/pre_processed_images/")
+directory = Path("/groups/CaiLab/personal/Lex/raw/092222_150_nih_3t3/seqFISH_datapipeline/output/pre_processed_images/")
 position_name = f'MMStack_Pos{JOB_ID}.ome.tif'
 
 files, _, _ = find_matching_files(directory, 'HybCycle_{hyb}' + f'/{position_name}')

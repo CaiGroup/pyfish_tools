@@ -8,7 +8,7 @@ JOB_ID = os.getenv('SLURM_ARRAY_TASK_ID', 0)
 print(f'This is task {JOB_ID}')
 
 #paths for real image
-directory = Path("/groups/CaiLab/personal/Lex/raw/090222_150genes_acrosschannel_3t3/notebook_pyfiles/aberration_corrected")
+directory = Path("/groups/CaiLab/personal/Lex/raw/092222_150_nih_3t3/seqFISH_datapipeline/output/aberration_corrected")
 position_name = f'MMStack_Pos{JOB_ID}.ome.tif'
 
 files, _, _ = find_matching_files(directory, 'HybCycle_{hyb}' + f'/{position_name}')

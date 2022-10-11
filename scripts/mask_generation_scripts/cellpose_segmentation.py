@@ -6,24 +6,20 @@ date:09/08/22
 
 #general packages
 import plotly.express as px
-import tifffile as tf
 from pathlib import Path
 import numpy as np
-import time, os, sys, random
-from urllib.parse import urlparse
+import os
 import skimage.io
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 import matplotlib as mpl
-import glob
-import re
 from util import pil_imread
 from cellpose import plot
+from cellpose import core
+from cellpose import models
 mpl.rcParams['figure.dpi'] = 300
-from urllib.parse import urlparse
-import shutil
-#custom function
-import nuclear_cyto_match as ncm
+
+
 
 def plot_2d(img, zmax):
 
@@ -96,8 +92,8 @@ def plot_isolated_image(img, have_multiple_z = False, zmax=5000):
             plot_2d(img, zmax=zmax)
                       
                       
-def cellpose_settings(models, use_GPU):
-    
+def cellpose_settings(num_gpus=1):
+    core.use_gpu(gpu_number=num_gpus, use_torch=True)
     model_choice = input("Do you want to segment Nucleus or Cytoplasm (Type Cytoplasm or Nucleus): ") 
 
     if model_choice == "Cytoplasm":
@@ -105,7 +101,7 @@ def cellpose_settings(models, use_GPU):
     else:
         model_type = "nuclei"
 
-    model = models.Cellpose(gpu=use_GPU, model_type=model_type)
+    model = models.Cellpose(gpu=True, model_type=model_type)
     
     return model
      

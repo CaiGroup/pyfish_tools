@@ -13,7 +13,7 @@ JOB_ID = os.getenv('SLURM_ARRAY_TASK_ID', 0)
 print(f'This is task {JOB_ID}')
 
 #general path and position name
-directory = Path("/groups/CaiLab/personal/Lex/raw/092222_150_nih_3t3/notebook_pyfiles/dapi_aligned/")
+directory = Path("/groups/CaiLab/personal/Lex/raw/092222_150_nih_3t3/seqFISH_datapipeline/output/dapi_aligned/")
 position_name = f'MMStack_Pos{JOB_ID}.ome.tif'
 
 #use this for all hyb alignment

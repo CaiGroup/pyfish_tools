@@ -26,7 +26,7 @@ for channel in channel_list:
         f.write("echo This is task $SLURM_ARRAY_TASK_ID\n") #output task id
         f.write("source ~/miniconda3/bin/activate\n") #activate source
         f.write("conda activate python3.7\n") #activate conda env
-        f.write(f"python feature_radial_decoding_batch.py 0 {channel}\n") #run batch.py and feed in arguments
+        f.write(f"python feature_radial_decoding_batch_within.py 0 {channel}\n") #run batch.py and feed in arguments
         f.write("date\n")
         f.close()
 
