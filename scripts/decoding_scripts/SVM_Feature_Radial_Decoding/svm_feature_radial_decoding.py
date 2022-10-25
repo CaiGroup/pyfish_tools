@@ -342,7 +342,10 @@ def find_best_spot_combination(temp, tempscore, locations, neighbor_list, distan
         if len(get_barcode)==(num_barcodes-1):
             continue
         #if the codeword passes parity then end loop
-        elif (sum(get_barcode[:len(get_barcode)-1]) % pseudocolors) == get_barcode[-1]:
+        parity_code = sum(get_barcode[:len(get_barcode)-1]) % pseudocolors
+        if parity_code == 0:
+            parity_code = pseudocolors
+        elif parity_code == get_barcode[-1]:
             best = codes
             best_score = sorted_scores[i]
             best_dist = sorted_dist[i]
