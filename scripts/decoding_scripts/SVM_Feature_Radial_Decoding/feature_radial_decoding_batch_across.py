@@ -7,24 +7,24 @@ JOB_ID = os.getenv('SLURM_ARRAY_TASK_ID', 0)
 
 print(f'This is task {JOB_ID}')
 
-#path to dots
-locations_path = glob.glob(f"/groups/CaiLab/personal/Lex/raw/092222_150_nih_3t3/seqFISH_datapipeline/output/dots_detected/Channel_All/Pos{JOB_ID}/*")
-#general codebook path
-codebook_path = f"/groups/CaiLab/personal/Lex/raw/092222_150_nih_3t3/barcode_key/codebook_string_across.csv"
+#name of experimental directory
+exp_dir = "102322_10K_NIH3T3"
+#name of user
+user = "Lex"
 #number of readout sites
-num_barcodes = 4
+num_barcodes = 5
 #search radii
-first_radius = 1
+first_radius = 1.5
 second_radius = 1.5
 third_radius = 2
 #how many allowed drops in calls 
 diff = 1
 #how many times does a pseudocolor sequence must appear
-min_seed = 3
+min_seed = 4
 #how many times does pseudocolor sequence must appear for highly expressed genes
-high_exp_seed = 3
+high_exp_seed = 4
 #number of total hybs
-hybs = 8
+hybs = 20
 #probability cutoff for On dots (0-1). Lower the value the less stringent. Setting probability_cutoff=0 and desired_fdr=None, will output normal unfiltered data.
 probability_cutoff = 0.15
 #desired FDR (0-1). Could set to None if you would like to filter yourself.
@@ -37,8 +37,14 @@ include_undefined = False
 decode_high_exp_genes = True
 #do you want to perform an additional third round of decoding
 triple_decode = True
+#____________________________________________________________________________________________________________________________
+
+#path to dots
+locations_path = glob.glob(f"/groups/CaiLab/personal/{user}/raw/{exp_dir}/seqFISH_datapipeline/output/dots_detected/Channel_All/Pos{JOB_ID}/*")
+#general codebook path
+codebook_path = f"/groups/CaiLab/personal/{user}/raw/{exp_dir}/barcode_key/codebook_string_across.csv"
 #Where do you want to output the files
-output_dir = f"/groups/CaiLab/personal/Lex/raw/092222_150_nih_3t3/seqFISH_datapipeline/output/decoded/final_11p52_33_heg_svm_0p15_diff1_fdr5/Channel_All/Pos_{JOB_ID}"
+output_dir = f"/groups/CaiLab/personal/{user}/raw/{exp_dir}/seqFISH_datapipeline/output/decoded/final_{first_radius}{second_radius}{third_radius}_seed{min_seed}{high_exp_seed}_heg_svm_p{probability_cutoff*100}_diff{diff}_fdr{desired_fdr*100}/Channel_All/Pos_{JOB_ID}"
 
 if len(locations_path) > 1:
     for locations in locations_path:

@@ -95,10 +95,8 @@ class barcode_key_converter:
             ps_list = []
             for j in range(num_sites):
                 ps_list.append(int(self.codebook.iloc[i][col_names[j]]))
-            table[i,pos_dict[ps_list[0]]] = channel_dict[ps_list[0]]
-            table[i,pos_dict[ps_list[1]]+offset] = channel_dict[ps_list[1]]
-            table[i,pos_dict[ps_list[2]]+(offset*2)] = channel_dict[ps_list[2]]
-            table[i,pos_dict[ps_list[3]]+(offset*3)] = channel_dict[ps_list[3]]
+            for k in range(len(ps_list)):
+                table[i,pos_dict[ps_list[k]]+(offset*k)] = channel_dict[ps_list[k]]
 
         codebook_converted = pd.DataFrame(table)
         codebook_converted.index = self.codebook.index

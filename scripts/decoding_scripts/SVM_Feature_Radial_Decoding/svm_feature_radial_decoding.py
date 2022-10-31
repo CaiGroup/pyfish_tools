@@ -1,7 +1,7 @@
 """
 author: Katsuya Lex Colon
 group: Cai Lab
-updated: 06/13/22
+updated: 10/28/22
 """
 
 #general analysis packages
@@ -330,34 +330,80 @@ def find_best_spot_combination(temp, tempscore, locations, neighbor_list, distan
     sorted_codes = [possible_codes[index] for index in new_sorted_indicies]
     sorted_dist = [possible_code_distances[index] for index in new_sorted_indicies]
     
-    #check each codeword on whether it passes parity 
-    for i,codes in enumerate(sorted_codes):
-        potential = (locations.iloc[list(codes)].sort_values("hyb")["hyb"].values) + 1
-        pseudocolors = int(hybs/num_barcodes)
-        #convert into pseudocolor sequence
-        get_barcode = []
-        for k,ps in enumerate(potential):
-            get_barcode.append(ps - (k*pseudocolors))
-        #if a barcode is missing a pseudocolor then we can't do parity check
-        if len(get_barcode)==(num_barcodes-1):
-            continue
-        #if the codeword passes parity then end loop
-        parity_code = sum(get_barcode[:len(get_barcode)-1]) % pseudocolors
-        if parity_code == 0:
-            parity_code = pseudocolors
-        elif parity_code == get_barcode[-1]:
-            best = codes
-            best_score = sorted_scores[i]
-            best_dist = sorted_dist[i]
-            break
-            
-    #if none passed parity then just return first code since it is the best scoring
-    if "best" not in locals():
-        best = sorted_codes[0]
-        best_score = sorted_scores[0]
-        best_dist = sorted_dist[0]
+    #pseudocolor calculation will be dependent on whether it is across or within
+    if len(locations.ch.unique()) == 1:
+        #check each codeword on whether it passes parity 
+        for i,codes in enumerate(sorted_codes):
+            potential = (locations.iloc[list(codes)].sort_values("hyb")["hyb"].values) + 1
+            pseudocolors = int(hybs/num_barcodes)
+            #convert into pseudocolor sequence
+            get_barcode = []
+            for k,ps in enumerate(potential):
+                get_barcode.append(ps - (k*pseudocolors))
+            #if a barcode is missing a pseudocolor then we can't do parity check
+            if len(get_barcode)==(num_barcodes-1):
+                continue
+            #if the codeword passes parity then end loop
+            parity_code = sum(get_barcode[:len(get_barcode)-1]) % pseudocolors
+            if parity_code == 0:
+                parity_code = pseudocolors
+            elif parity_code == get_barcode[-1]:
+                best = codes
+                best_score = sorted_scores[i]
+                best_dist = sorted_dist[i]
+                break
 
-    return list(best), best_score, best_dist
+        #if none passed parity then just return first code since it is the best scoring
+        if "best" not in locals():
+            best = sorted_codes[0]
+            best_score = sorted_scores[0]
+            best_dist = sorted_dist[0]
+
+        return list(best), best_score, best_dist
+    else:
+        #figure out total pseudocolors
+        hybs_per_round = int(hybs/num_barcodes)
+        unique_ch = len(locations.ch.unique())
+        total_pseudocolor = hybs_per_round * unique_ch
+        #check if offset of pseudocolor is necessary
+        round1_last_hyb = locations[locations.hyb == (hybs_per_round-1)]
+        #counts per ch
+        ch_counts = []
+        for ch in range(1,unique_ch+1,1):
+            ch_counts.append(len(round1_last_hyb[round1_last_hyb.ch==ch]))
+        #if a certain set of channels only have less than 10% of max spots then assume it is blank
+        threshold = max(ch_counts)*0.1
+        blank_ch = np.sum(np.array(ch_counts)<threshold)
+        pseudocolors = int(total_pseudocolor-blank_ch)
+        print(f"Total pseudocolor was determined to be: {pseudocolors}")
+        #check each codeword on whether it passes parity 
+        for i,codes in enumerate(sorted_codes):
+            potential = locations.iloc[list(codes)].sort_values("hyb")[["hyb","ch"]]
+            potential = potential.values
+            #convert into pseudocolor sequence
+            get_barcode = []    
+            for k,ps in enumerate(potential):
+                get_barcode.append(((ps[0])*3)+ps[1]-(k*pseudocolors)) 
+            #if a barcode is missing a pseudocolor then we can't do parity check
+            if len(get_barcode)==(num_barcodes-1):
+                continue
+            #if the codeword passes parity then end loop
+            parity_code = sum(get_barcode[:len(get_barcode)-1]) % pseudocolors
+            if parity_code == 0:
+                parity_code = pseudocolors
+            elif parity_code == get_barcode[-1]:
+                best = codes
+                best_score = sorted_scores[i]
+                best_dist = sorted_dist[i]
+                break
+
+        #if none passed parity then just return first code since it is the best scoring
+        if "best" not in locals():
+            best = sorted_codes[0]
+            best_score = sorted_scores[0]
+            best_dist = sorted_dist[0]
+
+        return list(best), best_score, best_dist
     
 def radial_decoding(locations,num_barcodes = 4, 
                     radius=np.sqrt(2),diff=0,
