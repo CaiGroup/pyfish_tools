@@ -1,25 +1,24 @@
-from svm_feature_radial_decoding import feature_radial_decoding
+from svm_feature_radial_decoding import decode
 import os
 import glob
 import sys
 
 JOB_ID = os.getenv('SLURM_ARRAY_TASK_ID', 0)
-
 print(f'This is task {JOB_ID}')
 
-#name of codebooks
-codebooks = ["codebook_string_647.csv","codebook_string_561.csv","codebook_string_488.csv"]
-
+#arguments from multi_decoding_param file
 #collect pos and channel info
 #pos = int(sys.argv[1])
 channel = int(sys.argv[2])
 
-#path to dots
-locations_path = glob.glob(f"/groups/CaiLab/personal/Lex/raw/06082022_4kgenes/seqFISH_datapipeline/output/dots_detected/Channel_{channel}/spots_in_cells/Pos{JOB_ID}/locations_z_0.csv")
-#general codebook path
-codebook_path = f"/groups/CaiLab/personal/Lex/raw/06082022_4kgenes/barcode_key/{codebooks[channel-1]}"
-#number of readout sites
-num_barcodes = 4
+#name of codebooks
+codebooks = ["codebook_string_647.csv","codebook_string_561.csv","codebook_string_488.csv"]
+#name of experimental directory
+exp_dir = "102222_10K_NIH3T3"
+#name of user
+user = "Lex"
+#number of rounds
+num_rounds = 4
 #search radii
 first_radius = 1
 second_radius = 1.5
@@ -31,9 +30,9 @@ min_seed = 3
 #how many times does pseudocolor sequence must appear for highly expressed genes
 high_exp_seed = 3
 #number of total hybs
-hybs = 48
+total_hybs = 20
 #probability cutoff for On dots (0-1). Lower the value the less stringent. Setting probability_cutoff=0 and desired_fdr=None, will output normal unfiltered data.
-probability_cutoff = 0.15
+probability_cutoff = 0.20
 #desired FDR (0-1). Could set to None if you would like to filter yourself.
 desired_fdr = 0.10
 #do you have parity round
@@ -41,28 +40,41 @@ parity_round = True
 #do you want locations of dots that didn't pass parity
 include_undefined = False
 #do you want to decode highly expressed genes first
-decode_high_exp_genes = True
+decode_high_exp_genes_first = True
 #do you want to perform an additional third round of decoding
 triple_decode = True
+#do you want to use brightness for scoring (set to false for lantern)
+score_brightness = True
+#____________________________________________________________________________________________________________________________
+
+#path to dots
+locations_path = glob.glob(f"/groups/CaiLab/personal/{user}/raw/{exp_dir}/seqFISH_datapipeline/output/dots_detected/Channel_{channel}/spots_in_cells/Pos{JOB_ID}/*")
+#general codebook path
+codebook_path = f"/groups/CaiLab/personal/{user}/raw/{exp_dir}/barcode_key/{codebooks[channel-1}"
 #Where do you want to output the files
-output_dir = f"/groups/CaiLab/personal/Lex/raw/06082022_4kgenes/seqFISH_datapipeline/output/decoded/final_11p52_33_heg_svm_0p15_diff1_fdr10/Channel_{channel}/Pos_{JOB_ID}"
+output_dir = f"/groups/CaiLab/personal/{user}/raw/{exp_dir}/seqFISH_datapipeline/output/decoded/final_{first_radius}{second_radius}{third_radius}_seed{min_seed}{high_exp_seed}_heg_svm_p{probability_cutoff*100}_diff{diff}_fdr{desired_fdr*100}/Channel_{channel}/Pos_{JOB_ID}"
 
 if len(locations_path) > 1:
     for locations in locations_path:
-        feature_radial_decoding(location_path=locations, codebook_path=codebook_path,
-                             num_barcodes=num_barcodes, first_radius=first_radius, 
+        decoder = decode(location_path=locations, codebook_path=codebook_path,
+                             num_rounds=num_rounds, first_radius=first_radius, 
                              second_radius=second_radius,third_radius=third_radius,
-                             diff=diff, min_seed=min_seed, high_exp_seed=high_exp_seed, hybs=hybs, 
+                             diff=diff, min_seed=min_seed, high_exp_seed=high_exp_seed, total_hybs=total_hybs, 
                              probability_cutoff=probability_cutoff, desired_fdr = desired_fdr, 
                              output_dir=output_dir, include_undefined=include_undefined, 
-                             decode_high_exp_genes=decode_high_exp_genes,
-                             triple_decode=triple_decode, parity_round=parity_round)
+                             decode_high_exp_genes_first=decode_high_exp_genes_first,
+                             triple_decode=triple_decode, parity_round=parity_round, 
+                             score_brightness = score_brightness)
+        decoder.feature_radial_decoding()
 else:
-    feature_radial_decoding(location_path=locations_path[0], codebook_path=codebook_path,
-                         num_barcodes=num_barcodes, first_radius=first_radius, second_radius=second_radius,
-                         third_radius=third_radius, diff=diff, min_seed=min_seed, high_exp_seed=high_exp_seed, hybs=hybs, 
-                         probability_cutoff=probability_cutoff,desired_fdr = desired_fdr,
-                         output_dir=output_dir, include_undefined=include_undefined,
-                         decode_high_exp_genes=decode_high_exp_genes,
-                         triple_decode=triple_decode, parity_round=parity_round)
-
+    decoder = decode(location_path=locations_path[0], codebook_path=codebook_path,
+                            num_rounds=num_rounds, first_radius=first_radius,
+                            second_radius=second_radius,
+                            third_radius=third_radius, diff=diff, min_seed=min_seed,
+                            high_exp_seed=high_exp_seed, total_hybs=total_hybs, 
+                            probability_cutoff=probability_cutoff,desired_fdr = desired_fdr,
+                            output_dir=output_dir, include_undefined=include_undefined,
+                            decode_high_exp_genes_first=decode_high_exp_genes_first,
+                            triple_decode=triple_decode, parity_round=parity_round, 
+                            score_brightness = score_brightness)
+    decoder.feature_radial_decoding()
