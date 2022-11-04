@@ -93,7 +93,8 @@ def plot_isolated_image(img, have_multiple_z = False, zmax=5000):
                       
                       
 def cellpose_settings(num_gpus=1):
-    core.use_gpu(gpu_number=num_gpus, use_torch=True)
+    if num_gpus != None:
+        core.use_gpu(gpu_number=num_gpus, use_torch=True)
     model_choice = input("Do you want to segment Nucleus or Cytoplasm (Type Cytoplasm or Nucleus): ") 
 
     if model_choice == "Cytoplasm":
