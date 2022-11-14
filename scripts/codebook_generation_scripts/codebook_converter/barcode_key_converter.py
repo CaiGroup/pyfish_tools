@@ -39,7 +39,7 @@ class barcode_key_converter:
         col_names = self.codebook.columns
 
         #fill table
-        for i in range(len(codebook)):
+        for i in range(len(self.codebook)):
             ps_list = []
             for j in range(num_barcodes):
                 ps_list.append(int(self.codebook.iloc[i][col_names[j]]))
