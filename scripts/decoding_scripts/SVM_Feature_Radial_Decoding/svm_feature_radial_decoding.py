@@ -1324,6 +1324,9 @@ class decode:
         locations_trues = locations.iloc[flattened_indicies_used_trues].reset_index(drop=True)
         locations_fakes = locations.iloc[flattened_indicies_used_fakes].reset_index(drop=True)
         
+        #if no true codes were found, then something is wrong and will raise error message
+        assert len(locations_trues) != 0, "Something is wrong with codebook or experiment"
+        
         #assign probabilities
         if len(locations_fakes) < 100:
             print("Cannot generate probabilities due to low number of fake dots.")
