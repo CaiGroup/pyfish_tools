@@ -1,7 +1,7 @@
 """
 authors: Katsuya Lex Colon and Arun Chakravorty
 group: Cai Lab
-date:09/08/22
+date:11/15/22
 """
 
 #general packages
@@ -54,21 +54,17 @@ def isolate_image(imgs, pos=0, channel=1, have_multiple_z=False):
     
     #isolate image
     if have_multiple_z == True:
-        if channel == "both":
-            img = imgs[pos]
-        else:
-            #get all z for specific channel
-            img = np.swapaxes(imgs[pos],0,1)
-            img = img[channel]
-            img = img.reshape(img.shape[0],1,img.shape[1],img.shape[2])
-            #copy same channel since stitching has issues with one channel 
-            img_copy = img.copy()
-            img = np.concatenate([img,img_copy],axis=1)
+        #get all z for specific channel
+        img = np.swapaxes(imgs[pos],0,1)
+        img_seg = img[channel]
+        img_dapi = img[-1]
+        img_seg = img.reshape(img_seg.shape[0],1,img_seg.shape[1],img_seg.shape[2])
+        img_dapi = img.reshape(img_dapi.shape[0],1,img_dapi.shape[1],img_dapi.shape[2])
+        img = np.concatenate([img_seg,img_dapi],axis=1)
     else:
-        if channel == "both":
-            img = imgs[pos]
-        else:
-            img = imgs[pos][channel]
+        img_seg = imgs[pos][channel].reshape(1, imgs[pos][channel].shape[0], imgs[pos][channel].shape[1])
+        img_dapi = imgs[pos][-1].reshape(1, imgs[pos][channel].shape[0], imgs[pos][channel].shape[1])
+        img = np.concatenate([img_seg,img_dapi], axis=0)
             
     return img
             
@@ -138,35 +134,20 @@ def generate_final_images(imgs, have_multiple_z=False, channel=0):
     
     imgs_final = []
     for i in tqdm(range(len(imgs))):
-        #isolate image
-        if have_multiple_z == True:
-            if channel == "both":
-                img = imgs[i]
-                imgs_final.append(img)
-            else:
-                #get all z for specific channel
-                img = np.swapaxes(imgs[i],0,1)
-                img = img[channel]
-                img = img.reshape(img.shape[0],1,img.shape[1],img.shape[2])
-                img_copy = img.copy()
-                img = np.concatenate([img,img_copy],axis=1)
-                imgs_final.append(img)
-        else:
-            if channel == "both":
-                img = imgs[i]
-                imgs_final.append(np.max(img,axis=0))
-            else:
-                img = imgs[i][channel]
-                imgs_final.append(img)
+        img = isolate_image(imgs, pos = i, channel = channel, have_multiple_z = have_multiple_z)
+        imgs_final.append(img)
                 
     return imgs_final
             
-def write_masks(masks, files, save_dir):
+def write_masks(masks, files, save_dir, repeat_mask_multi_z = 0):
+    
     #save images
     print("Saving masks in the following directory: ",save_dir)
+    
     if (not os.path.exists(save_dir)):
         Path(save_dir).mkdir(parents=True, exist_ok=True)
-    
+        
+
     for idx,mask in enumerate(masks):
         file_name=os.path.splitext(os.path.basename(files[idx]))[0]
         if len(mask.shape) > 2:
@@ -178,11 +159,19 @@ def write_masks(masks, files, save_dir):
                 mask_z=mask_z.astype(np.uint16)
                 skimage.io.imsave(mask_output_name, mask_z, check_contrast=False)
         else:
-            #Output name for masks
-            mask_output_name=save_dir+file_name+".tif"
-            #Save mask as 16-bit in case this has to be used for detecting than 255 objects
-            mask=mask.astype(np.uint16)
-            skimage.io.imsave(mask_output_name,mask, check_contrast=False)
-    
-    print("Files saved")
+            if repeat_mask_multi_z == 0:
+                #Output name for masks
+                mask_output_name=save_dir+file_name+".tif"
+                #Save mask as 16-bit in case this has to be used for detecting than 255 objects
+                mask=mask.astype(np.uint16)
+                skimage.io.imsave(mask_output_name,mask, check_contrast=False)
+            else:
+                for z in range(repeat_mask_multi_z):
+                    #Output name for masks
+                    mask_output_name=save_dir+file_name.replace(".ome",f"_z{z}.tif")
+                    #Save mask as 16-bit in case this has to be used for detecting than 255 objects
+                    mask=mask.astype(np.uint16)
+                    skimage.io.imsave(mask_output_name,mask, check_contrast=False)
+    print("")
+    print("~Files saved~ :D")
     
