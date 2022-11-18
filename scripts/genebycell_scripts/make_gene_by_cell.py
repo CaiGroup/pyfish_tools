@@ -199,18 +199,25 @@ def make_genebycell(gene_loc_dir, mask_dir=None, output_dir = None,
         final_genebycell.to_csv(str(final_output))
         gene_den_df.to_csv(str(final_output.parent / f"gene_density_{channel}.csv"))
 
-def get_best_z(src):
+def get_best_z(src, unfiltered=False):
     
     #collect average percent decoded
     percent_decode_list = []
     best_z_path = []
     pos_list = list(Path(src).glob("*"))
     for pos in pos_list:
-        final = list(pos.glob(f"*_finalgenes.csv"))
+        if unfiltered ==  False:
+            final = list(pos.glob(f"*_finalgenes.csv"))
+        else:
+            final = list(pos.glob(f"*_unfiltered.csv"))
         barcodes = []
         for path in final:
             barcodes.append(len(pd.read_csv(str(path))))
-        best = np.argmax(barcodes)
+        try:
+            best = np.argmax(barcodes)
+        except:
+            print(f"{pos} has missing files...")
+            continue
         best_z = final[best]
         z_slice = best_z.name.split("_")[5]
         per_decode_src = best_z.parent / f"percent_decoded_z_{z_slice}.txt"
