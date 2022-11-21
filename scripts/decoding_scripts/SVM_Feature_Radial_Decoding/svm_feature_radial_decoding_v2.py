@@ -234,7 +234,7 @@ class decode:
         param_grid = dict(gamma=gamma_range, C=C_range)
                                       
         #total number of cross validations
-        total_cross_val = 8
+        total_cross_val = 10
         
         #total number of fits
         total_fits = len(C_range) * len(gamma_range) * total_cross_val
@@ -242,7 +242,7 @@ class decode:
         print(f"Performing hyperparameter optimization totalling {total_fits} fits...")
                                       
         #screen all permutation of parameters
-        grid = GridSearchCV(SVC(kernel="rbf", max_iter=2e5, random_state=42), 
+        grid = GridSearchCV(SVC(kernel="rbf", max_iter=2e5, coef0=1,), 
                             param_grid=param_grid, cv=total_cross_val,  n_jobs=-1,)
         grid.fit(X_scaled, y_train)
 
