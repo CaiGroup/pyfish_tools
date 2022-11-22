@@ -1,7 +1,7 @@
 """
 author: Katsuya Lex Colon
 group: Cai Lab
-updated: 11/01/22
+updated: 11/21/22
 """
 
 #general analysis packages
@@ -18,16 +18,13 @@ from pathlib import Path
 import sys
 import os
 # SVM model
-from sklearn.svm import LinearSVC
 from sklearn.svm import SVC
 #for splitting training and test set
 from sklearn.model_selection import train_test_split
 #screening hyperparameters
 from sklearn.model_selection import GridSearchCV
 #scaling features
-from sklearn.preprocessing import StandardScaler
-#calibrate model for probability predictions (required for LinearSVC)
-from sklearn.calibration import CalibratedClassifierCV
+from sklearn.preprocessing import MinMaxScaler
 #metrics module for model accuracy calculation
 from sklearn import metrics
 #output most important features
@@ -92,11 +89,10 @@ class decode:
         self.output_dir = output_dir
         
     
-    def rbf_gen_dot_probabilities(dots_used_trues,dots_used_fakes, locations):
+    def poly_rbf_gen_dot_probabilities(dots_used_trues, dots_used_fakes, locations):
         """
-        A SVM classifier using a radial basis function kernel to assign probability scores to dots.
-        This model tends to be slower for larger datasets, but more accurate.
-        
+        A SVM classifier using a radial basis function or polynomial kernel to assign probability scores to dots.
+    
         Parameters
         ----------
         dots_used_trues: dot locations of true dots with features to train svm classifier
@@ -108,86 +104,133 @@ class decode:
         trues["labels"] = 1
         fakes = dots_used_fakes[["flux","max intensity","size", "sharpness", "symmetry","roundness by gaussian fits"]]
         fakes["labels"] = -1
-        
+    
         #make sure number of fakes is > 500
         assert len(fakes) >= 500, "Not enough fake dots to train."
-        
+    
         #if there is over 500,000 fake spots then down sample for training
         fakes = fakes.iloc[:500000,:]
-        
+    
         #downsample trues to match fakes
         #generally there will be less fakes then trues 
         trues = trues.iloc[:len(fakes),:]
-
+    
         #combine trues and fakes into one array
         comb = pd.concat([trues,fakes]).reset_index(drop=True)
-
+    
         #Split dataset into training set and test set
         # 80% training and 20% test
         X_train, X_test, y_train, y_test = train_test_split(comb.iloc[:,0:6], 
-                                                            comb["labels"], test_size=0.20, 
+                                                            comb["labels"], test_size=0.20,random_state=42, 
                                                             stratify=comb["labels"])
-
+    
         # Train classifiers
         start = time.time()
-
-        #z score normalize
-        scaler = StandardScaler().fit(X_train)
+    
+        #Normalize features
+        scaler = MinMaxScaler().fit(X_train)
         X_scaled = scaler.transform(X_train)
-        print(f"Number of features in dataset = {scaler.n_features_in_}")
-        print(f"Mean of features = {scaler.mean_}")
-        print(f"Variance of features = {scaler.var_}")
-
+    
         #parameters to test
         C_range = np.logspace(1, 12, 12)
-        gamma_range = np.logspace(-9, 3, 12)
-        param_grid = dict(gamma=gamma_range, C=C_range)
-                                      
+        gamma_range = np.logspace(-9, 1, 12)
+        degree_range = [1,2,3,4,5]
+        param_grid_poly = dict(degree=degree_range, C=C_range)
+        param_grid_rbf = dict(gamma=gamma_range, C=C_range)
+    
         #total number of cross validations
         total_cross_val = 8
+    
+        #total number of fits
+        total_fits = len(C_range) * len(degree_range) * total_cross_val
+    
+        print(f"Performing hyperparameter optimization using polynomial kernel totalling {total_fits} fits...")
+    
+        #screen all permutation of parameters
+        grid_poly = GridSearchCV(SVC(kernel="poly", max_iter=2e5, coef0=1, gamma=1), 
+                            param_grid=param_grid_poly, cv=total_cross_val,  n_jobs=-1,)
+        grid_poly.fit(X_scaled, y_train)
+    
+        #which is the best
+        print("The best parameters are %s with a score of %0.2f" % (grid_poly.best_params_, grid_poly.best_score_))
+        print(f"Model building took {round((time.time()-start)/60, 2)} min and is now being applied to test set.")
+        #generate probability model based on best params
+        clf = SVC(kernel="poly", max_iter=1e6, coef0=1,gamma=1,
+                  degree=grid_poly.best_params_["degree"], 
+                  C=grid_poly.best_params_["C"], probability=True)
+        clf.fit(X_scaled, y_train)
+        # Model Accuracy: how often is the classifier correct with its labels
+        #normalize data
+        X_test_scaled = scaler.transform(X_test)
+        y_pred = clf.predict(X_test_scaled)
+        #obtain probabilities
+        y_proba = clf.predict_proba(X_test_scaled)
+        true_probs_only_poly = y_proba[:,1]
+        print(f"Label classification accuracy: {round(metrics.accuracy_score(y_test, y_pred), 2)}")
+        poly_accuracy = metrics.accuracy_score(y_test, y_pred)
         
         #total number of fits
         total_fits = len(C_range) * len(gamma_range) * total_cross_val
-                                      
-        print(f"Performing hyperparameter optimization totalling {total_fits} fits...")
-                                      
+    
+        print(f"Performing hyperparameter optimization usinf rbf kernel totalling {total_fits} fits...")
+    
         #screen all permutation of parameters
-        grid = GridSearchCV(SVC(kernel="rbf", max_iter=2e5, coef0=1), 
-                            param_grid=param_grid, cv=total_cross_val,  n_jobs=-1,)
-        grid.fit(X_scaled, y_train)
-
+        grid_rbf = GridSearchCV(SVC(kernel="rbf", max_iter=2e5, coef0=1), 
+                            param_grid=param_grid_rbf, cv=total_cross_val,  n_jobs=-1,)
+        grid_rbf.fit(X_scaled, y_train)
+    
         #which is the best
-        print("The best parameters are %s with a score of %0.2f" % (grid.best_params_, grid.best_score_))
+        print("The best parameters are %s with a score of %0.2f" % (grid_rbf.best_params_, grid_rbf.best_score_))
         print(f"Model building took {round((time.time()-start)/60, 2)} min and is now being applied to test set.")
         #generate probability model based on best params
         clf = SVC(kernel="rbf", max_iter=1e6, 
-                  coef0=1,gamma = grid.best_params_["gamma"], 
-                  C=grid.best_params_["C"], probability=True)
+                  coef0=1,gamma = grid_rbf.best_params_["gamma"], 
+                  C=grid_rbf.best_params_["C"], probability=True)
         clf.fit(X_scaled, y_train)
-        # Model Accuracy: how often is the classifier correct with its labels
-        #scale test data using training mean and std
+        #normalize data
         X_test_scaled = scaler.transform(X_test)
         y_pred = clf.predict(X_test_scaled)
-        print(f"Label classification accuracy: {round(metrics.accuracy_score(y_test, y_pred), 2)}")
-        print("Generating probabilities for each dot...")
         #obtain probabilities
         y_proba = clf.predict_proba(X_test_scaled)
-        true_probs_only = y_proba[:,1]
+        true_probs_only_rbf = y_proba[:,1]
+        print(f"Label classification accuracy: {round(metrics.accuracy_score(y_test, y_pred), 2)}")
+        rbf_accuracy = metrics.accuracy_score(y_test, y_pred)
         
+        #pick model with better kernel 
+        best = np.argmax([poly_accuracy, rbf_accuracy])
+        
+        #create final model
+        if best == 0:
+            clf = SVC(kernel="poly", max_iter=1e6, coef0=1,gamma=1,
+                  degree=grid_poly.best_params_["degree"], 
+                  C=grid_poly.best_params_["C"], probability=True)
+            clf.fit(X_scaled, y_train)
+            true_probs_only = true_probs_only_poly
+            print("Poly kernel was picked...")
+        else:
+            clf = SVC(kernel="rbf", max_iter=1e6, 
+                  coef0=1,gamma = grid_rbf.best_params_["gamma"], 
+                  C=grid_rbf.best_params_["C"], probability=True)
+            clf.fit(X_scaled, y_train)
+            true_probs_only = true_probs_only_rbf
+            print("RBF kernel was picked...")
+        
+        print("Generating probabilities for each dot...")
         #get probabilities for every dot
         locations_features = locations[["flux","max intensity","size", "sharpness", "symmetry","roundness by gaussian fits"]]
+        #normalize data
         locations_scaled = scaler.transform(locations_features)
         loc_proba = clf.predict_proba(locations_scaled)
         locations["probability on"] = loc_proba[:,1]
         print(f"Probabilities assigned, Total time = {round((time.time()-start)/60, 2)} min")
-        
+    
         #output most important features
         perm_importance = permutation_importance(clf, X_test_scaled, y_test)
         features= X_test.columns
         sorted_idx = perm_importance.importances_mean.argsort()
         plt.barh(features[sorted_idx], perm_importance.importances_mean[sorted_idx])
         plt.xlabel("Feature Importance")
-        
+
         return true_probs_only, X_test, y_test, locations, plt
 
     def false_positive_rate(gene_locations, truebook, fakebook):
@@ -1218,7 +1261,7 @@ class decode:
         if len(locations_fakes) < 500:
             print("Cannot generate probabilities due to low number of fake dots.")
         else:
-            true_probs_only, X_test, y_test, locations, plt = decode.rbf_gen_dot_probabilities(locations_trues,locations_fakes, locations)
+            true_probs_only, X_test, y_test, locations, plt = decode.poly_rbf_gen_dot_probabilities(locations_trues,locations_fakes, locations)
             #median on probability for trues and fakes
             fake_median_prob = np.median(np.compress(y_test== -1,true_probs_only))
             true_median_prob = np.median(np.compress(y_test== 1,true_probs_only))
