@@ -1238,6 +1238,8 @@ class decode:
         
         #check to see if the necessary amount of hybs are present
         assert len(locations["hyb"].unique()) == self.hybs, "Locations file is missing a hyb"
+        #make sure codebook has correct length
+        assert len(codebook) <= (np.max(codebook.values[:,0])**self.num_barcodes), "Your codebook length is wrong"
     
         #make directories
         Path(self.output_dir).mkdir(parents=True, exist_ok = True)
