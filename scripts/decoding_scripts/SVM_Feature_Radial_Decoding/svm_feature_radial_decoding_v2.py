@@ -736,10 +736,15 @@ class decode:
         temp = []
         for h in hyb_rounds:
             if h == hyb_rounds[len(hyb_rounds)-1]:
-                barcode = locations[locations["hyb"] == h]
-                temp.append(barcode)
-                comp_round = pd.concat(temp)
-                barcoding_round.append(comp_round) 
+                if hybs==num_barcodes:
+                    barcode = locations[locations["hyb"] == h]
+                    barcoding_round.append(temp[0])
+                    barcoding_round.append(barcode)
+                else:
+                    barcode = locations[locations["hyb"] == h]
+                    temp.append(barcode)
+                    comp_round = pd.concat(temp)
+                    barcoding_round.append(comp_round) 
             elif (h % (hybs/num_barcodes) != 0) or (h == 0):
                 barcode = locations[locations["hyb"] == h]
                 temp.append(barcode)
