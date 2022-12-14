@@ -58,8 +58,8 @@ def isolate_image(imgs, pos=0, channel=1, have_multiple_z=False):
         img = imgs[pos]
         img_seg = img[channel]
         img_dapi = img[-1]
-        img_seg = img.reshape(img_seg.shape[0],1,img_seg.shape[1],img_seg.shape[2])
-        img_dapi = img.reshape(img_dapi.shape[0],1,img_dapi.shape[1],img_dapi.shape[2])
+        img_seg = img_seg.reshape(img_seg.shape[0],1,img_seg.shape[1],img_seg.shape[2])
+        img_dapi = img_dapi.reshape(img_dapi.shape[0],1,img_dapi.shape[1],img_dapi.shape[2])
         img = np.concatenate([img_seg,img_dapi],axis=1)
     else:
         img_seg = imgs[pos][channel].reshape(1, imgs[pos][channel].shape[0], imgs[pos][channel].shape[1])
