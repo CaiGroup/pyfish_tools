@@ -55,7 +55,7 @@ def isolate_image(imgs, pos=0, channel=1, have_multiple_z=False):
     #isolate image
     if have_multiple_z == True:
         #get all z for specific channel
-        img = np.swapaxes(imgs[pos],0,1)
+        img = imgs[pos]
         img_seg = img[channel]
         img_dapi = img[-1]
         img_seg = img.reshape(img_seg.shape[0],1,img_seg.shape[1],img_seg.shape[2])
