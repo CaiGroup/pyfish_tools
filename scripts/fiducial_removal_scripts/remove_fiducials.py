@@ -1,7 +1,7 @@
 """
 author: Katsuya Lex Colon
 group: Cai Lab
-date: 07/25/22
+date: 12/14/22
 """
 
 #basic analysis package
@@ -64,8 +64,11 @@ def get_optimum_fwhm(data, threshold):
     #get counts
     counts = []
     for fwhm in fwhm_range:
-        dots = len(daofinder(data,  threshold, fwhm))
-        counts.append(dots)
+        try:
+            dots = len(daofinder(data,  threshold, fwhm))
+            counts.append(dots)
+        except:
+            continue
     #find index with largest counts
     best_index = np.argmax(counts)
     #this is the best fwhm
@@ -154,13 +157,16 @@ def remove_fiducials(fiducials, locations, radius=1):
         except IndexError:
             continue
             
+    if neighbors_flattened == []:
+        return None
     #separate file for dots that do not colocalize
     locations_nocoloc_idx = np.array(list(set(locations.index)-set(np.array(neighbors_flattened)[:,1])))
     locations_nocoloc = locations.iloc[locations_nocoloc_idx].reset_index(drop=True)
         
     return locations_nocoloc
 
-def remove_all_fiducials(locations_src, fid_src, threshold=500, radius=1, num_channels=4, write =True):
+def remove_all_fiducials(locations_src, fid_src, threshold=500, radius=1, 
+                         num_channels=4, write =True, max_project=True):
     """
     Remove fiducials for each z and channel for a specific position.
     
@@ -172,9 +178,9 @@ def remove_all_fiducials(locations_src, fid_src, threshold=500, radius=1, num_ch
     radius: pixel search
     num_channels: number of channels in your image
     write: bool to write results
+    max_project: bool to max project
     """
     #swapaxes to z,c,x,y if required
- 
     fiducials = pil_imread(fid_src, swapaxes=True)
     if fiducials.shape[1] != num_channels:
         fiducials = pil_imread(fid_src, swapaxes=False)
@@ -184,6 +190,10 @@ def remove_all_fiducials(locations_src, fid_src, threshold=500, radius=1, num_ch
     #read in locations file
     locations = pd.read_csv(locations_src)
     
+    #if max projection is desired
+    if max_project == True:
+        fiducials = np.max(fiducials, axis=0)
+            
     #check if there is z, else reshape
     if len(fiducials.shape) == 3:
         fiducials = fiducials.reshape(1, fiducials.shape[0], fiducials.shape[1], fiducials.shape[2])
@@ -193,7 +203,10 @@ def remove_all_fiducials(locations_src, fid_src, threshold=500, radius=1, num_ch
     fiducial_locations = []
     for z in locations["z"].unique().astype(int):
         for c in locations["ch"].unique().astype(int):
-            fid_loc = find_fiducials(fiducials[z, c-1], threshold=threshold)
+            if max_project == True:
+                fid_loc = find_fiducials(fiducials[0, c-1], threshold=threshold)
+            else:
+                fid_loc = find_fiducials(fiducials[z, c-1], threshold=threshold)
             fid_loc["z"]=z
             fid_loc["ch"]=c
             fiducial_locations.append(fid_loc)
@@ -203,10 +216,22 @@ def remove_all_fiducials(locations_src, fid_src, threshold=500, radius=1, num_ch
                                             (locations["z"] == z)]
                 
                 fiducials_removed = remove_fiducials(fid_loc, locations_slice, radius=radius)
+                if type(fiducials_removed) == type(None):
+                    continue
                 removed_locations.append(fiducials_removed)
     #combine final
+    if fiducial_locations == []:
+        print("No fiducials were found...")
+        return 
     final = pd.concat(removed_locations).reset_index(drop=True)
     fid_final = pd.concat(fiducial_locations).reset_index(drop=True)
+    
+    #removed any undefined columns
+    unwanted_columns = []
+    for names in final.columns:
+        if "Unnamed" in names:
+            unwanted_columns.append(names)
+    final = final.drop(unwanted_columns, axis=1)
     
     if write == False:
         return final, fid_final
@@ -224,7 +249,8 @@ def remove_all_fiducials(locations_src, fid_src, threshold=500, radius=1, num_ch
                 final_slice = final[(final["z"]==z) & (final["ch"]==ch)]
                 final_slice.reset_index(drop=True).to_csv(str(output_path))
 
-def remove_fiducials_parallel(locations_srcs, fid_srcs, threshold=500, radius=1, num_channels=4):
+def remove_fiducials_parallel(locations_srcs, fid_srcs, threshold=500, radius=1, 
+                              num_channels=4, max_project=True):
     """
     Remove fiducials from multiple locations files.
     
@@ -238,11 +264,14 @@ def remove_fiducials_parallel(locations_srcs, fid_srcs, threshold=500, radius=1,
     """
     
     if len(locations_srcs) == 1:
-        remove_all_fiducials(locations_srcs, fid_srcs, threshold=threshold, radius=radius, num_channels=num_channels, write =True)
+        remove_all_fiducials(locations_srcs, fid_srcs, 
+                             threshold=threshold, radius=radius, 
+                             num_channels=num_channels, write =True, max_project=max_project)
     
     else:
         with ProcessPoolExecutor(max_workers=20) as exe:
             for i in range(len(locations_srcs)):
                 exe.submit(remove_all_fiducials, locations_srcs[i], fid_srcs[i],
-                           threshold=threshold, radius=radius, num_channels=num_channels, write =True )
+                           threshold=threshold, radius=radius, num_channels=num_channels,
+                           write =True, max_project=max_project )
                 print(f"fid_src={fid_srcs[i]}; dot_src={locations_srcs[i]}")
