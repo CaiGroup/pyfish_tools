@@ -194,10 +194,10 @@ def make_genebycell(gene_loc_dir, mask_dir=None, output_dir = None,
         #combine all gene density mtx
         if mask_dir != None:
             gene_den_df = pd.concat(gene_den_list,axis=1).fillna(0)
+            gene_den_df.to_csv(str(final_output.parent / f"gene_density_{channel}.csv"))
         
         #write file
         final_genebycell.to_csv(str(final_output))
-        gene_den_df.to_csv(str(final_output.parent / f"gene_density_{channel}.csv"))
 
 def get_best_z(src, unfiltered=False):
     
