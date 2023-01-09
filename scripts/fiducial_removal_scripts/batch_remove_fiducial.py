@@ -13,7 +13,7 @@ key = [int(re.search('Pos(\\d+)*', str(f)).group(1)) for f in directory]
 locations_srcs = list(np.array(directory)[np.argsort(key)])
 
 #get reference paths
-directory = glob("/groups/CaiLab/personal/Lex/raw/120822_2k_mouse_brain/chromatic_aberration/*")
+directory = glob("/groups/CaiLab/personal/Lex/raw/120822_2k_mouse_brain/chromatic_aberration/*.ome.tif")
 #sort positions to match
 key = [int(re.search('Pos(\\d+)*', str(f)).group(1)) for f in directory]
 fid_srcs = list(np.array(directory)[np.argsort(key)])

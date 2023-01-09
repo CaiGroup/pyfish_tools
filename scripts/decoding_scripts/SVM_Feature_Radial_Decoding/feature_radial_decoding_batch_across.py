@@ -12,21 +12,21 @@ exp_dir = "102222_10K_NIH3T3"
 #name of user
 user = "Lex"
 #number of rounds
-num_rounds = 5
+num_rounds = 4
 #search radii
 first_radius = 1
 second_radius = 1.5
 third_radius = 1.5
 #how many allowed drops in calls 
-diff = 0
+diff = 1
 #how many times does a pseudocolor sequence must appear
-min_seed = 4
+min_seed = 3
 #how many times does pseudocolor sequence must appear for highly expressed genes
-high_exp_seed = 4
+high_exp_seed = 3
 #number of total hybs
 total_hybs = 20
 #probability cutoff for On dots (0-1). Lower the value the less stringent. Setting probability_cutoff=0 and desired_fdr=None, will output normal unfiltered data.
-probability_cutoff = 0.10
+probability_cutoff = 0.25
 #desired FDR (0-1). Could set to None if you would like to filter yourself.
 desired_fdr = 0.15
 #do you have parity round
@@ -37,8 +37,8 @@ include_undefined = False
 decode_high_exp_genes_first = True
 #do you want to perform an additional third round of decoding
 triple_decode = True
-#do you want to use brightness for scoring (set to false for lantern)
-score_brightness = False
+#do you want to use brightness for scoring 
+score_brightness = True
 #____________________________________________________________________________________________________________________________
 
 #path to dots
