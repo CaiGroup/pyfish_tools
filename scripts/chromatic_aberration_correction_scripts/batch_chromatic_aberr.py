@@ -20,7 +20,7 @@ files = [str(f) for f in files]
 ref_img = f"/groups/CaiLab/personal/Lex/raw/092222_150_nih_3t3/chromatic_aberration/MMStack_Pos{JOB_ID}.ome.tif"
 
 #calculate transform
-_, _, tform = chromatic_corr_offsets(ref_img, threshold_abs=500,  max_dist=3, ransac_threshold = 0.5, num_channels=4)
+_, _, tform = chromatic_corr_offsets(ref_img, threshold_abs=500,  max_dist=2, ransac_threshold = 0.5, num_channels=4)
 
 #apply offsets
 apply_chromatic_corr(files, tform, cores = 12,  num_channels=4, write = True)

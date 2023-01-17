@@ -18,7 +18,7 @@ files, _, _ = find_matching_files(directory, 'HybCycle_{hyb}' + f'/{position_nam
 files = [str(f) for f in files]
 
 size_cutoff = 4 # sigma cutoff for size distribution
-threshold = 0.02 # threshold to detect all dots (if image was scaled)
+threshold = 0.1 # threshold to detect all dots (if image was scaled)
 channel = channel #which channel to analyze
 num_channels=4 #number of channels in image
 
