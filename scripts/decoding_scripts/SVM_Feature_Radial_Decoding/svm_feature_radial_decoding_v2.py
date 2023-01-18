@@ -1,7 +1,7 @@
 """
 author: Katsuya Lex Colon
 group: Cai Lab
-updated: 11/21/22
+updated: 01/18/23
 """
 
 #general analysis packages
@@ -668,7 +668,6 @@ class decode:
             threshold = max(ch_counts)*0.1
             blank_ch = np.sum(np.array(ch_counts)<threshold)
             pseudocolors = int(total_pseudocolor-blank_ch)
-            print(f"Total pseudocolor was determined to be: {pseudocolors}")
             #check each codeword on whether it passes parity 
             for i,codes in enumerate(sorted_codes):
                 potential = locations.iloc[list(codes)].sort_values("hyb")[["hyb","ch"]]
