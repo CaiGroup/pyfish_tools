@@ -80,6 +80,10 @@ def last_hyb_coloc(img_src_1, img_src_2, channel=1, z = 0, pos=0, threshold= 0.0
     #isolate z
     dots_1 = dots_1[dots_1["z"]==z].reset_index(drop=True)
     dots_2 = dots_2[dots_2["z"]==z].reset_index(drop=True)
+    
+    #check if z exists
+    if len(dots_1) == 0 or len(dots_2) == 0:
+        return pd.DataFrame()
 
     #calculate colocalization at various radii
     colocal_list = []
