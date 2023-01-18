@@ -1,4 +1,4 @@
-from svm_feature_radial_decoding import decode
+from svm_feature_radial_decoding_v2 import decode
 import os
 import glob
 import sys
