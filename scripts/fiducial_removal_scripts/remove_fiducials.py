@@ -158,7 +158,8 @@ def remove_fiducials(fiducials, locations, radius=1):
             continue
             
     if neighbors_flattened == []:
-        return None
+        #if no fiducials colocalized then return df
+        return locations
     #separate file for dots that do not colocalize
     locations_nocoloc_idx = np.array(list(set(locations.index)-set(np.array(neighbors_flattened)[:,1])))
     locations_nocoloc = locations.iloc[locations_nocoloc_idx].reset_index(drop=True)
@@ -216,13 +217,8 @@ def remove_all_fiducials(locations_src, fid_src, threshold=500, radius=1,
                                             (locations["z"] == z)]
                 
                 fiducials_removed = remove_fiducials(fid_loc, locations_slice, radius=radius)
-                if type(fiducials_removed) == type(None):
-                    continue
                 removed_locations.append(fiducials_removed)
     #combine final
-    if fiducial_locations == []:
-        print("No fiducials were found...")
-        return 
     final = pd.concat(removed_locations).reset_index(drop=True)
     fid_final = pd.concat(fiducial_locations).reset_index(drop=True)
     
