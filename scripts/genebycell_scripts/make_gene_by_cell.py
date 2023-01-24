@@ -199,7 +199,7 @@ def make_genebycell(gene_loc_dir, mask_dir=None, output_dir = None,
         #write file
         final_genebycell.to_csv(str(final_output))
 
-def get_best_z(src, unfiltered=False):
+def get_best_z(src, quality_score=0.2, unfiltered=False):
     
     #collect average percent decoded
     percent_decode_list = []
@@ -224,8 +224,11 @@ def get_best_z(src, unfiltered=False):
         with open(per_decode_src) as f:
             decoded = f.readlines()[0].split(" ")[-1]
             f.close()
+        if float(decoded) <= (quality_score*100):
+            continue
+        else:
             percent_decode_list.append(float(decoded))
-        best_z_path.append(str(best_z))
+            best_z_path.append(str(best_z))
         
     #organize files numerically
     key = [int(re.search('Pos_(\\d+)', f).group(1)) for f in best_z_path]
