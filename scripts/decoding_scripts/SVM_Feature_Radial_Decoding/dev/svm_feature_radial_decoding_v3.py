@@ -434,7 +434,7 @@ class decode:
             temp = temp.union(_set)
             history_element.add(_set)
             unique_dots = unique_dots.union(_set)
-            matching_element_list.append(temp)
+            matching_element_list.append([temp])
             temp = set()
             
         # group again to combine list of dot sets that have any common dot sequence
@@ -555,7 +555,6 @@ class decode:
         #delete some variables
         del matching_element_list
         del new_set
-        del search_set
         del history_element
         del codeword_hash
         del distance_hash
