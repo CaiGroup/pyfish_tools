@@ -49,7 +49,7 @@ class barcode_key_converter:
                 k+=1
 
         codebook_converted = pd.DataFrame(table)
-        codebook_converted.index = codebook.index
+        codebook_converted.index = self.codebook.index
 
         return codebook_converted
 
