@@ -67,4 +67,4 @@ To set up your Conda environment, please run the following yml file: `conda env 
 
 To begin using seqFISH Datapipeline, copy the pipeline folder into your raw images directory by running the following command: `cp -r /path/to/seqFISH_datapipeline /path/to/raw/images/`
 
-Outputs will be generated into a directory called "output" within the pseqFISH_datapipeline directory.
+Outputs will be generated into a directory called "output" within the seqFISH_datapipeline directory.
