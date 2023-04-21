@@ -3,7 +3,7 @@ SeqFISH Datapipeline is a generalized, fully Python-based pipeline that allows f
 
 ## General Workflow
 <p align="center">
-<img src="https://github.com/klcolon/pyfish_tools/blob/main/logo/pipeline_format.png" alt="pipeline">
+<img src="https://github.com/CaiGroup/seqFISH_datapipeline/tree/restructured/images" alt="pipeline">
 </p>
 
 ## What is included in this pipeline?
