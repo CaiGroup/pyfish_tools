@@ -1,6 +1,5 @@
 """
 authors: Katsuya Lex Colon and Arun Chakravorty
-group: Cai Lab
 date:11/15/22
 """
 
@@ -18,8 +17,6 @@ from cellpose import plot
 from cellpose import core
 from cellpose import models
 mpl.rcParams['figure.dpi'] = 300
-
-
 
 def plot_2d(img, zmax):
 

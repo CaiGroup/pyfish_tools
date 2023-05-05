@@ -8,7 +8,7 @@ JOB_ID = os.getenv('SLURM_ARRAY_TASK_ID', 0)
 print(f'This is task {JOB_ID}')
 
 #paths for real image
-directory = Path("/groups/CaiLab/personal/Lex/raw/092222_150_nih_3t3/seqFISH_datapipeline/output/aberration_corrected")
+directory = Path("")
 position_name = f'MMStack_Pos{JOB_ID}.ome.tif'
 
 files, _, _ = find_matching_files(directory, 'HybCycle_{hyb}' + f'/{position_name}')
@@ -16,7 +16,7 @@ files = [str(f) for f in files]
 
 #-----------------------------------------------------------------------
 # #path for background
-# directory = Path("/groups/CaiLab/personal/Lex/raw/576_readout_screen/100621_576readout_screen/notebook_pyfiles/dapi_aligned/final_background")
+# directory = Path("")
 # position_name = f'MMStack_Pos{JOB_ID}.ome.tif'
 # path_bkgrd = str(directory / position_name)
 

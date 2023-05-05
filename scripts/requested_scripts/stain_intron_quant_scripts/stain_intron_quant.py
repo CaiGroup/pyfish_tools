@@ -1,7 +1,6 @@
 """
 author: Katsuya Lex Colon
 date: 07/21/22
-group: CaiLab
 """
 
 print("Loading packages...")

@@ -1,6 +1,5 @@
 """
 author: Katsuya Lex Colon
-group: CaiLab
 date:02/25/22
 """
 

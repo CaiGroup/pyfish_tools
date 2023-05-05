@@ -13,13 +13,13 @@ pos = int(sys.argv[1])
 channel = int(sys.argv[2])
 
 #path for pos
-directory = Path("/groups/CaiLab/personal/Lex/raw/150genes3bind_040622/notebook_pyfiles/pre_processed_images/")
+directory = Path("")
 position_name = f'MMStack_Pos{pos}.ome.tif'
 file = str(directory / f"HybCycle_{JOB_ID}"/ position_name) 
 
 #pos number from find threshold, just provide the location of MMStack_Posx folders
 #channel doesn't matter here
-thresh_pos = glob.glob(f"/groups/CaiLab/personal/Lex/raw/150genes3bind_040622/notebook_pyfiles/threshold_counts/Channel_{channel}/HybCycle_{JOB_ID}/*")
+thresh_pos = glob.glob(f"")
 pos_list = []
 for path in thresh_pos:
     pos = int(Path(path).name.split("_")[1].replace("Pos",""))

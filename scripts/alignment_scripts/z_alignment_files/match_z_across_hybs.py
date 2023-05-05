@@ -1,6 +1,5 @@
 """
 author: Katsuya Lex Colon
-group: Cai Lab
 date: 09/07/22
 """
 
@@ -32,10 +31,10 @@ def z_matching(image_dir, pos_number = 0):
     
     #output directory
     parent = Path(image_dir).parent
-    while "seqFISH_datapipeline" not in os.listdir(parent):
+    while "pyfish_tools" not in os.listdir(parent):
         parent = parent.parent
     
-    output_dir = parent / "seqFISH_datapipeline" / "output"/ "z_matched_images"
+    output_dir = parent / "pyfish_tools" / "output"/ "z_matched_images"
     
     #adjust string path if missing "/"
     if image_dir[-1] != "/":

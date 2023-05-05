@@ -1,6 +1,5 @@
 """
 author: Katsuya Lex Colon
-group: Cai Lab
 updated: 03/03/22
 """
 #basic analysis package

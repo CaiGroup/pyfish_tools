@@ -13,7 +13,7 @@ JOB_ID = os.getenv('SLURM_ARRAY_TASK_ID', 0)
 print(f'This is task {JOB_ID}')
 
 #general path and position name
-directory = Path("/groups/CaiLab/personal/Lex/raw/092222_150_nih_3t3/seqFISH_datapipeline/output/dapi_aligned/")
+directory = Path("")
 position_name = f'MMStack_Pos{JOB_ID}.ome.tif'
 
 #use this for all hyb alignment
@@ -21,7 +21,7 @@ files, _, _ = find_matching_files(directory, 'HybCycle_{hyb}' + f'/{position_nam
 files = [str(f) for f in files]
 
 #directory to beads
-ref = f"/groups/CaiLab/personal/Lex/raw/092222_150_nih_3t3/chromatic_aberration/{position_name}"
+ref = f"/{position_name}"
 
 tiff_list = files #list of images
 ref_src = ref #reference bead images

@@ -1,6 +1,5 @@
 """
 authors: Katsuya Lex Colon and Lincoln Ombelets
-group: Cai Lab
 updated: 07/19/22
 """
 #basic analysis package
@@ -451,10 +450,10 @@ def apply_tform(img_src, tform_list, num_channels = 4, write = True):
         """
         #output path
         parent = Path(img_src).parent
-        while "seqFISH_datapipeline" not in os.listdir(parent):
+        while "pyfish_tools" not in os.listdir(parent):
             parent = parent.parent
         #create output path
-        output_folder = parent / "seqFISH_datapipeline" / "output" /"aberration_corrected"
+        output_folder = parent / "pyfish_tools" / "output" /"aberration_corrected"
         hybcycle = Path(img_src).parent.name
         output_path = output_folder / hybcycle / Path(img_src).name
         output_path.parent.mkdir(parents=True, exist_ok=True)

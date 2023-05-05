@@ -8,14 +8,14 @@ JOB_ID = os.getenv('SLURM_ARRAY_TASK_ID', 0)
 print(f'This is task {JOB_ID}')
 
 #name of experimental directory
-exp_dir = "102222_10K_NIH3T3"
+exp_dir = ""
 #name of user
 user = "Lex"
 #number of rounds
 num_rounds = 4
 #search radii
 first_radius = 1
-second_radius = 1.5
+second_radius = 1.25
 third_radius = 1.5
 #how many allowed drops in calls 
 diff = 1
@@ -42,11 +42,11 @@ score_brightness = True
 #____________________________________________________________________________________________________________________________
 
 #path to dots
-locations_path = glob.glob(f"/groups/CaiLab/personal/{user}/raw/{exp_dir}/seqFISH_datapipeline/output/dots_detected/Channel_All/Pos{JOB_ID}/*")
+locations_path = glob.glob(f"/{user}/{exp_dir}/pyfish_tools/output/dots_detected/Channel_All/Pos{JOB_ID}/*")
 #general codebook path
-codebook_path = f"/groups/CaiLab/personal/{user}/raw/{exp_dir}/barcode_key/codebook_string_across.csv"
+codebook_path = f"/{user}/{exp_dir}/barcode_key/codebook_string_across.csv"
 #Where do you want to output the files
-output_dir = f"/groups/CaiLab/personal/{user}/raw/{exp_dir}/seqFISH_datapipeline/output/decoded/final_{first_radius}{second_radius}{third_radius}_seed{min_seed}{high_exp_seed}_heg_svm_p{probability_cutoff*100}_diff{diff}_fdr{desired_fdr*100}/Channel_All/Pos_{JOB_ID}"
+output_dir = f"/{user}/{exp_dir}/pyfish_tools/output/decoded/final_{first_radius}{second_radius}{third_radius}_seed{min_seed}{high_exp_seed}_heg_svm_p{probability_cutoff*100}_diff{diff}_fdr{desired_fdr*100}/Channel_All/Pos_{JOB_ID}"
 
 if len(locations_path) > 1:
     for locations in locations_path:

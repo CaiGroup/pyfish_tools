@@ -1,6 +1,5 @@
 """
 author: Katsuya Lex Colon
-group: Cai Lab
 updated: 03/18/22
 """
 
@@ -29,7 +28,7 @@ def dapi_alignment_single(ref,moving):
     image (c,z,x,y)
     """
     orig_image_dir = Path(moving).parent.parent
-    output_folder = Path(orig_image_dir) / 'seqFISH_datapipeline' / 'output' / 'dapi_aligned'
+    output_folder = Path(orig_image_dir) / 'pyfish_tools' / 'output' / 'dapi_aligned'
     output_path = output_folder / Path(moving).parent.name / Path(moving).name
     
     output_path.parent.mkdir(parents=True, exist_ok=True)

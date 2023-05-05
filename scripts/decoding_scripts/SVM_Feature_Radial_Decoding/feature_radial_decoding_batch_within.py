@@ -14,7 +14,7 @@ channel = int(sys.argv[2])
 #name of codebooks
 codebooks = ["codebook_string_647.csv","codebook_string_561.csv","codebook_string_488.csv"]
 #name of experimental directory
-exp_dir = "102222_10K_NIH3T3"
+exp_dir = ""
 #name of user
 user = "Lex"
 #number of rounds
@@ -48,11 +48,11 @@ score_brightness = True
 #____________________________________________________________________________________________________________________________
 
 #path to dots
-locations_path = glob.glob(f"/groups/CaiLab/personal/{user}/raw/{exp_dir}/seqFISH_datapipeline/output/dots_detected/Channel_{channel}/spots_in_cells/Pos{JOB_ID}/*")
+locations_path = glob.glob(f"/{user}/{exp_dir}/pyfish_tools/output/dots_detected/Channel_{channel}/spots_in_cells/Pos{JOB_ID}/*")
 #general codebook path
-codebook_path = f"/groups/CaiLab/personal/{user}/raw/{exp_dir}/barcode_key/{codebooks[channel-1}"
+codebook_path = f"/{user}/{exp_dir}/barcode_key/{codebooks[channel-1}"
 #Where do you want to output the files
-output_dir = f"/groups/CaiLab/personal/{user}/raw/{exp_dir}/seqFISH_datapipeline/output/decoded/final_{first_radius}{second_radius}{third_radius}_seed{min_seed}{high_exp_seed}_heg_svm_p{probability_cutoff*100}_diff{diff}_fdr{desired_fdr*100}/Channel_{channel}/Pos_{JOB_ID}"
+output_dir = f"/{user}/{exp_dir}/pyfish_tools/output/decoded/final_{first_radius}{second_radius}{third_radius}_seed{min_seed}{high_exp_seed}_heg_svm_p{probability_cutoff*100}_diff{diff}_fdr{desired_fdr*100}/Channel_{channel}/Pos_{JOB_ID}"
 
 if len(locations_path) > 1:
     for locations in locations_path:

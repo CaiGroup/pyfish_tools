@@ -1,9 +1,12 @@
-# Welcome to SeqFISH Datapipeline!
-SeqFISH Datapipeline is a generalized, fully Python-based pipeline that allows for the analysis of various smFISH methods. The pipeline also includes a decoder for various seqFISH encoding schemes. It is recommended that users utilize a high-performance cluster, since the pipeline is already formatted to use the slurm workload manager. Sbatch file templates can be found in each directory to meet the user's needs. 
+# Welcome to pyFISH tools!
+<p align="center">
+<img src="https://github.com/klcolon/pyfish_tools/blob/main/logo/logo.svg" alt="fish icon" width="400" height="200">
+</p>
+pyFISH tools is a generalized, fully Python-based pipeline that allows for the analysis of various smFISH methods. The pipeline also includes a decoder for various seqFISH encoding schemes. It is recommended that users utilize a high-performance cluster, since the pipeline is already formatted to use the slurm workload manager. Sbatch file templates can be found in each directory to meet the user's needs. Soon, NextFlow workflow manager will also be available for this pipeline as v2.0.
 
 ## General Workflow
 <p align="center">
-<img src="https://github.com/CaiGroup/seqFISH_datapipeline/blob/restructured/images/pipeline_format.png" alt="pipeline">
+<img src="https://github.com/klcolon/pyfish_tools/blob/main/logo/pipeline_format.png" alt="pipeline">
 </p>
 
 ## What is included in this pipeline?
@@ -65,6 +68,12 @@ To set up your Conda environment, please run the following yml file: `conda env 
 
 ## Copying the pipeline folder
 
-To begin using seqFISH Datapipeline, copy the pipeline folder into your raw images directory by running the following command: `cp -r /path/to/seqFISH_datapipeline /path/to/raw/images/`
+To begin using pyFISH tools, copy the pipeline folder into your raw images directory by running the following command: `cp -r /path/to/pyfish_tools /path/to/raw/images/`
 
-Outputs will be generated into a directory called "output" within the seqFISH_datapipeline directory.
+
+Outputs will be generated into a directory called "output" within the pyfish_tools directory.
+
+
+
+
+

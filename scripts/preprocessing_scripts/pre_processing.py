@@ -1,7 +1,6 @@
 """
-authors: Katsuya Lex Colon, Shaan Sekhon, and Anthony Linares
+author: Katsuya Lex Colon
 updated: 06/20/22
-group: Cai Lab
 """
 #image processing
 import cv2
@@ -315,7 +314,8 @@ def RL_deconvolution(image, kern_rl=7, sigma=(1.8,1.6,1.5,1.3),
             return img_arr, psf
         
 def low_pass_gaussian(image, kern=3):
-    """A low pass gaussian blur
+    """
+    A low pass gaussian blur
     Parameters
     ----------
     image = single or list of arrays
@@ -401,9 +401,9 @@ def deconvolute_one(image_path, sigma_hpgb = 1, kern_hpgb=5, kern_rl = 5,
     
     #make output directory
     parent = Path(image_path).parent
-    while "seqFISH_datapipeline" not in os.listdir(parent):
+    while "pyfish_tools" not in os.listdir(parent):
         parent = parent.parent
-    output_dir = parent / "seqFISH_datapipeline" /"output"/ "deconvoluted_images"
+    output_dir = parent / "pyfish_tools" /"output"/ "deconvoluted_images"
     hybcycle =  Path(image_path).parent.name
     output_path = output_dir / hybcycle / Path(image_path).name
     
@@ -551,9 +551,9 @@ def bkgrd_corr_one(image_path, correction_type = None, stack_bkgrd=None, num_cha
     """
     #output path
     parent = Path(image_path).parent
-    while "seqFISH_datapipeline" not in os.listdir(parent):
+    while "pyfish_tools" not in os.listdir(parent):
         parent = parent.parent
-    output_dir = parent / "seqFISH_datapipeline" /"output"/ "pre_processed_images"
+    output_dir = parent / "pyfish_tools" /"output"/ "pre_processed_images"
     hybcycle =  Path(image_path).parent.name
     output_path = output_dir / hybcycle / Path(image_path).name
     

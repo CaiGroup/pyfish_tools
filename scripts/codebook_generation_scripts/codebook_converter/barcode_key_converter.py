@@ -1,6 +1,5 @@
 """
 author: Katsuya Colon
-group: Cai Lab
 updated: 09/08/22
 """
 

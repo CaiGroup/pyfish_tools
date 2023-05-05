@@ -6,7 +6,7 @@ JOB_ID = os.getenv('SLURM_ARRAY_TASK_ID', 0)
 print(f'This is task {JOB_ID}')
 
 #path to processed images
-img_dir = "/groups/CaiLab/personal/Lex/raw/092222_150_nih_3t3/notebook_pyfiles/pre_processed_images/"
+img_dir = ""
 
 channel = int(JOB_ID) # which channel to analyze
 z=2 # which z layer to focus on

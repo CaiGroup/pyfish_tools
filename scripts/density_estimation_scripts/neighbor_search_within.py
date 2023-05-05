@@ -1,7 +1,6 @@
 """
 author: Katsuya Lex Colon
 updated: 02/14/21
-group: Cai Lab
 """
 
 from sklearn.neighbors import NearestNeighbors

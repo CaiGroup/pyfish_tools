@@ -1,6 +1,5 @@
 """
 author: Katsuya Lex Colon
-group: Cai Lab
 updated: 06/02/22
 """
 #data management
@@ -504,13 +503,13 @@ def ratiometric_dot_detection_parallel(img_src, size_cutoff=None, threshold=500,
     
     #set output paths
     parent = Path(img_src[0]).parent
-    while "seqFISH_datapipeline" not in os.listdir(parent):
+    while "pyfish_tools" not in os.listdir(parent):
         parent = parent.parent
         
     if pixel_based == False:
-        output_folder = parent / "seqFISH_datapipeline"/ "dots_detected" / "spot_based"
+        output_folder = parent / "pyfish_tools"/ "dots_detected" / "spot_based"
     else:
-        output_folder = parent / "seqFISH_datapipeline"/ "dots_detected" / "pixel_based"
+        output_folder = parent / "pyfish_tools"/ "dots_detected" / "pixel_based"
     output_folder.mkdir(parents=True, exist_ok=True)
     
     #how many files

@@ -279,9 +279,9 @@ def dot_detection_parallel(img_src, size_cutoff=3, threshold=0.02,
     
     #set output paths
     parent = Path(img_src[0]).parent
-    while "seqFISH_datapipeline" not in os.listdir(parent):
+    while "pyfish_tools" not in os.listdir(parent):
         parent = parent.parent
-    output_folder = parent / "seqFISH_datapipeline"/ "output" /"dots_detected"/ f"Channel_{channel}" 
+    output_folder = parent / "pyfish_tools"/ "output" /"dots_detected"/ f"Channel_{channel}" 
     output_folder.mkdir(parents=True, exist_ok=True)
     
     #how many files

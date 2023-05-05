@@ -1,7 +1,6 @@
 """
 author: Katsuya Lex Colon
 updated: 02/14/21
-group: Cai Lab
 """
 #general analysis packages
 import numpy as np

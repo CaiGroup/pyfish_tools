@@ -1,7 +1,6 @@
 """
 author: Katsuya Lex Colon
 updated: 05/13/22
-group: Cai Lab
 """
 
 import numpy as np

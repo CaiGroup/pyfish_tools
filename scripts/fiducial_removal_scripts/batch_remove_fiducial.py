@@ -7,13 +7,13 @@ import os
 JOB_ID = os.getenv('SLURM_ARRAY_TASK_ID', 0)
 
 #get paths of all dot locations for specific z and channel
-directory = glob(f"/groups/CaiLab/personal/Lex/raw/120822_2k_mouse_brain/seqFISH_datapipeline/output/dots_detected/Channel_All/*/locations_z_{JOB_ID}.csv")
+directory = glob(f"")
 #sort positions to match
 key = [int(re.search('Pos(\\d+)*', str(f)).group(1)) for f in directory]
 locations_srcs = list(np.array(directory)[np.argsort(key)])
 
 #get reference paths
-directory = glob("/groups/CaiLab/personal/Lex/raw/120822_2k_mouse_brain/chromatic_aberration/*.ome.tif")
+directory = glob("")
 #sort positions to match
 key = [int(re.search('Pos(\\d+)*', str(f)).group(1)) for f in directory]
 fid_srcs = list(np.array(directory)[np.argsort(key)])

@@ -1,7 +1,6 @@
 """
 author: Katsuya Lex Colon
 updated: 06/17/22
-group: Cai Lab
 """
 
 import matplotlib.pyplot as plt

@@ -1,7 +1,6 @@
 """
 author: Katsuya Lex Colon
-group: Cai Lab
-date:05/01/2022
+date: 05/01/2022
 """
 
 #import gen packages
