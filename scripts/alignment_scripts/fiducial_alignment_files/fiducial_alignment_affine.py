@@ -411,10 +411,16 @@ def fiducial_alignment_single(tiff_src, ref_src,threshold_abs=500, max_dist=2, r
 
     tiff = pil_imread(tiff_src, swapaxes=True)
     ref = pil_imread(ref_src, swapaxes=True)
+    
     if tiff.shape[1] != num_channels:
         tiff = pil_imread(tiff_src, swapaxes=False)
         if tiff.shape[0] == tiff.shape[1]:
             tiff = check_axis(tiff)
+            
+    if ref.shape[1] != num_channels:
+        ref = pil_imread(ref_src, swapaxes=False)
+        if ref.shape[0] == ref.shape[1]:
+            ref = check_axis(ref)
 
     #Get dots per channel 
     ref_dots_list = []
