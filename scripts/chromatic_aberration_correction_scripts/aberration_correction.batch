@@ -4,12 +4,15 @@
 #SBATCH --mem=50G
 #SBATCH --cpus-per-task=12
 #SBATCH --time=02:00:00
-#SBATCH --array=0-25
+#SBATCH --array=0-35
 
 pwd; hostname; date
 echo This is task $SLURM_ARRAY_TASK_ID
 
-source /groups/CaiLab/personal/python_env/bin/activate_batch
+source ~/miniconda3/bin/activate
+
+conda activate python3.7
+
 python batch_chromatic_aberr.py
 
 date
