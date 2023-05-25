@@ -16,7 +16,7 @@ sys.path.append("..")
 from helpers.util import pil_imread
 
 
-def dapi_alignment_single(ref,moving):
+def dapi_alignment_single(ref, moving, num_channels):
     """A function to obtain translational offsets using phase correlation. Image input should have the format z,c,x,y.
     Parameters
     ----------
@@ -35,6 +35,10 @@ def dapi_alignment_single(ref,moving):
     
     image_ref = pil_imread(ref, swapaxes=True)
     image_moving = pil_imread(moving, swapaxes=True)
+    
+    if image_ref.shape[1] != num_channels:
+        image_ref = pil_imread(ref, swapaxes=False)
+        image_moving = pil_imread(moving, swapaxes=False)
     
     #get dapi channel for reference and moving assuming it is at the end
     dapi_ref = image_ref.shape[1]-1
@@ -66,7 +70,7 @@ def dapi_alignment_single(ref,moving):
     np.savetxt(str(shift_output),shift)
     del corr_stack
 
-def dapi_alignment_parallel(image_ref,images_moving):
+def dapi_alignment_parallel(image_ref, images_moving, num_channels):
     """Run dapi alignment on all positions
     Parameter
     ---------
@@ -79,13 +83,13 @@ def dapi_alignment_parallel(image_ref,images_moving):
     
     if type(images_moving) != list:
         with ThreadPoolExecutor(max_workers=20) as exe:
-            exe.submit(dapi_alignment_single, image_ref, images_moving)
+            exe.submit(dapi_alignment_single, image_ref, images_moving, num_channels)
     
     else:
         with ThreadPoolExecutor(max_workers=20) as exe:
             futures = {}
             for path in images_moving:
-                fut = exe.submit(dapi_alignment_single, image_ref, path)
+                fut = exe.submit(dapi_alignment_single, image_ref, path, num_channels)
                 futures[fut] = path
         
             for fut in as_completed(futures):
