@@ -31,15 +31,14 @@ def plot_2d(img, zmax):
     
     fig.show()
     
-def read_images(files, max_project=True):
-    
-    #Do you wish to max project?
-    max_project = max_project
+def read_images(files, max_project = True):
 
     #Read in images
     imgs = []
     for i in tqdm(range(len(files))):
         img = pil_imread(files[i], swapaxes=True)
+        if img.shape[1] > 4:
+            img = pil_imread(files[i], swapaxes=False)
         if max_project == True:
             imgs.append(np.max(img,axis=0))
         else:
