@@ -1232,7 +1232,7 @@ class decode:
         codebook = codebook.set_index(codebook.columns[0])
         location_path_name = Path(self.location_path).name
         #collect z info
-        z_info = location_path_name.split("_")[2].replace(".csv","")
+        z_info = location_path_name.split("_")[-1].replace(".csv","")
         
         #check to see if the necessary amount of hybs are present
         assert len(locations["hyb"].unique()) == self.hybs, "Locations file is missing a hyb"
