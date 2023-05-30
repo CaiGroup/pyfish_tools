@@ -43,8 +43,9 @@ pyFISH tools is a generalized, fully Python-based pipeline that allows for the a
 - Gene assignment of barcoded sequential smFISH spots with SVM Feature Radial Decoder (look at PDF  in corresponding directory for how it works)
 ### Gene by Cell 
 - Generate gene-by-cell matrix for single-cell analysis
-### Fiducial Removal
-- Remove fiducial markers or background spot-like noise (ex. lipofuscin)
+### Noise and Fiducial Removal
+- Remove fiducial markers or background spot-like noise by spot detecting on background image
+- Remove fiducial markers or background spot-like noise by looking for redudant spots within a barcoding round
 ### Codebook Generation
 - Convert pseudocolor codebooks to an n-bit string codebook
 - Balance codebook using TPM or FPKM values from RNA-seq
@@ -58,6 +59,7 @@ pyFISH tools is a generalized, fully Python-based pipeline that allows for the a
 ### Post Analysis
 - Calculate final false positive rate of decoded barcodes
 - Perform correlational analysis with other smFISH datasets or RNA-seq
+- Basic clustering 
 ### Requested Scripts
 - Stitch nuclear and cytoplasm masks so that two separate sub-cellular analysis can be performed
 - Use an interactive python script to quantify antibody stains or intron spots (look at readme.txt file in scripts/requested_scripts/stain_intron_quant_scripts)
