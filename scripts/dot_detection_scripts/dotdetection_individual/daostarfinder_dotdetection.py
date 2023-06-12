@@ -67,7 +67,7 @@ def daofinder(data,  threshold, fwhm = 4.0):
     sources = daofind(data)
     
     #return none if nothing was picked else return table
-    if sources == None:
+    if type(sources) == type(None):
         return None
     for col in sources.colnames:
          sources[col].info.format = '%.8g'  # for consistent table output
