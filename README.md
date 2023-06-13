@@ -7,7 +7,7 @@ pyFISH tools is a generalized, fully Python-based pipeline that allows for the a
 
 ## General Workflow
 <p align="center">
-<img src="https://github.com/klcolon/pyfish_tools/blob/main/logo/pipeline_format.png" alt="pipeline">
+<img src="https://github.com/CaiGroup/pyfish_tools/blob/pyFISH/logo/pipeline_format.png" alt="pipeline">
 </p>
 
 ## What is included in this pipeline?
