@@ -139,35 +139,33 @@ def write_masks(masks, files, save_dir, repeat_mask_multi_z = 0):
     
     #save images
     print("Saving masks in the following directory: ",save_dir)
-    
-    if (not os.path.exists(save_dir)):
-        Path(save_dir).mkdir(parents=True, exist_ok=True)
+    save_dir = Path(save_dir)
+    save_dir.mkdir(parents=True, exist_ok=True)
         
-
     for idx,mask in enumerate(masks):
         file_name=os.path.splitext(os.path.basename(files[idx]))[0]
         if len(mask.shape) > 2:
             for z in range(len(mask)):
                 mask_z=mask[z]
                 #Output name for masks
-                mask_output_name=save_dir+file_name.replace(".ome",f"_z{z}.tif")
+                mask_output_name=save_dir / file_name.replace(".ome", f"_z{z}.tif")
                 #Save mask as 16-bit in case this has to be used for detecting than 255 objects
                 mask_z=mask_z.astype(np.uint16)
-                skimage.io.imsave(mask_output_name, mask_z, check_contrast=False)
+                skimage.io.imsave(str(mask_output_name), mask_z, check_contrast=False)
         else:
             if repeat_mask_multi_z == 0:
                 #Output name for masks
-                mask_output_name=save_dir+file_name+".tif"
+                mask_output_name=save_dir / (file_name +".tif")
                 #Save mask as 16-bit in case this has to be used for detecting than 255 objects
                 mask=mask.astype(np.uint16)
-                skimage.io.imsave(mask_output_name,mask, check_contrast=False)
+                skimage.io.imsave(str(mask_output_name) ,mask, check_contrast=False)
             else:
                 for z in range(repeat_mask_multi_z):
                     #Output name for masks
-                    mask_output_name=save_dir+file_name.replace(".ome",f"_z{z}.tif")
+                    mask_output_name=save_dir / file_name.replace(".ome",f"_z{z}.tif")
                     #Save mask as 16-bit in case this has to be used for detecting than 255 objects
                     mask=mask.astype(np.uint16)
-                    skimage.io.imsave(mask_output_name,mask, check_contrast=False)
+                    skimage.io.imsave(str(mask_output_name) ,mask, check_contrast=False)
     print("")
     print("~Files saved~ :D")
     

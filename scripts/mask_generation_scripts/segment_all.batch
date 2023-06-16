@@ -1,18 +1,16 @@
 #!/bin/bash
 
 #SBATCH --ntasks=1
-#SBATCH --mem=50G
+#SBATCH --mem=100G
 #SBATCH --cpus-per-task=12
-#SBATCH --time=02:00:00
-#SBATCH --array=0-99
+#SBATCH --time=12:00:00
+#SBATCH --array=0
 
 pwd; hostname; date
 echo This is task $SLURM_ARRAY_TASK_ID
 
 source ~/miniconda3/bin/activate
-
 conda activate python3.7
-
-python batch_chromatic_aberr.py
+python segment_batch.py
 
 date

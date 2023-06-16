@@ -13,7 +13,7 @@ JOB_ID = os.getenv('SLURM_ARRAY_TASK_ID', 0)
 print(f'This is task {JOB_ID}')
 
 #general path and position name
-directory = Path("")
+directory = Path("/groups/CaiLab/personal/Lex/raw/230608_4k_inv_5bs/pyfish_tools/output/z_matched_images")
 position_name = f'MMStack_Pos{JOB_ID}.ome.tif'
 
 #use this for all hyb alignment
@@ -21,11 +21,11 @@ files, _, _ = find_matching_files(directory, 'HybCycle_{hyb}' + f'/{position_nam
 files = [str(f) for f in files]
 
 #directory to beads
-ref = f"/{position_name}"
+ref = f"/groups/CaiLab/personal/Lex/raw/230608_4k_inv_5bs/chromatic_aberration/{position_name}"
 
 tiff_list = files #list of images
 ref_src = ref #reference bead images
-threshold_abs=500 #raw intensity value the dots must be over
+threshold_abs=1000 #raw intensity value the dots must be over
 max_dist=1 #maximum allowed distance a fiducial can be prior to alignment
 ransac_threshold=0.5 #maximum pixel distance a dot has to be after correction to be considered an inlier
 bead_channel_single=None #if all channels have beads set to None, else specificy which channel (0,1,2,3)
