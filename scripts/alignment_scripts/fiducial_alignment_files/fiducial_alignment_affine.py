@@ -409,16 +409,16 @@ def fiducial_alignment_single(tiff_src, ref_src,threshold_abs=500, max_dist=2, r
     
     #read in image
 
-    tiff = pil_imread(tiff_src, swapaxes=True)
-    ref = pil_imread(ref_src, swapaxes=True)
+    tiff = pil_imread(tiff_src, num_channels=num_channels, swapaxes=True)
+    ref = pil_imread(ref_src, num_channels=num_channels, swapaxes=True)
     
     if tiff.shape[1] != num_channels:
-        tiff = pil_imread(tiff_src, swapaxes=False)
+        tiff = pil_imread(tiff_src, num_channels=num_channels, swapaxes=False)
         if tiff.shape[0] == tiff.shape[1]:
             tiff = check_axis(tiff)
             
     if ref.shape[1] != num_channels:
-        ref = pil_imread(ref_src, swapaxes=False)
+        ref = pil_imread(ref_src, num_channels=num_channels, swapaxes=False)
         if ref.shape[0] == ref.shape[1]:
             ref = check_axis(ref)
 
