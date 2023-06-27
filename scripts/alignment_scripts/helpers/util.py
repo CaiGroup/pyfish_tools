@@ -18,27 +18,30 @@ def pil_imopen(fname, metadata=False):
     else:
         return im
 
-
 def pil_imread(
     fname,
+    num_channels = None,
     metadata=False,
     swapaxes=False,
     ensure_4d=True,
     backup=tif.imread,
-    **kwargs
-):
+    **kwargs):
+    
     md = None
 
     import warnings
+    # Ignoring the user warnings during the image read operation.
     warnings.simplefilter('ignore', UserWarning)
 
     try:
         im = pil_imopen(fname)
         md = pil_getmetadata(im)
         imarr = pil_frames_to_ndarray(im)
-    except (ValueError, UnidentifiedImageError) as e:
+    except (TypeError, ValueError, UnidentifiedImageError) as e:
         if callable(backup):
             imarr = backup(fname, **kwargs)
+            if num_channels:
+                imarr = imarr.reshape((num_channels, int(imarr.shape[0]/num_channels), *imarr.shape[1:])) 
         else:
             raise e
 
@@ -53,7 +56,6 @@ def pil_imread(
         return imarr, md
     else:
         return imarr
-
 
 def pil_getmetadata(im, relevant_keys=None):
     """
@@ -180,13 +182,14 @@ def pil_frames_to_ndarray(im, dtype=np.uint16):
 
     return npoutput
 
-
 def safe_imread(fname, is_ome=False, is_imagej=True):
     imarr = np.array([])
 
     try:
         imarr = tif.imread(fname, is_ome=is_ome, is_imagej=is_imagej)
     except (AttributeError, RuntimeError):
+        # AttributeError and RuntimeError exceptions are caught here,
+        # and the imread function is called again with different arguments.
         imarr = tif.imread(fname, is_ome=is_ome, is_imagej=False)
 
     return imarr
@@ -197,18 +200,18 @@ def safe_imwrite(
     fname,
     compression='DEFLATE',
     ome=False,
-    imagej=True
-):
+    imagej=True):
+    
     arr = arr.copy()
     try:
         with tif.TiffWriter(fname, ome=ome, imagej=imagej) as tw:
             tw.write(arr, compression=compression)
     except RuntimeError:
+        # In case of RuntimeError, the image is written again with different arguments.
         with tif.TiffWriter(fname, ome=ome, imagej=False) as tw:
             tw.write(arr, compression=compression)
 
     del arr
-
 
 def populate_files(
         directory,
