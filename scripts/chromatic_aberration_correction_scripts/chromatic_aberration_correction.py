@@ -331,7 +331,10 @@ def chromatic_corr_offsets(tiff_src,threshold_abs=500, max_dist=2,
     """
     
     #read in image
-    tiff = pil_imread(tiff_src, swapaxes=True)
+    try:
+        tiff = pil_imread(tiff_src, num_channels=num_channels, swapaxes=True)
+    except:
+        tiff = pil_imread(tiff_src, num_channels=None, swapaxes=True)
     if tiff.shape[1] != num_channels:
         tiff = pil_imread(tiff_src, swapaxes=False)
         if tiff.shape[0] == tiff.shape[1]:
