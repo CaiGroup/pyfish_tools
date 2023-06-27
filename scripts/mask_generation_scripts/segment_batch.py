@@ -10,8 +10,8 @@ from util import find_matching_files
 
 # User defined settings
 #----------------------------------------------------------------------------------
-input_directory = "/groups/CaiLab/personal/Lex/raw/230608_4k_inv_5bs/HybCycle_21/*" # don't forget the star
-num_pos         = 100
+input_directory = "/groups/CaiLab/personal/Lex/raw/230623_4k_0.5nM_IP/HybCycle_21/*.tif" # don't forget the star
+num_pos         = 69
 max_project     = True
 have_multiple_z = False
 channel         = 0   #which channel has segmenation marker (0,1,2,3)?
@@ -19,9 +19,10 @@ diameter_cyto   = 350 #diameter in pixels for cytoplasm
 diameter_nucl   = 150 #diameter in pixels for nucleus
 flow            = 2
 cellprob        = -1
-save_dir_cyto   = '/groups/CaiLab/personal/Lex/raw/230608_4k_inv_5bs/pyfish_tools/output/masks/cyto' 
-save_dir_nucl   = '/groups/CaiLab/personal/Lex/raw/230608_4k_inv_5bs/pyfish_tools/output/masks/nucl'
-repeat          = 6    #number of copies for z's if you wish to propagate (1-infinite)
+num_channels    = 4 
+save_dir_cyto   = '/groups/CaiLab/personal/Lex/raw/230623_4k_0.5nM_IP/pyfish_tools/output/masks/cyto' 
+save_dir_nucl   = '/groups/CaiLab/personal/Lex/raw/230623_4k_0.5nM_IP/pyfish_tools/output/masks/nucl'
+repeat          = 12    #number of copies for z's if you wish to propagate (1-infinite)
 threshold       = 0.15 #percent coverage of nuclear mask on top of cytoplasm mask
 use_gpu         = False #use this at your own risk. Job submission can take forever if GPUs are requested.
 #----------------------------------------------------------------------------------
@@ -31,7 +32,7 @@ if use_gpu == True:
 files           = glob.glob(input_directory)
 key             = [int(re.search('MMStack_Pos(\\d+)', f).group(1)) for f in files]
 files           = list(np.array(files)[np.argsort(key)])
-imgs            = read_images(files[:num_pos], max_project=max_project)
+imgs            = read_images(files[:num_pos], num_channels=num_channels, max_project=max_project)
 
 model_cyto      = models.Cellpose(gpu=False, model_type="cyto2")
 model_nucl      = models.Cellpose(gpu=False, model_type="nuclei")
