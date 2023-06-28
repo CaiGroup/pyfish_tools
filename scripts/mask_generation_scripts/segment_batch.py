@@ -3,6 +3,7 @@ from cellpose_segmentation import *
 import nuclear_cyto_match as ncm
 import glob
 import re
+import tifffile as tf
 from pathlib import Path
 import os
 import sys
