@@ -12,7 +12,7 @@ JOB_ID = os.getenv('SLURM_ARRAY_TASK_ID', 0)
 print(f'This is task {JOB_ID}')
 
 #general path and position name
-directory     = Path("/groups/CaiLab/personal/Lex/raw/230608_4k_inv_5bs/")
+directory     = Path("/groups/CaiLab/personal/Lex/raw/230623_4k_0.5nM_IP/")
 position_name = f'MMStack_Pos{JOB_ID}.ome.tif'
 
 #set reference positions

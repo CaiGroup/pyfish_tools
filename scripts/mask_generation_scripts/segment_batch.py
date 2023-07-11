@@ -11,8 +11,8 @@ from util import find_matching_files
 
 # User defined settings
 #----------------------------------------------------------------------------------
-input_directory = "/groups/CaiLab/personal/Lex/raw/230623_4k_0.5nM_IP/HybCycle_21/*.tif" # don't forget the star
-num_pos         = 69
+input_directory = "/groups/CaiLab/personal/Lex/raw/230708_3k_1nM_split_IP_tmg/HybCycle_21/*.tif" # don't forget the star
+num_pos         = 41
 max_project     = True
 have_multiple_z = False
 channel         = 0   #which channel has segmenation marker (0,1,2,3)?
@@ -21,9 +21,9 @@ diameter_nucl   = 150 #diameter in pixels for nucleus
 flow            = 2
 cellprob        = -1
 num_channels    = 4 
-save_dir_cyto   = '/groups/CaiLab/personal/Lex/raw/230623_4k_0.5nM_IP/pyfish_tools/output/masks/cyto' 
-save_dir_nucl   = '/groups/CaiLab/personal/Lex/raw/230623_4k_0.5nM_IP/pyfish_tools/output/masks/nucl'
-repeat          = 12    #number of copies for z's if you wish to propagate (1-infinite)
+save_dir_cyto   = '/groups/CaiLab/personal/Lex/raw/230708_3k_1nM_split_IP_tmg/pyfish_tools/output/masks/cyto' 
+save_dir_nucl   = '/groups/CaiLab/personal/Lex/raw/230708_3k_1nM_split_IP_tmg/pyfish_tools/output/masks/nucl'
+repeat          = 5    #number of copies for z's if you wish to propagate (1-infinite)
 threshold       = 0.15 #percent coverage of nuclear mask on top of cytoplasm mask
 use_gpu         = False #use this at your own risk. Job submission can take forever if GPUs are requested.
 #----------------------------------------------------------------------------------

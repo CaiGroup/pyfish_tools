@@ -33,12 +33,12 @@ def dapi_alignment_single(ref, moving, num_channels):
     
     output_path.parent.mkdir(parents=True, exist_ok=True)
     
-    image_ref = pil_imread(ref, swapaxes=True)
-    image_moving = pil_imread(moving, swapaxes=True)
+    image_ref = pil_imread(ref, num_channels=num_channels, swapaxes=True)
+    image_moving = pil_imread(moving, num_channels=num_channels, swapaxes=True)
     
     if image_ref.shape[1] != num_channels:
-        image_ref = pil_imread(ref, swapaxes=False)
-        image_moving = pil_imread(moving, swapaxes=False)
+        image_ref = pil_imread(ref, num_channels=num_channels, swapaxes=False)
+        image_moving = pil_imread(moving, num_channels=num_channels, swapaxes=False)
     
     #get dapi channel for reference and moving assuming it is at the end
     dapi_ref = image_ref.shape[1]-1

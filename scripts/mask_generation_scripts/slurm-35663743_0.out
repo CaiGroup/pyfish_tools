@@ -1,0 +1,88 @@
+/home/kcolon/Lex/raw/230708_3k_1nM_split_IP_tmg/pyfish_tools/scripts/mask_generation_scripts
+hpc-24-16.cm.cluster
+Tue Jul 11 10:18:42 PDT 2023
+This is task 0
+  0%|          | 0/41 [00:00<?, ?it/s]TiffPage 0: TiffFileError: invalid tag value offset
+TiffPages: invalid page offset 167795628
+  2%|▏         | 1/41 [00:01<00:52,  1.30s/it]TiffPage 0: TiffFileError: invalid tag value offset
+TiffPages: invalid page offset 167795628
+  5%|▍         | 2/41 [00:02<00:44,  1.15s/it]TiffPage 0: TiffFileError: invalid tag value offset
+TiffPages: invalid page offset 167795628
+  7%|▋         | 3/41 [00:03<00:47,  1.25s/it]TiffPage 0: TiffFileError: invalid tag value offset
+TiffPages: invalid page offset 167795628
+ 10%|▉         | 4/41 [00:05<00:47,  1.27s/it]TiffPage 0: TiffFileError: invalid tag value offset
+TiffPages: invalid page offset 167795628
+ 12%|█▏        | 5/41 [00:06<00:47,  1.32s/it]TiffPage 0: TiffFileError: invalid tag value offset
+TiffPages: invalid page offset 167795628
+ 15%|█▍        | 6/41 [00:07<00:46,  1.34s/it]TiffPage 0: TiffFileError: invalid tag value offset
+TiffPages: invalid page offset 167795628
+ 17%|█▋        | 7/41 [00:09<00:46,  1.36s/it]TiffPage 0: TiffFileError: invalid tag value offset
+TiffPages: invalid page offset 167795628
+ 20%|█▉        | 8/41 [00:10<00:45,  1.38s/it]TiffPage 0: TiffFileError: invalid tag value offset
+TiffPages: invalid page offset 167795628
+ 22%|██▏       | 9/41 [00:12<00:45,  1.41s/it]TiffPage 0: TiffFileError: invalid tag value offset
+TiffPages: invalid page offset 167795628
+ 24%|██▍       | 10/41 [00:13<00:44,  1.43s/it]TiffPage 0: TiffFileError: invalid tag value offset
+TiffPages: invalid page offset 167795668
+ 27%|██▋       | 11/41 [00:14<00:42,  1.41s/it]TiffPage 0: TiffFileError: invalid tag value offset
+TiffPages: invalid page offset 167795668
+ 29%|██▉       | 12/41 [00:16<00:40,  1.41s/it]TiffPage 0: TiffFileError: invalid tag value offset
+TiffPages: invalid page offset 167795668
+ 32%|███▏      | 13/41 [00:17<00:40,  1.44s/it]TiffPage 0: TiffFileError: invalid tag value offset
+TiffPages: invalid page offset 167795668
+ 34%|███▍      | 14/41 [00:19<00:37,  1.37s/it]TiffPage 0: TiffFileError: invalid tag value offset
+TiffPages: invalid page offset 167795668
+ 37%|███▋      | 15/41 [00:20<00:33,  1.27s/it]TiffPage 0: TiffFileError: invalid tag value offset
+TiffPages: invalid page offset 167795668
+ 39%|███▉      | 16/41 [00:21<00:31,  1.24s/it]TiffPage 0: TiffFileError: invalid tag value offset
+TiffPages: invalid page offset 167795668
+ 41%|████▏     | 17/41 [00:22<00:29,  1.22s/it]TiffPage 0: TiffFileError: invalid tag value offset
+TiffPages: invalid page offset 167795668
+ 44%|████▍     | 18/41 [00:23<00:27,  1.20s/it]TiffPage 0: TiffFileError: invalid tag value offset
+TiffPages: invalid page offset 167795668
+ 46%|████▋     | 19/41 [00:24<00:25,  1.18s/it]TiffPage 0: TiffFileError: invalid tag value offset
+TiffPages: invalid page offset 167795668
+ 49%|████▉     | 20/41 [00:25<00:25,  1.20s/it]TiffPage 0: TiffFileError: invalid tag value offset
+TiffPages: invalid page offset 167795668
+ 51%|█████     | 21/41 [00:27<00:25,  1.28s/it]TiffPage 0: TiffFileError: invalid tag value offset
+TiffPages: invalid page offset 167795668
+ 54%|█████▎    | 22/41 [00:28<00:25,  1.32s/it]TiffPage 0: TiffFileError: invalid tag value offset
+TiffPages: invalid page offset 167795668
+ 56%|█████▌    | 23/41 [00:30<00:24,  1.37s/it]TiffPage 0: TiffFileError: invalid tag value offset
+TiffPages: invalid page offset 167795668
+ 59%|█████▊    | 24/41 [00:31<00:24,  1.42s/it]TiffPage 0: TiffFileError: invalid tag value offset
+TiffPages: invalid page offset 167795668
+ 61%|██████    | 25/41 [00:33<00:22,  1.44s/it]TiffPage 0: TiffFileError: invalid tag value offset
+TiffPages: invalid page offset 167795668
+ 63%|██████▎   | 26/41 [00:34<00:21,  1.44s/it]TiffPage 0: TiffFileError: invalid tag value offset
+TiffPages: invalid page offset 167795668
+ 66%|██████▌   | 27/41 [00:36<00:20,  1.43s/it]TiffPage 0: TiffFileError: invalid tag value offset
+TiffPages: invalid page offset 167795668
+ 68%|██████▊   | 28/41 [00:37<00:18,  1.46s/it]TiffPage 0: TiffFileError: invalid tag value offset
+TiffPages: invalid page offset 167795668
+ 71%|███████   | 29/41 [00:40<00:23,  1.96s/it]TiffPage 0: TiffFileError: invalid tag value offset
+TiffPages: invalid page offset 167795668
+ 73%|███████▎  | 30/41 [00:43<00:24,  2.19s/it]TiffPage 0: TiffFileError: invalid tag value offset
+TiffPages: invalid page offset 167795668
+ 76%|███████▌  | 31/41 [00:45<00:20,  2.09s/it]TiffPage 0: TiffFileError: invalid tag value offset
+TiffPages: invalid page offset 167795668
+ 78%|███████▊  | 32/41 [00:47<00:17,  1.94s/it]TiffPage 0: TiffFileError: invalid tag value offset
+TiffPages: invalid page offset 167795668
+ 80%|████████  | 33/41 [00:48<00:14,  1.84s/it]TiffPage 0: TiffFileError: invalid tag value offset
+TiffPages: invalid page offset 167795668
+ 83%|████████▎ | 34/41 [00:50<00:12,  1.72s/it]TiffPage 0: TiffFileError: invalid tag value offset
+TiffPages: invalid page offset 167795668
+ 85%|████████▌ | 35/41 [00:51<00:10,  1.67s/it]TiffPage 0: TiffFileError: invalid tag value offset
+TiffPages: invalid page offset 167795668
+ 88%|████████▊ | 36/41 [00:53<00:08,  1.66s/it]TiffPage 0: TiffFileError: invalid tag value offset
+TiffPages: invalid page offset 167795668
+ 90%|█████████ | 37/41 [00:54<00:06,  1.59s/it]TiffPage 0: TiffFileError: invalid tag value offset
+TiffPages: invalid page offset 167795668
+ 93%|█████████▎| 38/41 [00:56<00:04,  1.53s/it]TiffPage 0: TiffFileError: invalid tag value offset
+TiffPages: invalid page offset 167795668
+ 95%|█████████▌| 39/41 [00:57<00:03,  1.53s/it]TiffPage 0: TiffFileError: invalid tag value offset
+TiffPages: invalid page offset 167795668
+ 98%|█████████▊| 40/41 [00:59<00:01,  1.50s/it]TiffPage 0: TiffFileError: invalid tag value offset
+TiffPages: invalid page offset 167795668
+100%|██████████| 41/41 [01:00<00:00,  1.52s/it]100%|██████████| 41/41 [01:00<00:00,  1.48s/it]
+  0%|          | 0/41 [00:00<?, ?it/s] 32%|███▏      | 13/41 [00:00<00:00, 124.39it/s] 63%|██████▎   | 26/41 [00:00<00:00, 127.24it/s] 98%|█████████▊| 40/41 [00:00<00:00, 129.95it/s]100%|██████████| 41/41 [00:00<00:00, 128.97it/s]
