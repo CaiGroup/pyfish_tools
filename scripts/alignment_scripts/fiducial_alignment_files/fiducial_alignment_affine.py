@@ -408,14 +408,20 @@ def fiducial_alignment_single(tiff_src, ref_src,threshold_abs=500, max_dist=2, r
     output_path.parent.mkdir(parents=True, exist_ok=True)
     
     #read in image
-
-    tiff = pil_imread(tiff_src, num_channels = num_channels, swapaxes = True)
-    ref = pil_imread(ref_src, num_channels = num_channels, swapaxes = True)
+    try:
+        tiff = pil_imread(tiff_src, num_channels = None, swapaxes = True)
+        if tiff.shape[1] != num_channels:
+            tiff = pil_imread(tiff_src, num_channels = None, swapaxes = False)
+            if tiff.shape[0] == tiff.shape[1]:
+                tiff = check_axis(tiff)
+    except:
+        tiff = pil_imread(tiff_src, num_channels = num_channels, swapaxes = True)
+        if tiff.shape[1] != num_channels:
+            tiff = pil_imread(tiff_src, num_channels = num_channels, swapaxes = False)
+            if tiff.shape[0] == tiff.shape[1]:
+                tiff = check_axis(tiff)
     
-    if tiff.shape[1] != num_channels:
-        tiff = pil_imread(tiff_src, num_channels = num_channels, swapaxes = False)
-        if tiff.shape[0] == tiff.shape[1]:
-            tiff = check_axis(tiff)
+    ref = pil_imread(ref_src, num_channels = num_channels, swapaxes = True)
             
     if ref.shape[1] != num_channels:
         ref = pil_imread(ref_src, num_channels = num_channels, swapaxes = False)
