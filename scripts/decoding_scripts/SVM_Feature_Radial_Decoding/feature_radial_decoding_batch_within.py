@@ -3,56 +3,38 @@ import os
 import glob
 import sys
 
-JOB_ID = os.getenv('SLURM_ARRAY_TASK_ID', 0)
-print(f'This is task {JOB_ID}')
-
-#arguments from multi_decoding_param file
-#collect pos and channel info
-#pos = int(sys.argv[1])
-channel = int(sys.argv[2])
-
-#name of codebooks
-codebooks = ["codebook_string_647.csv","codebook_string_561.csv","codebook_string_488.csv"]
-#name of experimental directory
-exp_dir = ""
-#name of user
-user = "Lex"
-#number of rounds
-num_rounds = 4
-#search radii
-first_radius = 1
-second_radius = 1.5
-third_radius = 2
-#how many allowed drops in calls 
-diff = 1
-#how many times does a pseudocolor sequence must appear
-min_seed = 3
-#how many times does pseudocolor sequence must appear for highly expressed genes
-high_exp_seed = 3
-#number of total hybs
-total_hybs = 20
-#probability cutoff for On dots (0-1). Lower the value the less stringent. Setting probability_cutoff=0 and desired_fdr=None, will output normal unfiltered data.
-probability_cutoff = 0.20
-#desired FDR (0-1). Could set to None if you would like to filter yourself.
-desired_fdr = 0.10
-#do you have parity round
-parity_round = True
-#do you want locations of dots that didn't pass parity
-include_undefined = False
-#do you want to decode highly expressed genes first
-decode_high_exp_genes_first = True
-#do you want to perform an additional third round of decoding
-triple_decode = True
-#do you want to use brightness for scoring (set to false for lantern)
-score_brightness = True
 #____________________________________________________________________________________________________________________________
+#pos = int(sys.argv[1]) #collect pos info. Note: This is legacy argument. We no longer really use this parameter anymore.
 
+channel                      = int(sys.argv[2]) #collect channel info from params file
+codebooks                    = ["codebook_string_647.csv", "codebook_string_561.csv", "codebook_string_488.csv"] #name of codebooks
+exp_dir                      = "230608_4k_inv_5bs" #name of experimental directory
+user                         = "Lex" #name of user
+num_rounds                   = 4 #number of rounds
+first_radius                 = 1 #first search radii
+second_radius                = 1.25 #second search radii
+third_radius                 = 1.5 #third search radii if applicable
+diff                         = 1 #how many allowed drops in calls. Note: This is proportional to number of parity rounds.
+min_seed                     = 3 #how many times does a pseudocolor sequence must appear
+high_exp_seed                = 3 #how many times does pseudocolor sequence must appear for highly expressed genes
+total_hybs                   = 20 #number of total hybs
+probability_cutoff           = 0.20 #probability cutoff for On dots (0-1). Lower the value the less stringent.
+desired_fdr                  = 0.10 #desired FDR (0-1). Could set to None if you would like to filter yourself.
+use_svm                      = False #set to false if model is not helping and to save time.
+parity_round                 = True #do you have parity round
+include_undefined            = False #do you want locations of dots that didn't pass parity
+decode_high_exp_genes_first  = False #do you want to decode highly expressed genes first (only use this if there is a transcript that is causing crowding)
+triple_decode                = True #do you want to perform an additional third round of decoding
+score_brightness             = True #do you want to use brightness for scoring 
+#____________________________________________________________________________________________________________________________
+#No need to really adjust unless you want alternative input or output paths
+JOB_ID = os.getenv('SLURM_ARRAY_TASK_ID', 0)
 #path to dots
-locations_path = glob.glob(f"/{user}/{exp_dir}/pyfish_tools/output/dots_detected/Channel_{channel}/spots_in_cells/Pos{JOB_ID}/*")
+locations_path = glob.glob(f"/groups/CaiLab/personal/{user}/raw/{exp_dir}/pyfish_tools/output/dots_detected/Channel_{channel}/spots_in_cells/Pos{JOB_ID}/*")
 #general codebook path
-codebook_path = f"/{user}/{exp_dir}/barcode_key/{codebooks[channel-1}"
+codebook_path = f"/groups/CaiLab/personal/{user}/raw/{exp_dir}/barcode_key/{codebooks[channel-1]}"
 #Where do you want to output the files
-output_dir = f"/{user}/{exp_dir}/pyfish_tools/output/decoded/final_{first_radius}{second_radius}{third_radius}_seed{min_seed}{high_exp_seed}_heg_svm_p{probability_cutoff*100}_diff{diff}_fdr{desired_fdr*100}/Channel_{channel}/Pos_{JOB_ID}"
+output_dir = f"/groups/CaiLab/personal/{user}/raw/{exp_dir}/pyfish_tools/output/decoded/final_{first_radius}{second_radius}{third_radius}_seed{min_seed}{high_exp_seed}_heg_svm_p{probability_cutoff*100}_diff{diff}_fdr{desired_fdr*100}/Channel_{channel}/Pos_{JOB_ID}"
 
 if len(locations_path) > 1:
     for locations in locations_path:
@@ -65,7 +47,7 @@ if len(locations_path) > 1:
                              decode_high_exp_genes_first=decode_high_exp_genes_first,
                              triple_decode=triple_decode, parity_round=parity_round, 
                              score_brightness = score_brightness)
-        decoder.feature_radial_decoding()
+        decoder.feature_radial_decoding(use_svm = use_svm )
 else:
     decoder = decode(location_path=locations_path[0], codebook_path=codebook_path,
                             num_rounds=num_rounds, first_radius=first_radius,
@@ -77,4 +59,4 @@ else:
                             decode_high_exp_genes_first=decode_high_exp_genes_first,
                             triple_decode=triple_decode, parity_round=parity_round, 
                             score_brightness = score_brightness)
-    decoder.feature_radial_decoding()
+    decoder.feature_radial_decoding(use_svm = use_svm )

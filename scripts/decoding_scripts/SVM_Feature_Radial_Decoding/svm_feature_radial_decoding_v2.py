@@ -1,6 +1,6 @@
 """
 author: Katsuya Lex Colon
-updated: 01/18/23
+updated: 08/03/2023
 """
 
 #general analysis packages
@@ -1203,7 +1203,7 @@ class decode:
         
         return highexpgenes
     
-    def feature_radial_decoding(self):
+    def feature_radial_decoding(self, use_svm = True):
         """
         This function will perform feature based radial decoding on all barcodes as reference. Dot sequences
         that appear n number of times defined by min seed will be kept. Three rounds of decoding can be 
@@ -1264,24 +1264,25 @@ class decode:
         if len(locations_fakes) < 500:
             print("Cannot generate probabilities due to low number of fake dots.")
         else:
-            true_probs_only, X_test, y_test, locations, plt = decode.poly_rbf_gen_dot_probabilities(locations_trues,locations_fakes, locations)
-            #median on probability for trues and fakes
-            fake_median_prob = np.median(np.compress(y_test== -1,true_probs_only))
-            true_median_prob = np.median(np.compress(y_test== 1,true_probs_only))
-            #write out test set
-            X_test.to_csv(str(output_path.parent/"test_set.csv"))
-            y_test.to_csv(str(output_path.parent/"test_set_labels.csv"))
-            np.savetxt(str(output_path.parent/"test_set_probabilities.csv"),true_probs_only)
-            with open(str(output_path.parent/"median_probs.txt"), "w+") as f:
-                f.write(f"Median probability of On for observed fakes were {round(fake_median_prob,2)}.\n")
-                f.write(f"Median probability of On for observed trues were {round(true_median_prob,2)}.\n")
-                f.close()
-            plt.savefig(str(output_path.parent/"feature_ranking.png"), dpi=300, bbox_inches = "tight")
-            plt.clf()
-            #probability cutoff, keep unused dots for later output
-            cutoff_unused_dots = locations[locations["probability on"] <= self.probability_cutoff].reset_index(drop=True)
-            locations = locations[locations["probability on"] > self.probability_cutoff].reset_index(drop=True)
-            print("Will now begin decoding...")
+            if use_svm == True:
+                true_probs_only, X_test, y_test, locations, plt = decode.poly_rbf_gen_dot_probabilities(locations_trues,locations_fakes, locations)
+                #median on probability for trues and fakes
+                fake_median_prob = np.median(np.compress(y_test== -1,true_probs_only))
+                true_median_prob = np.median(np.compress(y_test== 1,true_probs_only))
+                #write out test set
+                X_test.to_csv(str(output_path.parent/"test_set.csv"))
+                y_test.to_csv(str(output_path.parent/"test_set_labels.csv"))
+                np.savetxt(str(output_path.parent/"test_set_probabilities.csv"),true_probs_only)
+                with open(str(output_path.parent/"median_probs.txt"), "w+") as f:
+                    f.write(f"Median probability of On for observed fakes were {round(fake_median_prob,2)}.\n")
+                    f.write(f"Median probability of On for observed trues were {round(true_median_prob,2)}.\n")
+                    f.close()
+                plt.savefig(str(output_path.parent/"feature_ranking.png"), dpi=300, bbox_inches = "tight")
+                plt.clf()
+                #probability cutoff, keep unused dots for later output
+                cutoff_unused_dots = locations[locations["probability on"] <= self.probability_cutoff].reset_index(drop=True)
+                locations = locations[locations["probability on"] > self.probability_cutoff].reset_index(drop=True)
+                print("Will now begin decoding...")
         
         #only keep top 10% of highly expressed genes
         if self.decode_high_exp_genes == True:
