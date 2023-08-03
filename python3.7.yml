@@ -128,7 +128,6 @@ dependencies:
   - olefile=0.46=py37_0
   - openssl=1.0.2u=h516909a_0
   - packaging=21.0=pyhd8ed1ab_0
-  - pandas=1.2.5=py37h219a48f_0
   - pandocfilters=1.5.0=pyhd3eb1b0_0
   - pango=1.42.4=h049681c_0
   - parso=0.8.2=pyhd3eb1b0_0
@@ -205,6 +204,7 @@ dependencies:
   - zlib=1.2.11=h7b6447c_3
   - zstd=1.4.9=haebb681_0
   - pip:
+    - pandas==1.1.5
     - argon2-cffi==21.1.0
     - boto3==1.21.20
     - botocore==1.24.20
