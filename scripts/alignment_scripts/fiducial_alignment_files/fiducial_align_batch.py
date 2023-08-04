@@ -8,10 +8,7 @@ sys.path.append("..")
 #custom py files
 from helpers.util import find_matching_files
 
-JOB_ID = os.getenv('SLURM_ARRAY_TASK_ID', 0)
-
-print(f'This is task {JOB_ID}')
-
+#------------------------------------------------------------------------------------------------------------------------------------------------------------------
 #general path and position name
 directory = Path("/groups/CaiLab/personal/Lex/raw/230718_4k_1nM_5bs_IP_noexo/pyfish_tools/output/z_matched_images")
 position_name = f'MMStack_Pos{JOB_ID}.ome.tif'
@@ -23,17 +20,19 @@ files = [str(f) for f in files]
 #directory to beads
 ref = f"/groups/CaiLab/personal/Lex/raw/230718_4k_1nM_5bs_IP_noexo/chromatic_aberration/{position_name}"
 
-tiff_list = files #list of images
-ref_src = ref #reference bead images
-threshold_abs=600 #raw intensity value the dots must be over
-max_dist = 0.8 #maximum allowed distance a fiducial can be prior to alignment. Note: Set pixel distance to 5 is you are aligning DAPI punctates.
-ransac_threshold=0.4 #maximum pixel distance a dot has to be after correction to be considered an inlier
-bead_channel_single=None #if all channels have beads set to None, else specificy which channel (0,1,2,3). Note: You can try to use DAPI for affine alignment.
-include_dapi=False #bool to include dapi channel
-use_ref_coord = True # use the reference coordinates to find moving dots 
-num_channels=4 #number of channels in image
-cores = 16 #number of cores to use
-
+tiff_list           = files #list of images
+ref_src             = ref #reference bead images
+threshold_abs       = 600 #raw intensity value the dots must be over
+max_dist            = 0.8 #maximum allowed distance a fiducial can be prior to alignment. Note: Set pixel distance to 5 is you are aligning DAPI punctates.
+ransac_threshold    = 0.4 #maximum pixel distance a dot has to be after correction to be considered an inlier
+bead_channel_single = None #if all channels have beads set to None, else specificy which channel (0,1,2,3). Note: You can try to use DAPI for affine alignment.
+include_dapi        = False #Set to True if you are using DAPI punctates (euchromatin) for affine
+use_ref_coord       = True # use the reference coordinates to find moving dots 
+num_channels        = 4 #number of channels in image
+cores               = 16 #number of cores to use
+#------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#no need to edit
+JOB_ID = os.getenv('SLURM_ARRAY_TASK_ID', 0)
 fiducial_align_parallel(tiff_list, ref_src, threshold_abs=threshold_abs, max_dist=max_dist,
                         ransac_threshold=ransac_threshold,bead_channel_single=bead_channel_single,
                         include_dapi=include_dapi,use_ref_coord=use_ref_coord, num_channels=num_channels, cores=cores)
