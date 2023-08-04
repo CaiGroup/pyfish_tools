@@ -10,6 +10,7 @@ from helpers.util import find_matching_files
 
 #------------------------------------------------------------------------------------------------------------------------------------------------------------------
 #general path and position name
+JOB_ID = os.getenv('SLURM_ARRAY_TASK_ID', 0)
 directory = Path("/groups/CaiLab/personal/Lex/raw/230718_4k_1nM_5bs_IP_noexo/pyfish_tools/output/z_matched_images")
 position_name = f'MMStack_Pos{JOB_ID}.ome.tif'
 
@@ -32,7 +33,6 @@ num_channels        = 4 #number of channels in image
 cores               = 16 #number of cores to use
 #------------------------------------------------------------------------------------------------------------------------------------------------------------------
 #no need to edit
-JOB_ID = os.getenv('SLURM_ARRAY_TASK_ID', 0)
 fiducial_align_parallel(tiff_list, ref_src, threshold_abs=threshold_abs, max_dist=max_dist,
                         ransac_threshold=ransac_threshold,bead_channel_single=bead_channel_single,
                         include_dapi=include_dapi,use_ref_coord=use_ref_coord, num_channels=num_channels, cores=cores)
