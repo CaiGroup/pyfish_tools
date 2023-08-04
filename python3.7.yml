@@ -204,6 +204,7 @@ dependencies:
   - zlib=1.2.11=h7b6447c_3
   - zstd=1.4.9=haebb681_0
   - pip:
+    - h5py==3.9.0
     - pandas==1.1.5
     - argon2-cffi==21.1.0
     - boto3==1.21.20
