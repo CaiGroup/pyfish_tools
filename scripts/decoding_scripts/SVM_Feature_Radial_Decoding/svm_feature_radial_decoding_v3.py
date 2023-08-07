@@ -1,7 +1,8 @@
 """
 author: Katsuya Lex Colon
-group: Cai Lab
-updated: 01/18/23
+updated: 08/07/2023
+- Notes: Going to use SVM purely for filtering instead of also scoring. More documentation. Extra data checks. Redefining 
+var names for accuracy.
 """
 
 #general analysis packages
@@ -44,8 +45,7 @@ class decode:
     def __init__(self, location_path, codebook_path, num_rounds,first_radius,
                  second_radius, third_radius, diff, min_seed, high_exp_seed, total_hybs,
                  probability_cutoff, desired_fdr,parity_round, include_undefined,
-                 decode_high_exp_genes_first,
-                 triple_decode, score_brightness, output_dir):
+                 decode_high_exp_genes_first, triple_decode, score_brightness, blank_ch, output_dir):
         """
         Parameters 
         ----------
@@ -86,6 +86,7 @@ class decode:
         self.decode_high_exp_genes = decode_high_exp_genes_first
         self.triple_decode = triple_decode
         self.score_brightness = score_brightness
+        self.blank_ch = blank_ch
         self.output_dir = output_dir
         
     
@@ -98,6 +99,14 @@ class decode:
         dots_used_trues: dot locations of true dots with features to train svm classifier
         dots_used_fakes: dot locations of fake dots with features to train svm classifier
         locations: all of the dots
+
+        Returns
+        -------
+        true_probs_only: probability of being true for each spot
+        X_test: test points
+        y_test: test labels
+        locations: dot locations with probabilities
+        plt: feature importance plot
         """
         #get attributes
         trues = dots_used_trues[["flux","max intensity","size", "sharpness", "symmetry","roundness by gaussian fits"]]
@@ -236,40 +245,47 @@ class decode:
     def false_positive_rate(gene_locations, truebook, fakebook):
         """
         Calculate false positive rate.
+
         Parameters
         ----------
-        gene_locations = decoded gene locations
-        truebook = codebook of only real genes
-        fakebook = codebook of fake genes
-        
+        gene_locations: decoded gene locations
+        truebook: codebook of only real genes
+        fakebook: codebook of fake genes
+
+        Returns
+        -------
+        fpr: false positive rate
         """
         #make fake barcodes df
         fakebrcds = gene_locations[gene_locations["genes"].str.startswith("fake")]
-        
         #make real barcodes df
         real = gene_locations.drop(fakebrcds.index, axis=0)
         
-        #false positive rate
-        M_on = len(truebook)
-        M_off = len(fakebook)
-        N_on = len(real)
-        N_off = len(fakebrcds)
-        false_count_freq = N_off/M_off
-        false_positive_counts = M_on*false_count_freq
-        fdr = false_positive_counts/N_on   
+        M_on = len(truebook) #number of true barcodes in codebook
+        M_off = len(fakebook) #number of fake barcodes in codebook
+        N_on = len(real) #number of observed true barcodes
+        N_off = len(fakebrcds)#number of observed fake barcodes
+        false_count_freq = N_off/M_off #frequency of false barcodes
+        false_positive_counts = M_on*false_count_freq #estimated false positive barcodes based on frequency of false codes
+        fpr = false_positive_counts/N_on  #normalized false positive rate
 
-        return fdr
+        return fpr
 
-    def set_fdr(gene_locations, codebook, fdr_cutoff=0.05):
+    def set_fpr(gene_locations, codebook, fpr_cutoff=0.05):
         """
         Function to sort barcodes by codeword score and sample subsets of decreasing codeword score
-        while calculating fdr. A final gene locations file will be outputted based on user defined
-        fdr_cutoff.
+        while calculating false positive rate. A final gene locations file will be outputted based on user defined
+        fpr_cutoff.
         
         Parameters
         ----------
         gene_locations: decoded gene locations file
-        fdr_cutoff: desired fdr value
+        fpr_cutoff: desired fdr value
+
+        Returns
+        -------
+        desired_df: fpr adjusted dataframe
+        plt: fpr plot
         """
         #sort barcodes by codeword score
         sorted_genes = gene_locations.sort_values("codeword score", ascending=False).reset_index(drop=True)
@@ -278,42 +294,42 @@ class decode:
         fakebook = codebook[codebook.index.str.startswith("fake")]
         truebook = codebook.drop(fakebook.index)
         
-        #calculate fdr while sampling barcodes
-        collect_fdr = []
+        #calculate fpr while sampling barcodes
+        collect_fpr = []
         for i in np.linspace(100, len(sorted_genes),1000).astype(int):
             iso_loc = sorted_genes.iloc[0:i]
             #do not include fakes generated from two separate masks
             if "cell number" in iso_loc.columns:
                 iso_loc = iso_loc[iso_loc["cell number"].astype(int) == iso_loc["cell number"]].reset_index(drop=True)
             #calculate fdr
-            fdr_val = decode.false_positive_rate(iso_loc, truebook, fakebook)
-            collect_fdr.append([i,fdr_val])  
+            fpr_val = decode.false_positive_rate(iso_loc, truebook, fakebook)
+            collect_fpr.append([i,fpr_val])  
          
         #convert to array
-        collect_fdr = np.array(collect_fdr)
+        collect_fpr = np.array(collect_fpr)
         
-        #get fdr below cutoff with the highest number of decoded barcodes
-        filtered_by_fdr = collect_fdr[np.where(collect_fdr[:,1]<=fdr_cutoff)[0]]
+        #get fpr below cutoff with the highest number of decoded barcodes
+        filtered_by_fpr = collect_fpr[np.where(collect_fpr[:,1]<=fpr_cutoff)[0]]
         #in case nothing is below cutoff then return empty df
-        if filtered_by_fdr.size == 0:
+        if filtered_by_fpr.size == 0:
             desired_df = pd.DataFrame()
             #generate plot
-            plt.plot(collect_fdr[:,0],collect_fdr[:,1])
+            plt.plot(collect_fpr[:,0],collect_fpr[:,1])
             plt.xlabel("Decoded Barcodes")
-            plt.ylabel("FDR")
-            if fdr_cutoff != None:
-                plt.axhline(fdr_cutoff, c="red", ls = "--", label="FDR cutoff")
+            plt.ylabel("FPR")
+            if fpr_cutoff != None:
+                plt.axhline(fpr_cutoff, c="red", ls = "--", label="FPR cutoff")
             plt.legend()
             sns.despine()
         else:
-            max_dots = filtered_by_fdr[np.argmax(filtered_by_fdr[:,0])]
+            max_dots = filtered_by_fpr[np.argmax(filtered_by_fpr[:,0])]
             desired_df = sorted_genes.iloc[0:int(max_dots[0])]
             #generate plot
-            plt.plot(collect_fdr[:,0],collect_fdr[:,1])
+            plt.plot(collect_fpr[:,0],collect_fpr[:,1])
             plt.xlabel("Decoded Barcodes")
-            plt.ylabel("FDR")
-            if fdr_cutoff != None:
-                plt.axhline(fdr_cutoff, c="red", ls = "--", label="FDR cutoff")
+            plt.ylabel("FPR")
+            if fpr_cutoff != None:
+                plt.axhline(fpr_cutoff, c="red", ls = "--", label="FDR cutoff")
             plt.scatter(max_dots[0],max_dots[1], color = "k", label="Best")
             plt.legend()
             sns.despine()
@@ -387,8 +403,7 @@ class decode:
         
         Returns
         ----------
-        recovered_codes: codewords that were recovered if the dots are 
-        different from the best_codeword
+        recovered_codes: codewords that were recovered if the dots are different from the best_codeword
         """
         #store winner history
         winner_history = set()
@@ -418,51 +433,52 @@ class decode:
         
         Returns
         ----------
-        complete_set: final set of dots that are unique and high scoring
+        final_codewords: final set of dots that are unique and high scoring
         """
         
-        # group all sets with any matching dot indicies using individual unique dot sets as queries
+        #group all sets with any matching dot indicies using individual unique dot sets as queries
         matching_element_list = []
-        # keep history of elements
+        #make a copy of list for searching
+        search_set = filtered_set.copy()
+        #keep history of elements
         history_element = set()
-        # lets group
-        temp = set()
-        unique_dots = set()
+        #lets group
         for _set in filtered_set:
+            temp=[]
             if _set & history_element:
                 continue
-            temp = temp.union(_set)
-            history_element.add(_set)
-            unique_dots = unique_dots.union(_set)
-            matching_element_list.append([temp])
-            temp = set()
-            
-        # group again to combine list of dot sets that have any common dot sequence
+            for _search in search_set:
+                if _set & _search:
+                    temp.append(_search)
+            for item in np.unique(list(_set)):
+                history_element.add(item)
+            matching_element_list.append(temp)
+    
+        #group again to combine list of dot sets that have any common dot sequence
         new_set = []
-        # keep record of which indicies were combined
-        history_of_comb = set()
-        # keep record of which indicies have been used
-        history_index = set()
+        #keep record of which indicies were combined
+        history_of_comb = []
+        #keep record of which indicies have been used
+        history_index = []
         for i in range(len(matching_element_list)):
-            # create copy of list of sets
+            #create copy of list of sets
             comb_set = matching_element_list[i].copy()
-            # check if any dot set overlaps with any other list of sets
+            #check if any dot set overlaps with any other list of sets
             for dot_set in matching_element_list[i]:
                 for j in range(len(matching_element_list)):
-                    # if dot set overlaps with another list of sets combine them
-                    if (dot_set in matching_element_list[j]) and (i != j) and (frozenset([i, j]) not in history_of_comb):
+                    #if dot set overlaps with another list of sets combine them
+                    if (dot_set in matching_element_list[j]) and (i!=j) and (set([i,j]) not in history_of_comb):
                         comb_set += matching_element_list[j]
-                        history_of_comb.add(frozenset([i, j]))
-                        history_index.add(i)
-                        history_index.add(j)
-            # check to see if anything was combined and if index was used already
+                        history_of_comb.append(set([i,j]))
+                        history_index += [i,j]
+            #check to see if anything was combined and if index was used already
             if (len(comb_set) == len(matching_element_list[i])) and (i not in history_index):
                 new_set.append(matching_element_list[i])
             elif (len(comb_set) == len(matching_element_list[i])) and (i in history_index):
                 continue
             else:
                 new_set.append(list(set(comb_set)))
-
+    
         #generate hash table for codeword score
         codeword_hash = {}
         for i in range(len(codeword_scores)):
@@ -555,6 +571,7 @@ class decode:
         #delete some variables
         del matching_element_list
         del new_set
+        del search_set
         del history_element
         del codeword_hash
         del distance_hash
@@ -562,7 +579,7 @@ class decode:
         return final_codewords
     
     def find_best_spot_combination(temp, tempscore, locations, neighbor_list, distance_list,
-                                   hybs=24, num_barcodes=4):
+                                   hybs=24, num_barcodes=4, blank_ch = False):
         """
         Generates all possible codewords from highest scoring to lowest scoring and 
         pick highest scoring codeword that passes parity.
@@ -576,6 +593,13 @@ class decode:
         distance_list: euclidean distance of each spot to seed
         hybs: total number of hybs
         num_barcodes: total number of barcoding rounds
+        blank_ch: bool on whether there are empty channels on certain hybs
+
+        Returns
+        -------
+        list(best): best set of spots
+        best_score: score associated with best set
+        best_dist: total distance associated with best set
         """
         
         #generate all possible codeword combination
@@ -655,17 +679,18 @@ class decode:
             #figure out total pseudocolors
             hybs_per_round = int(hybs/num_barcodes)
             unique_ch = len(locations.ch.unique())
-            total_pseudocolor = hybs_per_round * unique_ch
-            #check if offset of pseudocolor is necessary
-            round1_last_hyb = locations[locations.hyb == (hybs_per_round-1)]
-            #counts per ch
-            ch_counts = []
-            for ch in range(1,unique_ch+1,1):
-                ch_counts.append(len(round1_last_hyb[round1_last_hyb.ch==ch]))
-            #if a certain set of channels only have less than 10% of max spots then assume it is blank
-            threshold = max(ch_counts)*0.1
-            blank_ch = np.sum(np.array(ch_counts)<threshold)
-            pseudocolors = int(total_pseudocolor-blank_ch)
+            pseudocolors = hybs_per_round * unique_ch
+            #only run this if blank channels are present
+            if blank_ch == True:
+                round1_last_hyb = locations[locations.hyb == (hybs_per_round-1)]
+                #counts per ch
+                ch_counts = []
+                for ch in range(1,unique_ch+1,1):
+                    ch_counts.append(len(round1_last_hyb[round1_last_hyb.ch==ch]))
+                #if a certain set of channels only have less than 10% of max spots then assume it is blank
+                threshold = max(ch_counts)*0.1
+                blank_ch = np.sum(np.array(ch_counts)<threshold)
+                pseudocolors = int(pseudocolors-blank_ch)
             #check each codeword on whether it passes parity 
             for i,codes in enumerate(sorted_codes):
                 potential = locations.iloc[list(codes)].sort_values("hyb")[["hyb","ch"]]
@@ -697,7 +722,7 @@ class decode:
         
     def radial_decoding(self,locations,num_barcodes = 4, 
                         radius=np.sqrt(2),diff=0,
-                        seed=0, hybs = 12, assign_und=False):
+                        seed=0, hybs = 12, look_for_parity=False):
         """
         This function will decode dots utilizing kNN algorithm from sklearn using the euclidean formula
         as a measure of distance. Essentially, a defined search radius will be used to identify nearby dots. 
@@ -714,7 +739,7 @@ class decode:
         diff: allowed barcode drops
         seed: which barcode set to use as reference
         hybs: total number of hybs
-        assign_und: bool to try and assign undefineds
+        look_for_parity: look for codes that have parity 
         
         Returns
         --------
@@ -812,7 +837,7 @@ class decode:
         del neighbor_list
         del distance_list
         
-        if assign_und == True:
+        if look_for_parity == True:
             dot_idx = []
             ambiguity_scores = []
             codeword_score_list = []
@@ -869,7 +894,8 @@ class decode:
                 best, best_score, best_dist = decode.find_best_spot_combination(temp, tempscore, locations, 
                                                                          neighbor_list2[i], 
                                                                          distance_list2[i],
-                                                                         hybs=hybs, num_barcodes=num_barcodes)
+                                                                         hybs=hybs, num_barcodes=num_barcodes, 
+                                                                         blank_ch = self.blank_ch)
                
                 #add codeword score and total distance
                 codeword_score += best_score
@@ -879,17 +905,19 @@ class decode:
                 ambiguity_score_final = ambiguity-len(neighbor_list2[i])
                 #adjust final codeword score by ambiguity+1 (add 1 to prevent division by 0)
                 codeword_score = codeword_score/(ambiguity_score_final+1)
-                #get adjust codeword score based on probability if probability score is present
-                try:
-                    #get log probability score as the sum of log probabilities
-                    log_prob_score = np.log(locations.iloc[best]["probability on"]).sum()
-                    #adjust log probability score by total codeword score
-                    log_prob_score= log_prob_score/codeword_score
-                    #exponentiate log probability score to get overall probability score
-                    codeword_score = np.exp(log_prob_score.astype(np.float))
-                except:
-                    #normalize codeword score by max dot score * number of barcode sites
-                    codeword_score = codeword_score/(2*num_barcodes)
+                # #get adjust codeword score based on probability if probability score is present
+                # try:
+                #     #get log probability score as the sum of log probabilities
+                #     log_prob_score = np.log(locations.iloc[best]["probability on"]).sum()
+                #     #adjust log probability score by total codeword score
+                #     log_prob_score= log_prob_score/codeword_score
+                #     #exponentiate log probability score to get overall probability score
+                #     codeword_score = np.exp(log_prob_score.astype(np.float))
+                # except:
+                #     #normalize codeword score by max dot score * number of barcode sites
+                #     codeword_score = codeword_score/(2*num_barcodes)
+                #normalize codeword score by max dot score * number of barcode sites
+                codeword_score = codeword_score/(2*num_barcodes)
                 #append all of the data to final list
                 dot_idx.append(best)
                 ambiguity_scores.append([tuple(best),ambiguity_score_final])
@@ -964,16 +992,18 @@ class decode:
                 #adjust final codeword score by ambiguity+1 (add 1 to prevent division by 0)
                 codeword_score = codeword_score/(ambiguity_score_final+1)
                 #get adjust codeword score based on probability if probability score is present
-                try:
-                    #get log probability score as the sum of log probabilities
-                    log_prob_score = np.log(locations.iloc[temp]["probability on"]).sum()
-                    #adjust log probability score by total codeword score
-                    log_prob_score= log_prob_score/codeword_score
-                    #exponentiate log probability score to get overall probability score
-                    codeword_score = np.exp(log_prob_score.astype(np.float))
-                except:
-                    #normalize codeword score by max dot score * number of barcode sites
-                    codeword_score = codeword_score/(2*num_barcodes)
+                # try:
+                #     #get log probability score as the sum of log probabilities
+                #     log_prob_score = np.log(locations.iloc[temp]["probability on"]).sum()
+                #     #adjust log probability score by total codeword score
+                #     log_prob_score= log_prob_score/codeword_score
+                #     #exponentiate log probability score to get overall probability score
+                #     codeword_score = np.exp(log_prob_score.astype(np.float))
+                # except:
+                #     #normalize codeword score by max dot score * number of barcode sites
+                #     codeword_score = codeword_score/(2*num_barcodes)
+                #normalize codeword score by max dot score * number of barcode sites
+                codeword_score = codeword_score/(2*num_barcodes)
                 #append all of the data to final list
                 dot_idx.append(temp)
                 ambiguity_scores.append([tuple(temp),ambiguity_score_final])
@@ -988,9 +1018,9 @@ class decode:
         #return indicies of nearby dots from seed, ambiguity scores, codeword scores and total distance per codeword
         return dot_idx,ambiguity_scores,codeword_score_list,total_distance_list
     
-    def radial_decoding_parallel(self, locations, codebook, num_barcodes = 4, radius=1,diff=0,
-                                 min_seed=4, hybs = 12, include_undecoded = False, 
-                                 assign_und = False, parity_round=True):
+    def radial_decoding_parallel(self, locations, codebook, num_barcodes = 4, radius=1, diff=0,
+                                 hybs = 12, include_undecoded = False, 
+                                 look_for_parity = False, parity_round=True):
         """This function will perform radial decoding on all barcodes as reference. Dot sequences
         that appear n number of times defined by min seed will be kept.
         Parameters 
@@ -1000,10 +1030,9 @@ class decode:
         num_barcodes: number of readout sites
         radius: search radius using euclidean metric
         diff: allowed barcode drops
-        min_seed: number of barcode seeds
         hybs: total number of hybs
         include_undecoded: bool to output the undecoded dots
-        assign_und: bool to try and assign undefineds
+        look_for_parity: bool to look for parity codes
         parity_round: bool on whether a parity round is included
         
         Returns
@@ -1022,7 +1051,7 @@ class decode:
                 seed = i
                 fut = exe.submit(decode.radial_decoding, self, locations,
                                  num_barcodes, radius,diff,
-                                 seed, hybs, assign_und)
+                                 seed, hybs, look_for_parity)
                 futures.append(fut)
                 
         #collect result from futures objects
@@ -1202,7 +1231,7 @@ class decode:
         
         return highexpgenes
     
-    def feature_radial_decoding(self):
+    def feature_radial_decoding(self, use_svm = True):
         """
         This function will perform feature based radial decoding on all barcodes as reference. Dot sequences
         that appear n number of times defined by min seed will be kept. Three rounds of decoding can be 
@@ -1211,7 +1240,7 @@ class decode:
         to assign probabilities to spots on the liklihood that they are true dots. Random signals will most
         likely have a low probability score and can be removed prior to real decoding. Alternatively, setting
         probability cutoff to 0 will not perform any filtering and the outputed codeword score for each decoded
-        spot can be used for filtering based on fdr cutoff set by the user.
+        spot can be used for filtering based on fpr cutoff set by the user.
         """
         #record start time
         start = time.time()
@@ -1231,7 +1260,7 @@ class decode:
         codebook = codebook.set_index(codebook.columns[0])
         location_path_name = Path(self.location_path).name
         #collect z info
-        z_info = location_path_name.split("_")[2].replace(".csv","")
+        z_info = location_path_name.split("_")[-1].replace(".csv","")
         
         #check to see if the necessary amount of hybs are present
         assert len(locations["hyb"].unique()) == self.hybs, "Locations file is missing a hyb"
@@ -1241,11 +1270,16 @@ class decode:
         output_path = Path(self.output_dir) / f"diff_{self.diff}_minseed_{self.min_seed}_z_{z_info}_finalgenes.csv"
         
         #rough decoding to identify true and false dots
+        #the parameters here is somewhat loose in order to collect fakes
+        if self.parity_round:
+            rough_diff = 1
+        else:
+            rough_diff = 0
         decoded_rough, indicies_used_1 = decode.radial_decoding_parallel(self, locations, codebook,
-                                                                  num_barcodes=self.num_barcodes, radius=1,diff=self.diff,
+                                                                  num_barcodes=self.num_barcodes, radius=1.2, diff=rough_diff,
                                                                   min_seed=self.num_barcodes-self.diff, hybs = self.hybs, 
                                                                   include_undecoded = False, 
-                                                                  assign_und = False, parity_round=self.parity_round)
+                                                                  look_for_parity = False, parity_round=self.parity_round)
         #only get the indicies of decoded genes (excluding undefined) and separate true and fake
         decoded_rough_fakes = decoded_rough[decoded_rough["genes"].str.startswith("fake")]
         decoded_rough_trues = decoded_rough.drop(decoded_rough_fakes.index)
@@ -1263,32 +1297,34 @@ class decode:
         if len(locations_fakes) < 500:
             print("Cannot generate probabilities due to low number of fake dots.")
         else:
-            true_probs_only, X_test, y_test, locations, plt = decode.poly_rbf_gen_dot_probabilities(locations_trues,locations_fakes, locations)
-            #median on probability for trues and fakes
-            fake_median_prob = np.median(np.compress(y_test== -1,true_probs_only))
-            true_median_prob = np.median(np.compress(y_test== 1,true_probs_only))
-            #write out test set
-            X_test.to_csv(str(output_path.parent/"test_set.csv"))
-            y_test.to_csv(str(output_path.parent/"test_set_labels.csv"))
-            np.savetxt(str(output_path.parent/"test_set_probabilities.csv"),true_probs_only)
-            with open(str(output_path.parent/"median_probs.txt"), "w+") as f:
-                f.write(f"Median probability of On for observed fakes were {round(fake_median_prob,2)}.\n")
-                f.write(f"Median probability of On for observed trues were {round(true_median_prob,2)}.\n")
-                f.close()
-            plt.savefig(str(output_path.parent/"feature_ranking.png"), dpi=300, bbox_inches = "tight")
-            plt.clf()
-            #probability cutoff, keep unused dots for later output
-            cutoff_unused_dots = locations[locations["probability on"] <= self.probability_cutoff].reset_index(drop=True)
-            locations = locations[locations["probability on"] > self.probability_cutoff].reset_index(drop=True)
-            print("Will now begin decoding...")
+            if use_svm == True:
+                true_probs_only, X_test, y_test, locations, plt = decode.poly_rbf_gen_dot_probabilities(locations_trues,locations_fakes, locations)
+                #median on probability for trues and fakes
+                fake_median_prob = np.median(np.compress(y_test== -1,true_probs_only))
+                true_median_prob = np.median(np.compress(y_test== 1,true_probs_only))
+                #write out test set
+                X_test.to_csv(str(output_path.parent/"test_set.csv"))
+                y_test.to_csv(str(output_path.parent/"test_set_labels.csv"))
+                np.savetxt(str(output_path.parent/"test_set_probabilities.csv"),true_probs_only)
+                with open(str(output_path.parent/"median_probs.txt"), "w+") as f:
+                    f.write(f"Median probability of On for observed fakes were {round(fake_median_prob,2)}.\n")
+                    f.write(f"Median probability of On for observed trues were {round(true_median_prob,2)}.\n")
+                    f.close()
+                plt.savefig(str(output_path.parent/"feature_ranking.png"), dpi=300, bbox_inches = "tight")
+                plt.clf()
+                #probability cutoff, keep unused dots for later output
+                cutoff_unused_dots = locations[locations["probability on"] <= self.probability_cutoff].reset_index(drop=True)
+                locations = locations[locations["probability on"] > self.probability_cutoff].reset_index(drop=True)
+                print("Will now begin decoding...")
         
         #only keep top 10% of highly expressed genes
         if self.decode_high_exp_genes == True:
             #run decoding first pass
+            #we are enabling parity here, if applicable, to accurately obtain true codes
             decoded_1, indicies_used_1 = decode.radial_decoding_parallel(self, locations, codebook,
                                                                   num_barcodes=self.num_barcodes, radius=self.first_radius, diff=self.diff,
                                                                   min_seed=self.high_exp_seed, hybs = self.hybs, include_undecoded = False,
-                                                                  assign_und = True, parity_round=self.parity_round)
+                                                                  look_for_parity = True, parity_round=self.parity_round)
             #get highly expressed genes
             highexpgenes = decode.return_highly_expressed_names(decoded_1)
             #initialize loop
@@ -1316,7 +1352,7 @@ class decode:
                 decoded_1, indicies_used_1 = decode.radial_decoding_parallel(self, locations_temp, codebook,
                                                                       num_barcodes=self.num_barcodes, radius=self.first_radius,diff=self.diff,
                                                                       min_seed=self.high_exp_seed, hybs = self.hybs, 
-                                                                      include_undecoded = False, assign_und = True,
+                                                                      include_undecoded = False, look_for_parity = True,
                                                                       parity_round=self.parity_round)
                 #get new highly expressed gene list
                 highexpgenes_2 = decode.return_highly_expressed_names(decoded_1)
@@ -1328,10 +1364,11 @@ class decode:
             
         else:
             #run decoding first pass
+            #giving preference to parity codes since those will be most accurate
             decoded_1, indicies_used_1 = decode.radial_decoding_parallel(self, locations, codebook,
                                                                   num_barcodes=self.num_barcodes, radius=self.first_radius,diff=self.diff,
                                                                   min_seed=self.min_seed, hybs = self.hybs, include_undecoded = False,
-                                                                  assign_und = True, parity_round=self.parity_round)
+                                                                  look_for_parity = True, parity_round=self.parity_round)
             #only get the indicies of decoded genes (excluding undefined) and separate true and fake
             decoded_1_fakes = decoded_1[decoded_1["genes"].str.startswith("fake")]
             decoded_1_trues = decoded_1.drop(decoded_1_fakes.index)
@@ -1354,7 +1391,7 @@ class decode:
         decoded_2, indicies_used_2 = decode.radial_decoding_parallel(self, new_locations, codebook,
                                                               num_barcodes=self.num_barcodes, radius=self.second_radius,diff=self.diff,
                                                               min_seed=self.min_seed, hybs = self.hybs, include_undecoded = True, 
-                                                              assign_und = False,
+                                                              look_for_parity = False,
                                                               parity_round=self.parity_round)
         if self.triple_decode == True:
             #output results from second pass
@@ -1388,7 +1425,7 @@ class decode:
             try:
                 decoded_3, indicies_used_3 = decode.radial_decoding_parallel(self, new_locations_2, codebook,
                             num_barcodes=self.num_barcodes, radius=self.third_radius,diff=self.diff,
-                            min_seed=self.min_seed, hybs = self.hybs, include_undecoded = True, assign_und = False,
+                            min_seed=self.min_seed, hybs = self.hybs, include_undecoded = True, look_for_parity = False,
                             parity_round=self.parity_round)
                 #combine decoded dfs
                 decoded_combined = pd.concat([decoded_1, decoded_2, decoded_3])
