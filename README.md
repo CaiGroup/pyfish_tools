@@ -1,9 +1,8 @@
-# Welcome to pyFISH tools!
+# Welcome to pyFISH!
 <p align="center">
 <img src="https://github.com/CaiGroup/pyfish_tools/blob/pyFISH/logo/logo.svg" alt="fish icon" width="400" height="200">
 </p>
-
-pyFISH tools is a generalized, fully Python-based pipeline that allows for the analysis of various smFISH methods. The pipeline also includes a decoder for various seqFISH encoding schemes. It is recommended that users utilize a high-performance cluster, since the pipeline is already formatted to use the slurm workload manager. Sbatch file templates can be found in each directory to meet the user's needs. Soon, NextFlow workflow manager will also be available for this pipeline as v2.0.
+PyFISH is a generalized, fully Python-based pipeline for the analysis of various single-molecule FISH (smFISH) methods. The pipeline also includes a decoder for various sequential FISH (seqFISH) encoding schemes. It is recommended that users utilize a high-performance cluster (HPC), since the pipeline is already formatted to use the slurm workload manager. Sbatch file templates can be found in each directory to meet the user's needs. Current pipeline wrapped around a NextFlow workflow manager will be availible soon!
 
 ## General Workflow
 <p align="center">
