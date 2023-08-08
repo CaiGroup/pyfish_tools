@@ -6,7 +6,12 @@ PyFISH is a generalized, fully Python-based pipeline for the analysis of various
 
 ## General Workflow
 <p align="center">
-<img src="https://github.com/CaiGroup/pyfish_tools/blob/pyFISH/logo/pipeline_format.png" alt="pipeline">
+<img src="https://github.com/CaiGroup/pyfish_tools/blob/pyFISH/logo/workflow.png" alt="pipeline">
+</p>
+
+## Structure for Job Submission
+<p align="center">
+<img src="https://github.com/CaiGroup/pyfish_tools/blob/pyFISH/logo/parallel.png" alt="parallel">
 </p>
 
 ## What is included in this pipeline?
