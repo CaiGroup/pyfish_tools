@@ -9,10 +9,20 @@ PyFISH is a generalized, fully Python-based pipeline for the analysis of various
 <img src="https://github.com/CaiGroup/pyfish_tools/blob/pyFISH/logo/workflow.png" alt="pipeline">
 </p>
 
-## Structure for Job Submission
+## Structure for Parallel Job Submissions
 <p align="center">
 <img src="https://github.com/CaiGroup/pyfish_tools/blob/pyFISH/logo/parallel.png" alt="parallel">
 </p>
+
+## Setting up your Conda environment
+
+To set up your Conda environment, please run the following yml file: `conda env create -f python3.7.yml`
+
+## Copying the pipeline folder
+
+To begin using pyFISH tools, copy the pipeline folder into your raw images directory by running the following command: `cp -r /path/to/pyfish_tools /path/to/raw/images/`
+
+Outputs will be generated into a directory called "output" within the pyfish_tools directory.
 
 ## What is included in this pipeline?
 ### Alignment
@@ -69,16 +79,6 @@ PyFISH is a generalized, fully Python-based pipeline for the analysis of various
 - Stitch nuclear and cytoplasm masks so that two separate sub-cellular analysis can be performed
 - Use an interactive python script to quantify antibody stains or intron spots (look at readme.txt file in scripts/requested_scripts/stain_intron_quant_scripts)
 
-## Setting up the Conda environment
-
-To set up your Conda environment, please run the following yml file: `conda env create -f python3.7.yml`
-
-## Copying the pipeline folder
-
-To begin using pyFISH tools, copy the pipeline folder into your raw images directory by running the following command: `cp -r /path/to/pyfish_tools /path/to/raw/images/`
-
-
-Outputs will be generated into a directory called "output" within the pyfish_tools directory.
 
 
 
