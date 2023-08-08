@@ -14,7 +14,7 @@ PyFISH is a generalized, fully Python-based pipeline for the analysis of various
 <img src="https://github.com/CaiGroup/pyfish_tools/blob/pyFISH/logo/parallel.png" alt="parallel">
 </p>
 
-Some algorithms will submit each FOV to individual nodes, where within each node each z-slice is processed simultaneously across numerous cores. Alternatively, some algortihsm will submit each HybCycle which consists of multiple FOVs into individual nodes. Then, within each node the FOVs are split across multiple cores.
+Some algorithms will submit each FOV to individual nodes, where within each node each z-slice is processed simultaneously across numerous cores. Alternatively, some algorithms will submit each HybCycle which consists of multiple FOVs into individual nodes. Then, within each node the FOVs are split across multiple cores.
 
 ## Setting up your Conda environment
 
