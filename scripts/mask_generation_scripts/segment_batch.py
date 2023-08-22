@@ -11,20 +11,20 @@ from util import find_matching_files
 
 # User defined settings
 #----------------------------------------------------------------------------------
-input_directory = "/groups/CaiLab/personal/Lex/raw/230708_3k_1nM_split_IP_tmg/HybCycle_21/*.tif" # don't forget the star
-num_pos         = 41
-max_project     = True
-have_multiple_z = False
+input_directory = "/groups/CaiLab/personal/Lex/raw/230726_43gene_smfish/segmentation/*.tif" # don't forget the star
+num_pos         = 56
+max_project     = False
+have_multiple_z = True
 channel         = 0   #which channel has segmenation marker (0,1,2,3)?
 diameter_cyto   = 350 #diameter in pixels for cytoplasm
 diameter_nucl   = 150 #diameter in pixels for nucleus
 flow            = 2
 cellprob        = -1
-num_channels    = 4 
-save_dir_cyto   = '/groups/CaiLab/personal/Lex/raw/230708_3k_1nM_split_IP_tmg/pyfish_tools/output/masks/cyto' 
-save_dir_nucl   = '/groups/CaiLab/personal/Lex/raw/230708_3k_1nM_split_IP_tmg/pyfish_tools/output/masks/nucl'
-repeat          = 5    #number of copies for z's if you wish to propagate (1-infinite)
-threshold       = 0.15 #percent coverage of nuclear mask on top of cytoplasm mask
+num_channels    = 3 
+save_dir_cyto   = '/groups/CaiLab/personal/Lex/raw/230726_43gene_smfish/pyfish_tools/output/masks/cyto' 
+save_dir_nucl   = '/groups/CaiLab/personal/Lex/raw/230726_43gene_smfish/pyfish_tools/output/masks/nucl'
+repeat          = 1    #number of copies for z's if you wish to propagate (1-infinite)
+threshold       = 0.20 #percent coverage of nuclear mask on top of cytoplasm mask
 use_gpu         = False #use this at your own risk. Job submission can take forever if GPUs are requested.
 #----------------------------------------------------------------------------------
 # NO NEED TO EDIT
@@ -35,16 +35,16 @@ key             = [int(re.search('MMStack_Pos(\\d+)', f).group(1)) for f in file
 files           = list(np.array(files)[np.argsort(key)])
 imgs            = read_images(files[:num_pos], num_channels=num_channels, max_project=max_project)
 
-model_cyto      = models.Cellpose(gpu=False, model_type="cyto2")
+#model_cyto      = models.Cellpose(gpu=False, model_type="cyto2")
 model_nucl      = models.Cellpose(gpu=False, model_type="nuclei")
 
-imgs_final      = generate_final_images(imgs, have_multiple_z=have_multiple_z, channel=channel)
-channels        = [0,0]
-masks, _, _, _  = model_cyto.eval(imgs_final, diameter=diameter_cyto, channels=channels, 
-                             flow_threshold=flow, cellprob_threshold=cellprob, do_3D=False)
-write_masks(masks, files, save_dir_cyto, repeat_mask_multi_z = repeat)
+# imgs_final      = generate_final_images(imgs, have_multiple_z=have_multiple_z, channel=channel)
+# channels        = [0,0]
+# masks, _, _, _  = model_cyto.eval(imgs_final, diameter=diameter_cyto, channels=channels, 
+#                              flow_threshold=flow, cellprob_threshold=cellprob, do_3D=False)
+# write_masks(masks, files, save_dir_cyto, repeat_mask_multi_z = repeat)
 
-imgs_final      = generate_final_images(imgs, have_multiple_z=have_multiple_z, channel=3)
+imgs_final      = generate_final_images(imgs, have_multiple_z=have_multiple_z, channel=2)
 channels        = [0,0]
 masks, _, _, _  = model_nucl.eval(imgs_final, diameter=diameter_nucl, channels=channels, 
                              flow_threshold=flow, cellprob_threshold=cellprob, do_3D=False)

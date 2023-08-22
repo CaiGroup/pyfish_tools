@@ -57,8 +57,8 @@ def isolate_image(imgs, pos=0, channel=1, have_multiple_z=False):
     if have_multiple_z == True:
         #get all z for specific channel
         img = imgs[pos]
-        img_seg = img[channel]
-        img_dapi = img[-1]
+        img_seg = img[:, channel]
+        img_dapi = img[:, -1]
         img_seg = img_seg.reshape(img_seg.shape[0],1,img_seg.shape[1],img_seg.shape[2])
         img_dapi = img_dapi.reshape(img_dapi.shape[0],1,img_dapi.shape[1],img_dapi.shape[2])
         img = np.concatenate([img_seg,img_dapi],axis=1)
