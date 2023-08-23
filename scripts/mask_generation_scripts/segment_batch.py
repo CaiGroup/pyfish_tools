@@ -35,14 +35,14 @@ key             = [int(re.search('MMStack_Pos(\\d+)', f).group(1)) for f in file
 files           = list(np.array(files)[np.argsort(key)])
 imgs            = read_images(files[:num_pos], num_channels=num_channels, max_project=max_project)
 
-#model_cyto      = models.Cellpose(gpu=False, model_type="cyto2")
+model_cyto      = models.Cellpose(gpu=False, model_type="cyto2")
 model_nucl      = models.Cellpose(gpu=False, model_type="nuclei")
 
-# imgs_final      = generate_final_images(imgs, have_multiple_z=have_multiple_z, channel=channel)
-# channels        = [0,0]
-# masks, _, _, _  = model_cyto.eval(imgs_final, diameter=diameter_cyto, channels=channels, 
-#                              flow_threshold=flow, cellprob_threshold=cellprob, do_3D=False)
-# write_masks(masks, files, save_dir_cyto, repeat_mask_multi_z = repeat)
+imgs_final      = generate_final_images(imgs, have_multiple_z=have_multiple_z, channel=channel)
+channels        = [0,0]
+masks, _, _, _  = model_cyto.eval(imgs_final, diameter=diameter_cyto, channels=channels, 
+                             flow_threshold=flow, cellprob_threshold=cellprob, do_3D=False)
+write_masks(masks, files, save_dir_cyto, repeat_mask_multi_z = repeat)
 
 imgs_final      = generate_final_images(imgs, have_multiple_z=have_multiple_z, channel=2)
 channels        = [0,0]
