@@ -30,15 +30,18 @@ use_gpu         = False #use this at your own risk. Job submission can take fore
 # NO NEED TO EDIT
 if use_gpu == True:
     core.use_gpu(gpu_number=1, use_torch=True)
+    model_cyto      = models.Cellpose(gpu=True, model_type="cyto2")
+    model_nucl      = models.Cellpose(gpu=True, model_type="nuclei")
+else:
+    model_cyto      = models.Cellpose(gpu=False, model_type="cyto2")
+    model_nucl      = models.Cellpose(gpu=False, model_type="nuclei")
+
 files           = glob.glob(input_directory)
 key             = [int(re.search('MMStack_Pos(\\d+)', f).group(1)) for f in files]
 files           = list(np.array(files)[np.argsort(key)])
 imgs            = read_images(files[:num_pos], num_channels=num_channels, max_project=max_project)
-
-model_cyto      = models.Cellpose(gpu=False, model_type="cyto2")
-model_nucl      = models.Cellpose(gpu=False, model_type="nuclei")
-
 imgs_final      = generate_final_images(imgs, have_multiple_z=have_multiple_z, channel=channel)
+
 channels        = [0,0]
 masks, _, _, _  = model_cyto.eval(imgs_final, diameter=diameter_cyto, channels=channels, 
                              flow_threshold=flow, cellprob_threshold=cellprob, do_3D=False)
