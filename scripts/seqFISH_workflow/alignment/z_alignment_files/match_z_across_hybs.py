@@ -1,22 +1,24 @@
 """
 author: Katsuya Lex Colon
-date: 09/07/22
+date: 08/29/23
 """
 
 #data processing packages
-import numpy as np
+import numpy       as     np
 import re
 import cv2
-import tifffile as tf
+import tifffile    as     tf
+import pandas      as     pd
+from   collections import defaultdict, Counter
 #enable relative import
 import sys 
 sys.path.append("..")
 #custom py files
-from helpers.util import pil_imread
+from   helpers.util import pil_imread
 #file management
-from glob import glob
+from   glob         import glob
 import os
-from pathlib import Path
+from   pathlib      import Path
 
 def z_matching(image_dir, pos_number = 0):
     
@@ -54,89 +56,107 @@ def z_matching(image_dir, pos_number = 0):
     #remove first line in files list
     del files[0]
     
-    #collect matching z info by performing normalized correlation analysis
+    #collect matching z info by performing normalized cross correlation 
     match_z = []
+    z_mapper = []
+    #read ref image
     ref = pil_imread(ref_path, swapaxes=False)
     for file in files:
         hyb_list = []
+        #read in moving z images
         src = pil_imread(file, swapaxes=False)
+        #get dapi channel
         dapi_ch = ref.shape[1]-1
         for z in range(ref.shape[0]):
             #collect correlation info
             ccoef_list = []
+            ref_compressed = ref[z][dapi_ch].astype(np.float32)
+            #compress images to 32 float for template matching
             for z_2 in range(ref.shape[0]):
-                ref_compressed = ref[z][dapi_ch].astype(np.float32)
                 src_compressed = src[z_2][dapi_ch].astype(np.float32)
                 corr = cv2.matchTemplate(ref_compressed, src_compressed, cv2.TM_CCOEFF_NORMED)
                 ccoef_list.append(corr)
             #find best z
             best_z = np.argmax(ccoef_list)
-            hyb_list.append([z,best_z])
-        match_z.append(hyb_list)
+            #store ref z, best matching z to ref, and r
+            hyb_list.append([z, best_z, ccoef_list[best_z][0][0]])
+        #if there are any colliding z, pick best one
+        grouped_data = defaultdict(list)
+        for entry in hyb_list:
+            key = entry[1]  # Use the 2nd axis value as the key
+            grouped_data[key].append(entry)
+        curated_hyb_list = []
+        for key in grouped_data:
+            best = np.argmax(np.array(grouped_data[key])[:,2])
+            curated_hyb_list.append(grouped_data[key][best])
+        match_z.append(curated_hyb_list)
+        #create table reference
+        z_mapped = {}
+        for z1,z2,_ in curated_hyb_list:
+            z_mapped.update({z1:z2})
+        z_mapper.append(z_mapped)
         
     #check what the maximum allowed z stack can be
-    unique_value_across_hybs = []
-    i=0
-    num_z = ref.shape[0]
-    for _ in range(len(files)):
-        hyb_slice = np.vstack(match_z)[:,1][i:i+num_z]
-        i += num_z
-        unique_value_across_hybs.append(len(np.unique(hyb_slice)))
-    max_z = min(unique_value_across_hybs)
+    #by looking for minimum number of z across all hybcycles
+    num_of_zs = []
+    for fov in match_z:
+        num_of_zs.append(len(fov))
+    max_z_allowed = min(num_of_zs)
     
-    #check where the reference image should begin
-    check_z = []
-    for z in match_z:
-        flatten = [z[i][1] for i in range(len(z))]
-        check = 0 
-        while "first_z" not in locals():
-            try:
-                first_z = len(flatten)-1-flatten[::-1].index(check)
-            except:
-                check += 1
-        check_z.append(first_z)
-        del first_z
-    ref_start = max(check_z)
+    #use lowest z slice that appears the most for starting ref
+    obj = Counter(np.vstack(match_z)[:,0])
+    df = pd.DataFrame.from_dict(obj, orient="index")
+    df = df.reset_index().sort_values("index")
+    ref_start = int(df["index"][df[0].argmax()])
     
-    #now offset the zs in ref
-    ref = pil_imread(ref_path, swapaxes=False)
+    #now offset the zs for reference
+    if max_z_allowed == 1:
+        ref = ref[ref_start,:,:,:]
+        ref_zs = [ref_start]
+    else:
+        ref = ref[ref_start:ref_start+(max_z_allowed-1), :, :, :]
+        ref_zs = np.arange(ref_start,ref_start+(max_z_allowed), 1).astype(int)
+
     hyb_folder = Path(ref_path).parent.name
     output_path = output_dir / hyb_folder
     output_path.mkdir(parents=True, exist_ok=True)
-    ref = ref[ref_start:max_z,:,:,:]
     if len(ref) != 0:
         tf.imwrite(str(output_path / f"MMStack_Pos{pos_number}.ome.tif" ), ref)
-    print(len(np.argwhere(np.array(check_z) == max_z)))
-    #write empty file
-    output_info_path = output_dir / "matched_z_info"
-    output_info_path.mkdir(parents=True, exist_ok=True)
-    with open(str(output_info_path/f"pos{pos_number}_matched_z_info.txt"), "w+") as f:
-        if len(ref) == 0:
-            for bad_hyb in np.argwhere(np.array(check_z) == ref_start):
-                f.write(f"Messed up z in Hyb{bad_hyb[0]+1}.\n")
-            f.close()
-            return 
-        else:
-            f.close()
-    
-    #now offset other hybs
+
+    #now offset zs for rest of hybs
     for i in range(len(match_z)):
+        #moving zs
         src = pil_imread(files[i], swapaxes=False)
+        #hybcycle name
         hyb_folder = Path(files[i]).parent.name
-        flatten = [z[1] for z in match_z[i]]
-        #only get matching z for sliced reference
-        z_slice = flatten[ref_start:max_z]
-        #write matched z info
-        k = 0
-        with open(str(output_info_path/f"pos{pos_number}_matched_z_info.txt"), "a") as f:
-            for ref_z in np.arange(ref_start, max_z,1):
-                f.write(f"For Hyb {i+1}, ref z_{ref_z} == moving z_{z_slice[k]}\n")
-                k += 1
-            f.close()
+        #check if file already exists
+        if os.path.isfile(str(output_dir/f"pos{pos_number}_matched_z_info.txt")):
+            log = open(str(output_dir/f"pos{pos_number}_matched_z_info.txt"), "a")
+        else:
+            log = open(str(output_dir/f"pos{pos_number}_matched_z_info.txt"), "w+")
+        #get correct z mapper
+        table_map = z_mapper[i]
+        #only get matching z from reference 
         offset_image = []
-        for j in range(len(z_slice)):
-            offset_image.append(src[z_slice[j],:,:,:])
-        offset_image = np.array(offset_image)     
+        for ref_z in ref_zs:
+            try:
+                offset_image.append(src[table_map[ref_z],:,:,:])
+                #record ref z and src z
+                log.write(f"{hyb_folder}: ref_z = {ref_z}, src_z = {table_map[ref_z]}\n")
+            except:
+                #if z is really off, then there will be an error here
+                #instead it will output unaligned image
+                #this will be recoded in log file
+                log.write(f"{hyb_folder}: This FOV has very large z fluctuations.\n")
+                break
+        if offset_image != []: 
+            offset_image = np.array(offset_image)    
+        else:
+            offset_image = src
         output_path = output_dir / hyb_folder
         output_path.mkdir(parents=True, exist_ok=True)
         tf.imwrite(str(output_path / f"MMStack_Pos{pos_number}.ome.tif" ), offset_image)
+        #close log file
+        log.close()
+    
+    
