@@ -20,7 +20,37 @@ from   glob         import glob
 import os
 from   pathlib      import Path
 
-def z_matching(image_dir, pos_number = 0):
+def check_axis(img):
+    """
+    Determine if the img axis needs to be flipped if both channel and z axis is the same
+    Parameters
+    ----------
+    img = numpy 4d array
+    """
+    #performing normalized correlation analysis on expected dapi channel
+    ax1_list = []
+    for z in np.arange(0, img.shape[0]-1, 1):
+        ref_compressed = img[z][-1].astype(np.float32)
+        src_compressed = img[z+1][-1].astype(np.float32)
+        corr = cv2.matchTemplate(ref_compressed, src_compressed, cv2.TM_CCOEFF_NORMED)
+        ax1_list.append(corr)
+        
+    ax2_list = []
+    for z in np.arange(0, img.shape[1]-1, 1):
+        ref_compressed = img[-1][z].astype(np.float32)
+        src_compressed = img[-1][z+1].astype(np.float32)
+        corr = cv2.matchTemplate(ref_compressed, src_compressed, cv2.TM_CCOEFF_NORMED)
+        ax2_list.append(corr)
+     
+    #axis with highest correlation should be the correct shape    
+    correct_axis = np.argmax([np.mean(ax1_list), np.mean(ax2_list)])
+    
+    if correct_axis == 1:
+        img = np.swapaxes(img, 0, 1)
+    
+    return img
+
+def z_matching(image_dir, ref_dir, num_channels, pos_number = 0):
     
     """
     Function to find matching z across hybs for a given pos.
@@ -29,6 +59,7 @@ def z_matching(image_dir, pos_number = 0):
     ----------
     image_dir: directory of where your images are located
     pos_number: the position you wish to align
+    ref_dir: path to reference image for z alignment
     """
     
     #output directory
@@ -48,19 +79,26 @@ def z_matching(image_dir, pos_number = 0):
     key = [int(re.search('HybCycle_(\\d+)', f).group(1)) for f in hyb_images]
     files = list(np.array(hyb_images)[np.argsort(key)])
     
-    #get ref image (which is hyb0)
-    ref_path = files[0]
-    
+    ref_path = str(Path(ref_dir) / f"MMStack_Pos{pos_number}.ome.tif")
     print(f"reference image is: {ref_path}")
     
-    #remove first line in files list
-    del files[0]
-    
+    #read ref image
+    try:
+        ref = pil_imread(ref_path, num_channels = None, swapaxes = True)
+        if ref.shape[1] != num_channels:
+            ref = pil_imread(ref_path, num_channels = None, swapaxes = False)
+            if ref.shape[0] == ref.shape[1]:
+                ref = check_axis(ref)
+    except:
+        ref = pil_imread(ref_path, num_channels = num_channels, swapaxes = True)
+        if ref.shape[1] != num_channels:
+            ref = pil_imread(ref_path, num_channels = num_channels, swapaxes = False)
+            if ref.shape[0] == ref.shape[1]:
+                ref = check_axis(ref)
+                
     #collect matching z info by performing normalized cross correlation 
     match_z = []
     z_mapper = []
-    #read ref image
-    ref = pil_imread(ref_path, swapaxes=False)
     for file in files:
         hyb_list = []
         #read in moving z images
