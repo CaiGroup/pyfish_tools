@@ -1,6 +1,6 @@
 """
-author: Katsuya Lex Colon
-updated: 03/03/22
+author: Katsuya Lex Colon and Lincoln Ombelets
+updated: 08/31/23
 """
 #basic analysis package
 import numpy as np
@@ -421,12 +421,18 @@ def fiducial_alignment_single(tiff_src, ref_src,threshold_abs=500, max_dist=2, r
             if tiff.shape[0] == tiff.shape[1]:
                 tiff = check_axis(tiff)
     
-    ref = pil_imread(ref_src, num_channels = num_channels, swapaxes = True)
-            
-    if ref.shape[1] != num_channels:
-        ref = pil_imread(ref_src, num_channels = num_channels, swapaxes = False)
-        if ref.shape[0] == ref.shape[1]:
-            ref = check_axis(ref)
+    try:
+        ref = pil_imread(ref_src, num_channels = None, swapaxes = True)
+        if ref.shape[1] != num_channels:
+            ref = pil_imread(ref_src, num_channels = None, swapaxes = False)
+            if ref.shape[0] == ref.shape[1]:
+                ref = check_axis(ref)
+    except:
+        ref = pil_imread(ref_src, num_channels = num_channels, swapaxes = True)
+        if ref.shape[1] != num_channels:
+            ref = pil_imread(ref_src, num_channels = num_channels, swapaxes = False)
+            if ref.shape[0] == ref.shape[1]:
+                ref = check_axis(ref)
 
     #Get dots per channel 
     ref_dots_list = []
@@ -603,132 +609,4 @@ def fiducial_align_parallel(tiff_list, ref_src, threshold_abs=500, max_dist=2,ra
                 path = futures[fut]
                 print(f'Path {path} completed after {(time.time() - start)/60} minutes')
 
-def plot_error(path_to_files, num_hybcycles = 80, num_channels = 4, savefig = True, by_pos = False):
-    """
-    This function will plot the fiducial alignment error and percent improvement
-    Parameters
-    ----------
-    path_to_files: path to fiducial aligned folder
-    num_hybcycles: number of total hyb cycles
-    num_channels: number of total channels
-    savefig: bool to write plot
-    by_pos: bool to plot by pos or take average
-    
-    Returns
-    -------
-    matplotlib line plot
-    """
-    
-    #path to write plots
-    output_path = Path(path_to_files)
-    
-    #get error paths
-    error_list = []
-    for i in range(num_hybcycles):
-        final_path = Path(path_to_files) / f"HybCycle_{i}"
-        error_log = final_path.glob("*.txt")
-        error_list.append(list(error_log))
-    
-    #read in error paths and convert to df
-    error_log_df = []
-    for i in range(len(error_list)):
-        error_by_hyb = []
-        for j in range(len(error_list[i])):
-            error_df = pd.read_csv(error_list[i][j], sep = " ", header=None)
-            pos = error_list[i][j].name.split("_")[1].replace("Pos","")
-            error_df["pos"] = pos
-            error_by_hyb.append(error_df)
-        error_df_concat = pd.concat(error_by_hyb)
-        error_df_concat.columns = ["channel","percent improvement", "nm off", "pos"]
-        error_df_concat["nm off"] = error_df_concat["nm off"]*100
-        error_df_concat["hyb"] = i
-        error_log_df.append(error_df_concat)
-        
-    #combine final df
-    error_final = pd.concat(error_log_df)
-    if by_pos == False:
-        #separate averaged distance off and percent improved by channel
-        averaged_error_log_nm = []
-        averaged_error_log_improved = []
-        for c in range(num_channels):
-            channel_off = []
-            channel_improved = []
-            for i in range(num_hybcycles):
-                log = error_final[error_final["hyb"] == i].groupby("channel").mean()
-                off = log["nm off"][c]
-                imp = log["percent improvement"][c]
-                channel_off.append(off)
-                channel_improved.append(imp)
-            averaged_error_log_nm.append(channel_off)
-            averaged_error_log_improved.append(channel_improved)
 
-        #plot error information
-        color = ["red", "orange", "green", "blue"]
-        channel = np.arange(1,num_channels+1,1)
-        for i in range(len(averaged_error_log_nm)):
-            plt.plot(np.arange(1,num_hybcycles+1,1), averaged_error_log_nm[i], color = color[i], label = f"Channel {channel[i]}")
-            plt.xlabel("HybCycle", fontsize=12)
-            plt.ylabel("nm off", fontsize=12)
-            plt.xticks(fontsize=12, rotation=0)
-            plt.yticks(fontsize=12, rotation=0)
-            sns.despine()
-        plt.legend()
-        if savefig == True:
-            plt.savefig(str(Path(output_path) / "distance_off.png"), dpi = 300)
-        plt.show()
-
-
-        for i in range(len(averaged_error_log_improved)):
-            plt.plot(np.arange(1,num_hybcycles+1,1), averaged_error_log_improved[i], color = color[i], label = f"Channel {channel[i]}")
-            plt.xlabel("HybCycle", fontsize=12)
-            plt.ylabel("Percent Improved", fontsize=12)
-            plt.xticks(fontsize=12, rotation=0)
-            plt.yticks(fontsize=12, rotation=0)
-            sns.despine()
-        plt.legend()
-        if savefig == True:
-            plt.savefig(str(Path(output_path) / "percent_improved.png"), dpi = 300)
-        plt.show()
-    else:
-        #separate averaged distance off and percent improved by channel
-        error_log_list = []
-        for c in range(num_channels):
-            pos_list = []
-            for p in error_final["pos"].unique():
-                log = error_final[(error_final["channel"] == c) & (error_final["pos"] == p)]
-                error_log_list.append(log)
-        #plot error information
-        color = ["red", "orange", "green", "blue"]
-        for i in range(len(error_log_list)):
-            sort_df = error_log_list[i].sort_values("hyb")
-            channel_info = sort_df["channel"].iloc[0]
-            plt.plot(sort_df["hyb"], sort_df["nm off"], color = color[channel_info],
-                     label = f"Channel {channel_info+1}", lw=1)
-            plt.xlabel("HybCycle", fontsize=12)
-            plt.ylabel("nm off", fontsize=12)
-            plt.xticks(fontsize=12, rotation=0)
-            plt.yticks(fontsize=12, rotation=0)
-            sns.despine()
-        handles, labels = plt.gca().get_legend_handles_labels()
-        by_label = dict(zip(labels, handles))
-        plt.legend(by_label.values(), by_label.keys())
-        if savefig == True:
-            plt.savefig(str(Path(output_path) / "distance_off_all.png"), dpi = 300)
-        plt.show()
-        
-        for i in range(len(error_log_list)):
-            sort_df = error_log_list[i].sort_values("hyb")
-            channel_info = sort_df["channel"].iloc[0]
-            plt.plot(sort_df["hyb"], sort_df["percent improvement"], color = color[channel_info], 
-                     label = f"Channel {channel_info+1}", lw=1)
-            plt.xlabel("HybCycle", fontsize=12)
-            plt.ylabel("percent improvement", fontsize=12)
-            plt.xticks(fontsize=12, rotation=0)
-            plt.yticks(fontsize=12, rotation=0)
-            sns.despine()
-        handles, labels = plt.gca().get_legend_handles_labels()
-        by_label = dict(zip(labels, handles))
-        plt.legend(by_label.values(), by_label.keys())
-        if savefig == True:
-            plt.savefig(str(Path(output_path) / "percent_improved_all.png"), dpi = 300)
-        plt.show()
