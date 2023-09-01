@@ -182,11 +182,12 @@ def z_matching(image_dir, ref_dir, num_channels, pos_number = 0):
                 #record ref z and src z
                 log.write(f"{hyb_folder}: ref_z = {ref_z}, src_z = {table_map[ref_z]}\n")
             except:
-                #if z is really off, then there will be an error here
-                #instead it will output unaligned image
-                #this will be recoded in log file
-                log.write(f"{hyb_folder}: This FOV has very large z fluctuations.\n")
-                break
+                #if we cannot find matching z on table we will
+                #just isolate the same z number as reference
+                #this could arise if multiple z match with same moving z slice
+                #or if the shift is very large.
+                offset_image.append(src[ref_z,:,:,:])
+                log.write(f"{hyb_folder}: ref_z = {ref_z}, src_z = {ref_z}. May have z drift issues.\n")
         if offset_image != []: 
             offset_image = np.array(offset_image)    
         else:
