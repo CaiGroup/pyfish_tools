@@ -1019,7 +1019,7 @@ class decode:
         return dot_idx,ambiguity_scores,codeword_score_list,total_distance_list
     
     def radial_decoding_parallel(self, locations, codebook, num_barcodes = 4, radius=1, diff=0,
-                                 hybs = 12, include_undecoded = False, 
+                                 min_seed=4, hybs = 12, include_undecoded = False, 
                                  look_for_parity = False, parity_round=True):
         """This function will perform radial decoding on all barcodes as reference. Dot sequences
         that appear n number of times defined by min seed will be kept.
@@ -1460,7 +1460,7 @@ class decode:
         final_decoded.to_csv(str(output_path.parent / f"diff_{self.diff}_minseed_{self.min_seed}_z_{z_info}_unfiltered.csv"))
         
         #filter by desired fdr
-        final_decoded, cutoff_plt = decode.set_fdr(final_decoded, codebook, fdr_cutoff=self.desired_fdr)
+        final_decoded, cutoff_plt = decode.set_fpr(final_decoded, codebook, fpr_cutoff=self.desired_fdr)
         
         #write files
         final_decoded.to_csv(str(output_path))
