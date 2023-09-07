@@ -145,15 +145,18 @@ def z_matching(image_dir, ref_dir, num_channels, pos_number = 0):
     obj = Counter(np.vstack(match_z)[:,0])
     df = pd.DataFrame.from_dict(obj, orient="index")
     df = df.reset_index().sort_values("index")
-    ref_start = int(df["index"][df[0].argmax()])
+    ref_start = int(df["index"][df[0].argmax()]) #index here is correct, no need to -1
     
     #now offset the zs for reference
     if max_z_allowed == 1:
         ref = ref[ref_start,:,:,:]
         ref_zs = [ref_start]
     else:
-        ref = ref[ref_start:ref_start+(max_z_allowed-1), :, :, :]
-        ref_zs = np.arange(ref_start,ref_start+(max_z_allowed), 1).astype(int)
+        top_z = ref.shape[0]-1 #minus one for indexing purposes
+        if ref_start+(max_z_allowed-1) < top_z: #if we surpass top z then change top z var
+            top_z = ref_start+(max_z_allowed-1)
+        ref = ref[ref_start:top_z, :, :, :]
+        ref_zs = np.arange(ref_start,top_z+1,1).astype(int) # +1 since we exclude last number
 
     hyb_folder = Path(ref_path).parent.name
     output_path = output_dir / hyb_folder
