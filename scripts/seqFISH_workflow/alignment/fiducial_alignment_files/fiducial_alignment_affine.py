@@ -401,8 +401,10 @@ def fiducial_alignment_single(tiff_src, ref_src,threshold_abs=500, max_dist=2, r
     num_peaks=300 
     
     #create output path
-    orig_image_dir = Path(tiff_src).parent.parent
-    output_folder = Path(orig_image_dir) / "fiducial_aligned"
+    parent = Path(tiff_src).parent
+    while "pyfish_tools" not in os.listdir(parent):
+        parent = parent.parent
+    output_folder = parent / "pyfish_tools" / "output"/ "fiducial_aligned"
     hybcycle = Path(tiff_src).parent.name
     output_path = output_folder / hybcycle / Path(tiff_src).name
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -414,6 +416,8 @@ def fiducial_alignment_single(tiff_src, ref_src,threshold_abs=500, max_dist=2, r
             tiff = pil_imread(tiff_src, num_channels = None, swapaxes = False)
             if tiff.shape[0] == tiff.shape[1]:
                 tiff = check_axis(tiff)
+            if tiff.shape[1] != num_channels:
+                raise Exception("Error reading image file, will try to read it another way")
     except:
         tiff = pil_imread(tiff_src, num_channels = num_channels, swapaxes = True)
         if tiff.shape[1] != num_channels:
@@ -427,6 +431,8 @@ def fiducial_alignment_single(tiff_src, ref_src,threshold_abs=500, max_dist=2, r
             ref = pil_imread(ref_src, num_channels = None, swapaxes = False)
             if ref.shape[0] == ref.shape[1]:
                 ref = check_axis(ref)
+            if ref.shape[1] != num_channels:
+                raise Exception("Error reading image file, will try to read it another way")
     except:
         ref = pil_imread(ref_src, num_channels = num_channels, swapaxes = True)
         if ref.shape[1] != num_channels:
