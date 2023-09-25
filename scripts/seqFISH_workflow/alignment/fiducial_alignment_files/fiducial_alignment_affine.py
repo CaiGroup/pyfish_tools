@@ -6,6 +6,7 @@ updated: 08/31/23
 import numpy as np
 import pandas as pd
 import time
+import os
 #image analysis packages
 from skimage.feature import peak_local_max
 from photutils.centroids import centroid_2dg
