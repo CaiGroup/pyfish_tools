@@ -48,7 +48,7 @@ if len(locations_path) > 1:
                              output_dir=output_dir, include_undefined=include_undefined, 
                              decode_high_exp_genes_first=decode_high_exp_genes_first,
                              triple_decode=triple_decode, parity_round=parity_round, 
-                             score_brightness = score_brightness)
+                             score_brightness = score_brightness, blank_ch=blank_ch)
         decoder.feature_radial_decoding(use_svm = use_svm )
 else:
     decoder = decode(location_path=locations_path[0], codebook_path=codebook_path,
@@ -60,5 +60,5 @@ else:
                             output_dir=output_dir, include_undefined=include_undefined,
                             decode_high_exp_genes_first=decode_high_exp_genes_first,
                             triple_decode=triple_decode, parity_round=parity_round, 
-                            score_brightness = score_brightness)
+                            score_brightness = score_brightness, blank_ch=blank_ch)
     decoder.feature_radial_decoding(use_svm = use_svm )
