@@ -87,6 +87,8 @@ def z_matching(image_dir, ref_dir, num_channels, pos_number = 0):
         ref = pil_imread(ref_path, num_channels = None, swapaxes = True)
         if ref.shape[1] != num_channels:
             ref = pil_imread(ref_path, num_channels = None, swapaxes = False)
+            if ref.shape[1] != num_channels:
+                raise Exception("Having trouble reading file, will attempt another way...")
             if ref.shape[0] == ref.shape[1]:
                 ref = check_axis(ref)
     except:
