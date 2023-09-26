@@ -47,7 +47,7 @@ masks, _, _, _  = model_cyto.eval(imgs_final, diameter=diameter_cyto, channels=c
                              flow_threshold=flow, cellprob_threshold=cellprob, do_3D=False)
 write_masks(masks, files, save_dir_cyto, repeat_mask_multi_z = repeat)
 
-imgs_final      = generate_final_images(imgs, have_multiple_z=have_multiple_z, channel=2)
+imgs_final      = generate_final_images(imgs, have_multiple_z=have_multiple_z, channel=-1)
 channels        = [0,0]
 masks, _, _, _  = model_nucl.eval(imgs_final, diameter=diameter_nucl, channels=channels, 
                              flow_threshold=flow, cellprob_threshold=cellprob, do_3D=False)
