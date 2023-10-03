@@ -91,8 +91,6 @@ def dot_displacement(dist_arr, show_plot=True):
     displacement = x[index_hwhm]*2
     
     if show_plot == True:
-        #plot histogram
-        plt.hist(dist_arr, density=True, bins=50)
         #plot distribution
         plt.plot(x,p, label="Gaussian Fitted Data")
         #plot half max
@@ -253,9 +251,9 @@ def nearest_neighbors_transform(ref_points, fit_points, max_dist=None, ransac_th
     fit_pts_corr = fit_points[fit_inds]
     
     #estimate affine matrix using RANSAC
-    tform = cv2.estimateAffine2D(fit_pts_corr, ref_pts_corr, ransacReprojThreshold=ransac_threshold)[0]
+    tform, inliers = cv2.estimateAffine2D(fit_pts_corr, ref_pts_corr, ransacReprojThreshold=ransac_threshold)
 
-    return tform, dists, ref_pts_corr, fit_pts_corr
+    return tform, dists, ref_pts_corr, fit_pts_corr, inliers
 
 def alignment_error(ref_points_affine, moving_points_affine, 
                     ori_dist_list, tform_list, max_dist=2):
@@ -365,10 +363,14 @@ def chromatic_corr_offsets(tiff_src,threshold_abs=500, max_dist=2,
     fit_points_used= []
     
     for i in np.arange(1,len(exp_dots_list),1):
-        tform, ori_dist, ref_pts, fit_pts = nearest_neighbors_transform(exp_dots_list[0], 
+        tform, ori_dist, ref_pts, fit_pts, inliers = nearest_neighbors_transform(exp_dots_list[0], 
                                                                         exp_dots_list[i], 
                                                                         max_dist=max_dist, 
                                                                         ransac_threshold=ransac_threshold)
+        #only keep inliers (points actually used for error estimation)
+        ref_pts = np.compress(inliers.flatten(), ref_pts, axis=0)
+        fit_pts = np.compress(inliers.flatten(), fit_pts, axis=0)
+        
         ori_dist_list.append(ori_dist)
         tform_list.append(tform)
         ref_points_used.append(ref_pts)

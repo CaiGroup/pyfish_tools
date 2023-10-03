@@ -130,20 +130,16 @@ def dot_displacement(dist_arr, show_plot=True):
     displacement = x[index_hwhm]*2
     
     if show_plot == True:
-        #calculate number of bins based on sturge's rule
-        bins = round(1 + 3.322*np.log(len(dist_arr)))
-        #plot histogram
-        plt.hist(dist_arr, density=True, bins=bins)
         #plot distribution
         plt.plot(x,p, label="Gaussian Fitted Data")
         #plot half max
-        plt.axhline(half_max, color="red")
+        plt.axhline(half_max, color="k")
         #plot full width
-        plt.axvline(displacement/2, color="red", label="FWHM")
-        plt.axvline(-displacement/2, color="red")
+        plt.axvline(displacement/2, color="k", label="FWHM")
+        plt.axvline(-displacement/2, color="k")
         plt.legend()
         sns.despine()
-        plt.ylabel("Probability density")
+        plt.ylabel("Probability Density")
         plt.xlabel("Relative distances (pixels)")
         plt.show()
         plt.clf()
@@ -315,9 +311,9 @@ def nearest_neighbors_transform(ref_points, fit_points, max_dist=None, ransac_th
     fit_pts_corr = fit_points[fit_inds]
     
     #estimate affine matrix using RANSAC
-    tform = cv2.estimateAffine2D(fit_pts_corr, ref_pts_corr, ransacReprojThreshold=ransac_threshold)[0]
+    tform, inliers = cv2.estimateAffine2D(fit_pts_corr, ref_pts_corr, ransacReprojThreshold=ransac_threshold)
 
-    return tform, dists, ref_pts_corr, fit_pts_corr
+    return tform, dists, ref_pts_corr, fit_pts_corr, inliers
 
 def alignment_error(ref_points_affine, moving_points_affine, 
                     ori_dist_list, tform_list, max_dist=2):
@@ -496,8 +492,13 @@ def fiducial_alignment_single(tiff_src, ref_src,threshold_abs=500, max_dist=2, r
     ref_points_used= []
     fit_points_used= []
     for i in range(len(ref_dots_list)):
-        tform, ori_dist, ref_pts, fit_pts = nearest_neighbors_transform(ref_dots_list[i], exp_dots_list[i],
+        tform, ori_dist, ref_pts, fit_pts, inliers = nearest_neighbors_transform(ref_dots_list[i], exp_dots_list[i],
                                                                max_dist=max_dist,ransac_threshold=ransac_threshold)
+        
+        #only keep inliers (points actually used for error estimation)
+        ref_pts = np.compress(inliers.flatten(), ref_pts, axis=0)
+        fit_pts = np.compress(inliers.flatten(), fit_pts, axis=0)
+        
         ori_dist_list.append(ori_dist)
         tform_list.append(tform)
         ref_points_used.append(ref_pts)
@@ -567,7 +568,6 @@ def fiducial_alignment_single(tiff_src, ref_src,threshold_abs=500, max_dist=2, r
         error.columns = ["Channels","Percent Improvement","FWHM"]
         if bead_channel_single != None:
             error = error[error["Channels"]==bead_channel_single].reset_index(drop=True)
-        
         return transformed_image, error
 
 def fiducial_align_parallel(tiff_list, ref_src, threshold_abs=500, max_dist=2,ransac_threshold=0.5,
