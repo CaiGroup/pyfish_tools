@@ -9,6 +9,7 @@ import tifffile as tf
 import numpy as np
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
+import os
 #enable relative import
 import sys 
 sys.path.append("..")
@@ -27,18 +28,45 @@ def dapi_alignment_single(ref, moving, num_channels):
     -------
     image (c,z,x,y)
     """
-    orig_image_dir = Path(moving).parent.parent
-    output_folder = Path(orig_image_dir) / 'pyfish_tools' / 'output' / 'dapi_aligned'
-    output_path = output_folder / Path(moving).parent.name / Path(moving).name
     
+    #create output path
+    parent = Path(moving).parent
+    while "pyfish_tools" not in os.listdir(parent):
+        parent = parent.parent
+    output_folder = parent / "pyfish_tools" / "output"/ 'dapi_aligned'
+    hybcycle = Path(moving).parent.name
+    output_path = output_folder / hybcycle / Path(moving).name
     output_path.parent.mkdir(parents=True, exist_ok=True)
     
-    image_ref = pil_imread(ref, num_channels=num_channels, swapaxes=True)
-    image_moving = pil_imread(moving, num_channels=num_channels, swapaxes=True)
-    
-    if image_ref.shape[1] != num_channels:
-        image_ref = pil_imread(ref, num_channels=num_channels, swapaxes=False)
-        image_moving = pil_imread(moving, num_channels=num_channels, swapaxes=False)
+    try:
+        image_ref = pil_imread(ref, num_channels = None, swapaxes = True)
+        if image_ref.shape[1] != num_channels:
+            image_ref = pil_imread(ref, num_channels = None, swapaxes = False)
+            if image_ref.shape[0] == image_ref.shape[1]:
+                image_ref = check_axis(image_ref)
+            if image_ref.shape[1] != num_channels:
+                raise Exception("Error reading image file, will try to read it another way")
+    except:
+        image_ref = pil_imread(ref, num_channels = num_channels, swapaxes = True)
+        if image_ref.shape[1] != num_channels:
+            image_ref = pil_imread(ref, num_channels = num_channels, swapaxes = False)
+            if image_ref.shape[0] == image_ref.shape[1]:
+                image_ref = check_axis(image_ref)
+                
+    try:
+        image_moving = pil_imread(moving, num_channels = None, swapaxes = True)
+        if image_moving.shape[1] != num_channels:
+            image_moving = pil_imread(moving, num_channels = None, swapaxes = False)
+            if image_moving.shape[0] == image_moving.shape[1]:
+                image_moving = check_axis(image_moving)
+            if image_moving.shape[1] != num_channels:
+                raise Exception("Error reading image file, will try to read it another way")
+    except:
+        image_moving = pil_imread(moving, num_channels = num_channels, swapaxes = True)
+        if image_moving.shape[1] != num_channels:
+            image_moving = pil_imread(moving, num_channels = num_channels, swapaxes = False)
+            if image_moving.shape[0] == image_moving.shape[1]:
+                image_moving = check_axis(image_moving)
     
     #get dapi channel for reference and moving assuming it is at the end
     dapi_ref = image_ref.shape[1]-1

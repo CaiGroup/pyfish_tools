@@ -179,14 +179,23 @@ def remove_all_fiducials(locations_src, fid_src, threshold=500, radius=1,
     num_channels: number of channels in your image
     write: bool to write results
     max_project: bool to max project
-    """
-    #swapaxes to z,c,x,y if required
-    fiducials = pil_imread(fid_src, swapaxes=True)
-    if fiducials.shape[1] != num_channels:
-        fiducials = pil_imread(fid_src, swapaxes=False)
-        if fiducials.shape[0] == fiducials.shape[1]:
-            fiducials = check_axis(fiducials)
-    
+    """    
+    #read in image
+    try:
+        fiducials = pil_imread(fid_src, num_channels = None, swapaxes = True)
+        if fiducials.shape[1] != num_channels:
+            fiducials = pil_imread(fid_src, num_channels = None, swapaxes = False)
+            if fiducials.shape[0] == fiducials.shape[1]:
+                fiducials = check_axis(fiducials)
+            if fiducials.shape[1] != num_channels:
+                raise Exception("Error reading image file, will try to read it another way")
+    except:
+        fiducials = pil_imread(fid_src, num_channels = num_channels, swapaxes = True)
+        if fiducials.shape[1] != num_channels:
+            fiducials = pil_imread(fid_src, num_channels = num_channels, swapaxes = False)
+            if fiducials.shape[0] == fiducials.shape[1]:
+                fiducials = check_axis(fiducials)
+
     #read in locations file
     locations = pd.read_csv(locations_src)
     

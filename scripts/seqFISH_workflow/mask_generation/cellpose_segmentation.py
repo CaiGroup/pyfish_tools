@@ -38,11 +38,11 @@ def read_images(files, num_channels=4, max_project = True):
     for i in tqdm(range(len(files))):
         try:
             img = pil_imread(files[i], num_channels = num_channels, swapaxes=True)
-            if img.shape[1] > 4:
+            if img.shape[1] != num_channels:
                 img = pil_imread(files[i], num_channels = num_channels, swapaxes=False)
         except:
             img = pil_imread(files[i], num_channels=None, swapaxes=True)
-            if img.shape[1] > 4:
+            if img.shape[1] != num_channels:
                 img = pil_imread(files[i], num_channels=None, swapaxes=False)
         if max_project == True:
             imgs.append(np.max(img,axis=0))

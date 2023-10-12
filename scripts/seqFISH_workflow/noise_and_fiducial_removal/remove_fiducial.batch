@@ -1,10 +1,10 @@
 #!/bin/bash
 
 #SBATCH --ntasks=1
-#SBATCH --mem=25G
+#SBATCH --mem=50G
 #SBATCH --cpus-per-task=16
-#SBATCH --time=00:30:00
-#SBATCH --array=0-10
+#SBATCH --time=01:00:00
+#SBATCH --array=0-5
 
 pwd; hostname; date
 echo This is task $SLURM_ARRAY_TASK_ID
