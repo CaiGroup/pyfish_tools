@@ -1,8 +1,8 @@
 """
 author: Katsuya Lex Colon
-updated: 10/13/2023
-- Notes: Going to use SVM purely for filtering instead of also scoring. More documentation. Extra data checks. Redefining 
-var names for accuracy.
+updated: 10/16/2023
+- Notes: Same as v3, except with more aggressive decoding by looking at all possible spot combinations in a search radius across barcoding rounds. 
+All possible barcodes are sorted by their scored and the best scoring that passes parity is chosen.
 """
 
 #general analysis packages
@@ -662,7 +662,7 @@ class decode:
                 parity_code = sum(get_barcode[:len(get_barcode)-1]) % pseudocolors
                 if parity_code == 0:
                     parity_code = pseudocolors
-                elif parity_code == get_barcode[-1]:
+                if parity_code == get_barcode[-1]:
                     best = codes
                     best_score = sorted_scores[i]
                     best_dist = sorted_dist[i]
@@ -706,7 +706,7 @@ class decode:
                 parity_code = sum(get_barcode[:len(get_barcode)-1]) % pseudocolors
                 if parity_code == 0:
                     parity_code = pseudocolors
-                elif parity_code == get_barcode[-1]:
+                if parity_code == get_barcode[-1]:
                     best = codes
                     best_score = sorted_scores[i]
                     best_dist = sorted_dist[i]
@@ -1391,7 +1391,7 @@ class decode:
         decoded_2, indicies_used_2 = decode.radial_decoding_parallel(self, new_locations, codebook,
                                                               num_barcodes=self.num_barcodes, radius=self.second_radius,diff=self.diff,
                                                               min_seed=self.min_seed, hybs = self.hybs, include_undecoded = True, 
-                                                              look_for_parity = False,
+                                                              look_for_parity = True,
                                                               parity_round=self.parity_round)
         if self.triple_decode == True:
             #output results from second pass
@@ -1425,7 +1425,7 @@ class decode:
             try:
                 decoded_3, indicies_used_3 = decode.radial_decoding_parallel(self, new_locations_2, codebook,
                             num_barcodes=self.num_barcodes, radius=self.third_radius,diff=self.diff,
-                            min_seed=self.min_seed, hybs = self.hybs, include_undecoded = True, look_for_parity = False,
+                            min_seed=self.min_seed, hybs = self.hybs, include_undecoded = True, look_for_parity = True,
                             parity_round=self.parity_round)
                 #combine decoded dfs
                 decoded_combined = pd.concat([decoded_1, decoded_2, decoded_3])
