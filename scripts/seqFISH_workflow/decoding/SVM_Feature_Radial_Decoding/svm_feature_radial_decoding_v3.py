@@ -662,7 +662,7 @@ class decode:
                 parity_code = sum(get_barcode[:len(get_barcode)-1]) % pseudocolors
                 if parity_code == 0:
                     parity_code = pseudocolors
-                elif parity_code == get_barcode[-1]:
+                if parity_code == get_barcode[-1]:
                     best = codes
                     best_score = sorted_scores[i]
                     best_dist = sorted_dist[i]
@@ -706,7 +706,7 @@ class decode:
                 parity_code = sum(get_barcode[:len(get_barcode)-1]) % pseudocolors
                 if parity_code == 0:
                     parity_code = pseudocolors
-                elif parity_code == get_barcode[-1]:
+                if parity_code == get_barcode[-1]:
                     best = codes
                     best_score = sorted_scores[i]
                     best_dist = sorted_dist[i]
