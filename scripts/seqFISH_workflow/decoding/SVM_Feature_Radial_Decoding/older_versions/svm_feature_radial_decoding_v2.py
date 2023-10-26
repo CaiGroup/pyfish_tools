@@ -1,6 +1,7 @@
 """
 author: Katsuya Lex Colon
 updated: 08/03/2023
+note: scoring is handled differently in this script.
 """
 
 #general analysis packages
