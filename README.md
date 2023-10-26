@@ -34,15 +34,15 @@ Outputs will be generated into a directory called "output" within the pyfish_too
 - Gamma enhancement to boost signal
 - Rolling ball subtraction to even illumination while simultaneously isolating true signal
 - Division by 1D Gaussian convolution for evening out image illumination
-- TopHat to remove large blobs such as lipofuscin (I would recommend using the fiducial removal script)
+- TopHat to remove large blobs such as lipofuscin 
 - Scaling intensities of images by percentile clipping
 ### Spot Detection
 - Detection of single molecule spots across all z-planes and channel axes using DAOStarFinder  
-- Intensity threshold screen of single molecule spots using DAOStarFinder
 - Ratiometric dot detection to determine the contribution of various fluorophores in a given spot
 ### Segmentation
 - Generate cell masks using Cellpose 2.0
 - Keep cytoplasm masks that also overlap with nuclear masks
+- Stitch nuclear and cytoplasm masks so that two separate sub-cellular analysis can be performed
 ### Cell Mask Borders and Edge Deletion
 - Delete n number of pixels for two or more masks that touch
 - Delete masks that are at the image borders
@@ -50,11 +50,11 @@ Outputs will be generated into a directory called "output" within the pyfish_too
 - For detected spots, you can map them to their corresponding cell masks
 ### Decoding
 - Gene assignment of non-barcoded sequential smFISH spots
-- Gene assignment of barcoded sequential smFISH spots with SVM Feature Radial Decoder (look at PDF  in corresponding directory for how it works)
+- Gene assignment of barcoded sequential smFISH spots with SVM embedded, feature-based nearest neigbor radial decoder
 ### Gene by Cell 
 - Generate gene-by-cell matrix for single-cell analysis
 ### Noise and Fiducial Removal
-- Remove fiducial markers or background spot-like noise by spot detecting on background image
+- Remove fiducial markers or background spot-like noise by spot detecting on background image and searching for corresponding spot in subsequent images
 - Remove fiducial markers or background spot-like noise by looking for redudant spots within a barcoding round
 ### Codebook Generation
 - Convert pseudocolor codebooks to an n-bit string codebook
@@ -70,9 +70,7 @@ Outputs will be generated into a directory called "output" within the pyfish_too
 - Calculate final false positive rate of decoded barcodes
 - Perform correlational analysis with other smFISH datasets or RNA-seq
 - Basic clustering 
-### Requested Scripts
-- Stitch nuclear and cytoplasm masks so that two separate sub-cellular analysis can be performed
-- Use an interactive python script to quantify antibody stains or intron spots (look at readme.txt file in scripts/requested_scripts/stain_intron_quant_scripts)
+
 
 
 
