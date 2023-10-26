@@ -8,16 +8,16 @@ JOB_ID = os.getenv('SLURM_ARRAY_TASK_ID', 0)
 print(f'This is task {JOB_ID}')
 
 #get all hybs for specific pos
-directory = Path("/groups/CaiLab/personal/Lex/raw/Linus_10k_cleared_080918_NIH3T3/pyfish_tools/output/fiducial_aligned")
+directory = Path("/path/to/data/pyfish_tools/output/fiducial_aligned")
 position_name = f'MMStack_Pos{JOB_ID}.ome.tif'
 files, _, _ = find_matching_files(directory, 'HybCycle_{hyb}' + f'/{position_name}')
 files = [str(f) for f in files]
 
 #reference image
-ref_img = f"/groups/CaiLab/personal/Lex/raw/Linus_10k_cleared_080918_NIH3T3/pyfish_tools/output/z_matched_images/beads/{position_name}"
+ref_img = f"/path/to/beads/{position_name}"
 
 #calculate transform
-_, _, tform = chromatic_corr_offsets(ref_img, threshold_abs=950,  max_dist=1.5, ransac_threshold = 0.20, num_channels=4)
+_, _, tform = chromatic_corr_offsets(ref_img, threshold_abs=950,  max_dist=1.5, ransac_threshold = 0.25, num_channels=4)
 
 #apply offsets
 apply_chromatic_corr(files, tform, cores = 12,  num_channels=4, write = True)

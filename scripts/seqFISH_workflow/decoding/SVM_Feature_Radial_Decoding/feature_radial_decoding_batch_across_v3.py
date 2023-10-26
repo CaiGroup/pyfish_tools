@@ -5,13 +5,13 @@ import glob
 exp_dir                     = "230812_3k_IP_4bs" #name of experimental directory
 user                        = "Lex" #name of user
 num_rounds                  = 4     #number of rounds
-first_radius                = 1.5   #search radii
-second_radius               = 1.5   #search radii
+first_radius                = 1.0   #search radii
+second_radius               = 1.4   #search radii
 third_radius                = 2     #search radii
 min_seed                    = 3     #how many times does a pseudocolor sequence must appear
 high_exp_seed               = 3     #how many times does pseudocolor sequence must appear for highly expressed genes
 total_hybs                  = 20    #number of total hybs
-probability_cutoff          = 0.25  #probability cutoff for On dots (0-1). 
+probability_cutoff          = 0.20  #probability cutoff for On dots (0-1). 
 desired_fdr                 = 0.10  #desired FDR (0-1). Could set to None if you would like to filter yourself.
 use_svm                     = True #set to false if model is not helping and to save time.
 fiducial_removed            = True  #use noise removed

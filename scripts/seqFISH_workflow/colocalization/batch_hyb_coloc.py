@@ -6,7 +6,7 @@ JOB_ID = os.getenv('SLURM_ARRAY_TASK_ID', 0)
 print(f'This is task {JOB_ID}')
 
 #path to processed images
-img_dir      = "/groups/CaiLab/personal/Lex/raw/230608_4k_inv_5bs/pyfish_tools/output/pre_processed_images"
+img_dir      = "/path/to/data/pyfish_tools/output/pre_processed_images"
 channel      = int(JOB_ID) # which channel to analyze
 z            = 1 # which z layer to focus on
 threshold    = 0.2 # intensity threshold 

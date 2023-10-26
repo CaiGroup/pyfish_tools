@@ -1,14 +1,14 @@
 from pre_processing import deconvolute_many
 from pathlib import Path
 import os
-from webfish_tools.util import find_matching_files
+from util import find_matching_files
 
 JOB_ID = os.getenv('SLURM_ARRAY_TASK_ID', 0)
 
 print(f'This is task {JOB_ID}')
 
 #path to images
-directory = Path("/groups/CaiLab/personal/Lex/raw/Linus_10k_cleared_080918_NIH3T3/notebook_pyfiles/dapi_aligned/fiducial_aligned")
+directory = Path("/path/to/data/fiducial_aligned")
 position_name = f'MMStack_Pos{JOB_ID}.ome.tif'
 files, _, _ = find_matching_files(directory, 'HybCycle_{hyb}' + f'/{position_name}')
 files = [str(f) for f in files]

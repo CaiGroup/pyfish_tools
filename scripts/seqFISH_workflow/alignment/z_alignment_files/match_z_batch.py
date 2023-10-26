@@ -7,9 +7,9 @@ JOB_ID = os.getenv('SLURM_ARRAY_TASK_ID', 0)
 print(f'This is task {JOB_ID}')
 
 #path to images
-image_dir = "/groups/CaiLab/personal/Lex/raw/230812_3k_IP_4bs/pyfish_tools/output/dapi_aligned"
+image_dir = "/path/to/dir/pyfish_tools/output/dapi_aligned"
 #reference dir
-ref_dir = "/groups/CaiLab/personal/Lex/raw/230812_3k_IP_4bs/chromatic_aberration"
+ref_dir = "/path/to/beads/"
 #number of channels
 num_channels = 4
 

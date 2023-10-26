@@ -11,7 +11,7 @@ from util import find_matching_files
 
 # User defined settings
 #----------------------------------------------------------------------------------
-input_directory = "/groups/CaiLab/personal/Lex/raw/230726_43gene_smfish/segmentation/*.tif" # don't forget the star
+input_directory = "/path/to/data/segmentation/*.tif" # don't forget the star
 num_pos         = 56
 max_project     = False #set this to true if you want to max project all z's for single mask propagated
 have_multiple_z = True #set this to true if you want masks per z stitched (gpu is recommended for this)
@@ -20,9 +20,9 @@ diameter_cyto   = 350 #diameter in pixels for cytoplasm
 diameter_nucl   = 150 #diameter in pixels for nucleus
 flow            = 2
 cellprob        = -1
-num_channels    = 3 
-save_dir_cyto   = '/groups/CaiLab/personal/Lex/raw/230726_43gene_smfish/pyfish_tools/output/masks/cyto' 
-save_dir_nucl   = '/groups/CaiLab/personal/Lex/raw/230726_43gene_smfish/pyfish_tools/output/masks/nucl'
+num_channels    = 4 
+save_dir_cyto   = '/path/to/data/pyfish_tools/output/masks/cyto' 
+save_dir_nucl   = '/path/to/data/pyfish_tools/output/masks/nucl'
 repeat          = 1    #number of copies for z's if you wish to propagate (1-infinite)
 threshold       = 0.15 #percent coverage of nuclear mask on top of cytoplasm mask
 use_gpu         = False #use this at your own risk. Job submission can take forever if GPUs are requested.
