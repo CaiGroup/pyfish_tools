@@ -50,7 +50,7 @@ Outputs will be generated into a directory called "output" within the pyfish_too
 - For detected spots, you can map them to their corresponding cell masks
 ### Decoding
 - Gene assignment of non-barcoded sequential smFISH spots
-- Gene assignment of barcoded sequential smFISH spots with SVM embedded, feature-based nearest neigbor radial decoder
+- Gene assignment of barcoded sequential smFISH spots with SVM embedded, feature-based nearest neighbor radial decoder
 ### Gene by Cell 
 - Generate gene-by-cell matrix for single-cell analysis
 ### Noise and Fiducial Removal
