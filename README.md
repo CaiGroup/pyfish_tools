@@ -69,7 +69,6 @@ Outputs will be generated into a directory called "output" within the pyfish_too
 ### Post Analysis
 - Calculate final false positive rate of decoded barcodes
 - Perform correlational analysis with other smFISH datasets or RNA-seq
-- Basic clustering 
 
 
 
