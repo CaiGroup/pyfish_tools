@@ -9,9 +9,9 @@ PyFISH is a generalized, fully Python-based pipeline for the analysis of various
 <img src="https://github.com/CaiGroup/pyfish_tools/blob/pyFISH/logo/workflow.png" alt="pipeline">
 </p>
 
-## Setting up your Conda environment
+## Setting up your Conda environment (Linux only)
 
-To set up your Conda environment, please run the following yml file: `conda env create -f python3.7.yml`
+To set up your Conda environment, please run the following yml file: `conda env create -f python3.7_linux_.yml`.
 
 ## Copying the pipeline folder
 
