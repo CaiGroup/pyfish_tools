@@ -9,6 +9,18 @@ PyFISH is a generalized, fully Python-based pipeline for the analysis of various
 <img src="https://github.com/CaiGroup/pyfish_tools/blob/pyFISH/logo/workflow.png" alt="pipeline">
 </p>
 
+## Directory tree strcuture
+Experimental_Folder/
+├── HybCycle_0/
+  ├── MMStack_Pos0.ome.tif
+  ├── MMStack_Pos1.ome.tif
+  ├── MMStack_Pos2.ome.tif
+  ├── MMStack_Pos3.ome.tif
+  ├── MMStack_Pos4.ome.tif
+  ├── MMStack_Pos5.ome.tif
+  └── MMStack_Pos6.ome.tif
+Number of hybcycle directories will be dependent on your experimental needs. If there are fiducial beads, then parent directory would be named 'beads.'
+
 ## Setting up your Conda environment (Linux only)
 
 To set up your Conda environment, please run the following yml file: `conda env create -f python3.7_linux_.yml`.
