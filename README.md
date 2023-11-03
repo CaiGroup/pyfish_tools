@@ -10,15 +10,15 @@ PyFISH is a generalized, fully Python-based pipeline for the analysis of various
 </p>
 
 ## Directory tree strcuture
-- `Experimental_Folder/` <br>
-- `├── HybCycle_0/` <br>
-- ` ├── MMStack_Pos0.ome.tif` <br>
-- ` ├── MMStack_Pos1.ome.tif` <br>
-- ` ├── MMStack_Pos2.ome.tif` <br>
-- ` ├── MMStack_Pos3.ome.tif` <br>
-- ` ├── MMStack_Pos4.ome.tif` <br>
-- ` ├── MMStack_Pos5.ome.tif` <br>
-- ` └── MMStack_Pos6.ome.tif` <br>
+ `Experimental_Folder/` <br>
+ `├── HybCycle_0/` <br>
+ ` ├── MMStack_Pos0.ome.tif` <br>
+ ` ├── MMStack_Pos1.ome.tif` <br>
+ ` ├── MMStack_Pos2.ome.tif` <br>
+ ` ├── MMStack_Pos3.ome.tif` <br>
+ ` ├── MMStack_Pos4.ome.tif` <br>
+ ` ├── MMStack_Pos5.ome.tif` <br>
+ ` └── MMStack_Pos6.ome.tif` <br>
 
 Number of hybcycle directories will be dependent on your experimental needs. If there are fiducial beads, then parent directory would be named 'beads.'
 
