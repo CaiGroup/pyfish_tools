@@ -48,10 +48,10 @@ def keep_dots_in_cells(mask, dot_locations):
     
     """
     #output path
-    orig_image_dir = Path(dot_locations).parent.parent
-    output_folder = Path(orig_image_dir)
+    output_folder = Path(dot_locations).parent.parent
     file_name = Path(dot_locations).name
-    output_path = output_folder / 'spots_in_cells' /Path(dot_locations).relative_to(orig_image_dir).parent / file_name
+    pos = Path(dot_locations).parent.name
+    output_path = output_folder / 'spots_in_cells' / pos / file_name
     output_path.parent.mkdir(parents=True, exist_ok=True)
     
     #read in data
@@ -65,16 +65,19 @@ def keep_dots_in_cells(mask, dot_locations):
     for i in range(len(locations)):
         x = locations_xy[i][0]
         y = locations_xy[i][1]
-        if img[y,x] == 0:
+        try:
+            if img[y,x] == 0:
+                continue
+            else:
+                cell = img[y,x]
+                dot_info.append([i,cell])
+        except:
             continue
-        else:
-            cell = img[y,x]
-            dot_info.append([i,cell])
             
     dot_info = np.array(dot_info)
     
     #keep rows that have cells
-    dots_in_cells = locations.loc[dot_info[:,0]]
+    dots_in_cells = locations.loc[dot_info[:,0]].reset_index(drop=True)
     
     #add cell info
     dots_in_cells["cell number"] = dot_info[:,1]
