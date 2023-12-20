@@ -14,5 +14,5 @@ source ~/miniconda3/bin/activate
 
 conda activate python3.7
 
-python feature_radial_decoding_batch_across_v3.py
+python feature_radial_decoding_batch_across.py
 
