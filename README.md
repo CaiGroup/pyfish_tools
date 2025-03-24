@@ -34,7 +34,7 @@ Outputs will be generated into a directory called "output" within the pyfish_too
 
 ## What is included in this pipeline?
 ### Alignment
-- Align images with phase cross correlation using DAPI
+- Align images with phase cross correlation or SIFT using DAPI
 - Align images with RANSAC adjusted affine transformation using fiducial beads 
 - Align z shifts with normalized correlation analysis
 ### Chromatic Aberration Correction
