@@ -65,8 +65,7 @@ Outputs will be generated into a directory called "output" within the pyfish_too
 - Gene assignment of barcoded sequential smFISH spots with SVM embedded, feature-based nearest neighbor radial decoder
 ### Gene by Cell 
 - Generate gene-by-cell matrix for single-cell analysis
-### Noise and Fiducial Removal
-- Remove fiducial markers or background spot-like noise by spot detecting on background image and searching for corresponding spot in subsequent images
+### Overlap Spot Noise Removal
 - Remove fiducial markers or background spot-like noise by looking for redudant spots within a barcoding round
 ### Codebook Generation
 - Convert pseudocolor codebooks to an n-bit string codebook
