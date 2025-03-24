@@ -21,24 +21,28 @@ def pil_imopen(fname, metadata=False):
 
 def pil_imread(
     fname,
+    num_channels = None,
     metadata=False,
     swapaxes=False,
     ensure_4d=True,
     backup=tif.imread,
-    **kwargs
-):
+    **kwargs):
+    
     md = None
 
     import warnings
+    # Ignoring the user warnings during the image read operation.
     warnings.simplefilter('ignore', UserWarning)
 
     try:
         im = pil_imopen(fname)
         md = pil_getmetadata(im)
         imarr = pil_frames_to_ndarray(im)
-    except (ValueError, UnidentifiedImageError) as e:
+    except (TypeError, ValueError, UnidentifiedImageError) as e:
         if callable(backup):
             imarr = backup(fname, **kwargs)
+            if num_channels:
+                imarr = imarr.reshape((num_channels, int(imarr.shape[0]/num_channels), *imarr.shape[1:])) 
         else:
             raise e
 
@@ -53,6 +57,61 @@ def pil_imread(
         return imarr, md
     else:
         return imarr
+
+def pil_getmetadata(im, relevant_keys=None):
+    """
+    pil_getmetadata
+    ---------------
+    Given a PIL image sequence im, retrieve the metadata associated
+    with each frame in the sequence. Only keep metadata keys specified
+    in `relevant_keys` - which will default to ones that we need such as
+    channel, slice information. There are many metadata keys which are
+    useless / do not change frame to frame.
+    Returns: List of dicts in order of frame index.
+    """
+
+    if str(relevant_keys).lower() == 'all':
+        relevant_keys = None
+
+    elif not isinstance(relevant_keys, list):
+
+        relevant_keys = [
+            'Andor sCMOS Camera-Exposure',  # Exposure time (ms)
+            'Channel',                      # Channel name (wavelength)
+            'ChannelIndex',                 # Channel index (number)
+            'Frame',                        # Time slice (usually not used)
+            'FrameIndex',                   # Time slice index (usually not used)
+            'PixelSizeUm',                  # XY pixel size in microns
+            'Position',                     # Position 
+            'PositionIndex',                # Position index (MMStack_PosX)
+            'PositionName',                 # Position name
+            'Slice',                        # Z slice
+            'SliceIndex'                    # Z slice index (same as Slice)
+        ]
+
+    frame_metadata = []
+
+    for frame in ImageSequence.Iterator(im):
+
+        # The JSON string is stored in a key named "unknown",
+        # probably because it doesn't correspond to a standard
+        # TIF tag number.
+        if 'unknown' in frame.tag.named().keys():
+            jsstr = frame.tag.named()['unknown'][0]
+            jsdict = json.loads(jsstr)
+
+            if relevant_keys:
+                # Only keep the relevant keys
+                rel_dict = {
+                    k: jsdict.get(k)
+                    for k in relevant_keys
+                }
+            else:
+                rel_dict = jsdict
+
+            frame_metadata.append(rel_dict)
+
+    return frame_metadata
 
 
 def pil_getmetadata(im, relevant_keys=None):

@@ -106,9 +106,9 @@ def make_genebycell(gene_loc_dir, mask_dir=None, output_dir = None,
     else:
         #across all channels or not
         if channel == "all":
-            final_output = Path(output_dir) / "final" / "genebycell.csv"
+            final_output = Path(output_dir)  / "genebycell.csv"
         else:
-            final_output = Path(output_dir) / "final" / f"genebycell_{channel}.csv"
+            final_output = Path(output_dir)  / f"genebycell_{channel}.csv"
             
         #make directory
         final_output.parent.mkdir(parents=True, exist_ok=True)

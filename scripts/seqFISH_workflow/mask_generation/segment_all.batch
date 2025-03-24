@@ -3,15 +3,15 @@
 #SBATCH --ntasks=1
 #SBATCH --mem=100G
 #SBATCH --cpus-per-task=12
-#SBATCH --gpus-per-task=1
-#SBATCH --time=12:00:00
+#SBATCH --time=5:00:00
 #SBATCH --array=0
 
 pwd; hostname; date
 echo This is task $SLURM_ARRAY_TASK_ID
 
 source ~/miniconda3/bin/activate
-conda activate python3.7
-python segment_batch.py
 
+conda activate cellpose3
+
+cellpose --dir images --pretrained_model /home/kcolon/.cellpose/models/nih3t3_polt --diameter 271  --chan 1 --chan2 2
 date

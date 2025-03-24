@@ -53,9 +53,8 @@ Outputs will be generated into a directory called "output" within the pyfish_too
 - Detection of single molecule spots across all z-planes and channel axes using DAOStarFinder  
 - Ratiometric dot detection to determine the contribution of various fluorophores in a given spot
 ### Segmentation
-- Generate cell masks using Cellpose 2.0
-- Keep cytoplasm masks that also overlap with nuclear masks
-- Stitch nuclear and cytoplasm masks so that two separate sub-cellular analysis can be performed
+- Generate cell masks using Cellpose 3.0 with human-in-loop training
+- Separate script that keeps cytoplasm masks that also overlap with nuclear masks
 ### Cell Mask Borders and Edge Deletion
 - Delete n number of pixels for two or more masks that touch
 - Delete masks that are at the image borders
@@ -73,15 +72,13 @@ Outputs will be generated into a directory called "output" within the pyfish_too
 - Convert pseudocolor codebooks to an n-bit string codebook
 - Balance codebook using TPM or FPKM values from RNA-seq
 ### Image Stitching
-- Stitch images based on metadata to generate one composite image
-- Find position of cells across FOVs
-### Density Estimations
-- Calculate optical density of spots
+- Stitch images based on json file to generate one composite image
 ### Colocalization Assessment
 - Calculate the colocalization efficiency between two or more spots
 ### Post Analysis
 - Calculate final false positive rate of decoded barcodes
 - Perform correlational analysis with other smFISH datasets or RNA-seq
+- Perform clustering, cell-typing, and spatial-mapping
 
 
 

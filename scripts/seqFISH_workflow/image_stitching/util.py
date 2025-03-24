@@ -21,24 +21,28 @@ def pil_imopen(fname, metadata=False):
 
 def pil_imread(
     fname,
+    num_channels = None,
     metadata=False,
     swapaxes=False,
     ensure_4d=True,
     backup=tif.imread,
-    **kwargs
-):
+    **kwargs):
+    
     md = None
 
     import warnings
+    # Ignoring the user warnings during the image read operation.
     warnings.simplefilter('ignore', UserWarning)
 
     try:
         im = pil_imopen(fname)
         md = pil_getmetadata(im)
         imarr = pil_frames_to_ndarray(im)
-    except (ValueError, UnidentifiedImageError) as e:
+    except (TypeError, ValueError, UnidentifiedImageError) as e:
         if callable(backup):
             imarr = backup(fname, **kwargs)
+            if num_channels:
+                imarr = imarr.reshape((num_channels, int(imarr.shape[0]/num_channels), *imarr.shape[1:])) 
         else:
             raise e
 

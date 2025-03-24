@@ -11,7 +11,7 @@ from helpers.util import find_matching_files
 #------------------------------------------------------------------------------------------------------------------------------------------------------------------
 #general path and position name
 JOB_ID = os.getenv('SLURM_ARRAY_TASK_ID', 0)
-directory = Path("/path/to/dat/dir/pyfish_tools/output/z_matched_images")
+directory = Path("/path/to/dat/dir/pyfish_tools/output/dapi_aligned)
 position_name = f'MMStack_Pos{JOB_ID}.ome.tif'
 
 #use this for all hyb alignment

@@ -1,0 +1,17 @@
+#!/bin/bash
+
+#SBATCH --ntasks=1
+#SBATCH --mem=64G
+#SBATCH --cpus-per-task=12
+#SBATCH --time=1:00:00
+#SBATCH --array=0
+
+pwd; hostname; date
+echo This is task $SLURM_ARRAY_TASK_ID
+
+source ~/miniconda3/bin/activate
+conda activate python310
+
+python stitch_job.py
+
+date

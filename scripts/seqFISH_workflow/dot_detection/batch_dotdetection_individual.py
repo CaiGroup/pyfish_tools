@@ -12,14 +12,14 @@ channel = int(sys.argv[1])
 
 print(f'This is task {JOB_ID}')
 # path to processed images
-directory = Path("/path/to/data/pyfish_tools/output/pre_processed_images")
+directory = Path("/groups/CaiLab/personal/Lex/raw/250203_mb_161genes/pyfish_tools/output/pre_processed_images")
 position_name = f'MMStack_Pos{JOB_ID}.ome.tif'
 
 files, _, _ = find_matching_files(directory, 'HybCycle_{hyb}' + f'/{position_name}')
 files = [str(f) for f in files]
 
-threshold    = 0.02 # threshold to detect all dots (if image was scaled)
-num_channels = 4 #number of channels in image
+threshold    = 0.05 # threshold to detect all dots (if image was scaled)
+num_channels = 2 #number of channels in image
 channel      = channel #which channel to analyze
 size_cutoff  = None # sigma cutoff for size distribution
 
