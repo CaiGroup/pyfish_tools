@@ -65,6 +65,8 @@ Outputs will be generated into a directory called "output" within the pyfish_too
 - Gene assignment of barcoded sequential smFISH spots with SVM embedded, feature-based nearest neighbor radial decoder
 ### Gene by Cell 
 - Generate gene-by-cell matrix for single-cell analysis
+### Obtain Cell's Spatial Coordinates
+- Generate dataframe with spatial coordinates for each cell using provided metadata 
 ### Overlap Spot Noise Removal
 - Remove fiducial markers or background spot-like noise by looking for redudant spots within a barcoding round
 ### Codebook Generation
