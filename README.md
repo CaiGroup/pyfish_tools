@@ -20,7 +20,7 @@ PyFISH is a generalized, fully Python-based pipeline for the analysis of various
  ` ├── MMStack_Pos5.ome.tif` <br>
  ` └── MMStack_Pos6.ome.tif` <br>
 
-Number of hybcycle directories will be dependent on your experimental needs. If there are fiducial beads, then parent directory would be named 'beads.'
+Number of hybcycle directories will be dependent on your experimental needs. 
 
 ## Setting up your Conda environment (Linux only)
 
